@@ -7,6 +7,10 @@ import {
   Trash2,
   Camera,
   Check,
+  Cloud,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Contact } from '../../types';
@@ -15,6 +19,7 @@ export const PanelContacts: React.FC = () => {
   const {
     stagedContacts,
     hasContactChanges,
+    isSavingContacts,
     saveContactChanges,
     discardContactChanges,
     updateStagedContacts,
@@ -27,6 +32,7 @@ export const PanelContacts: React.FC = () => {
 
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
 
   // Form states for modal [28]
   const [formName, setFormName] = useState('');
@@ -38,6 +44,11 @@ export const PanelContacts: React.FC = () => {
 
   const emergencyCount = stagedContacts.filter(c => c.isEmergency).length;
   const totalCount = stagedContacts.length;
+
+  const showSaveSuccess = (msg: string) => {
+    setSaveFeedback(msg);
+    setTimeout(() => setSaveFeedback(null), 3500);
+  };
 
   const handleOpenAdd = () => {
     if (totalCount >= 20) {
@@ -72,7 +83,7 @@ export const PanelContacts: React.FC = () => {
     setIsAddingNew(false);
   };
 
-  const handleSaveModal = () => {
+  const handleSaveModal = async () => {
     if (!formName.trim()) {
       alert('Por favor escribe un nombre.');
       return;
@@ -90,7 +101,7 @@ export const PanelContacts: React.FC = () => {
     if (isAddingNew) {
       const colors = ['#0b6b3a', '#0b4f9e', '#7c3aed', '#991b1b', '#c2410c', '#0369a1'];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      addContact({
+      await addContact({
         name: formName.trim().slice(0, 40),
         phone: formattedPhone,
         photoUrl: formPhoto,
@@ -99,8 +110,9 @@ export const PanelContacts: React.FC = () => {
         isSafeZone: formSafeZone,
         isLowBattery: formLowBattery,
       });
+      showSaveSuccess('¡Contacto guardado en Supabase!');
     } else if (editingContact) {
-      editContact(editingContact.id, {
+      await editContact(editingContact.id, {
         name: formName.trim().slice(0, 40),
         phone: formattedPhone,
         photoUrl: formPhoto,
@@ -108,6 +120,7 @@ export const PanelContacts: React.FC = () => {
         isSafeZone: formSafeZone,
         isLowBattery: formLowBattery,
       });
+      showSaveSuccess('¡Contacto actualizado en Supabase!');
     }
 
     handleCloseModal();
@@ -146,9 +159,68 @@ export const PanelContacts: React.FC = () => {
     <div className="space-y-4 animate-in fade-in duration-150 pb-28">
       {/* Top Header & Counters matching [27] */}
       <div className="flex flex-col gap-3">
-        <p className="text-xl font-bold text-[#14213d]">
-          Emergencia: {emergencyCount} de 5 · Contactos: {totalCount} de 20
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xl font-bold text-[#14213d]">
+            Emergencia: {emergencyCount} de 5 · Contactos: {totalCount} de 20
+          </p>
+
+          {/* Sync Status Badge */}
+          {isSavingContacts ? (
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#0b4f9e] bg-[#eef4fb] border border-[#0b4f9e]/30 px-3 py-1 rounded-full shadow-xs">
+              <Loader2 className="w-4 h-4 animate-spin text-[#0b4f9e]" />
+              <span>Guardando en Supabase...</span>
+            </span>
+          ) : saveFeedback ? (
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#0b6b3a] bg-[#eaf5ed] border border-[#0b6b3a]/30 px-3 py-1 rounded-full shadow-xs animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-[#0b6b3a]" />
+              <span>{saveFeedback}</span>
+            </span>
+          ) : hasContactChanges ? (
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#854d0e] bg-[#fef9c3] border border-[#ca8a04]/40 px-3 py-1 rounded-full shadow-xs">
+              <AlertCircle className="w-4 h-4 text-[#ca8a04]" />
+              <span>Cambios pendientes</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#0b6b3a] bg-[#eaf5ed] border border-[#0b6b3a]/20 px-3 py-1 rounded-full shadow-xs">
+              <Cloud className="w-4 h-4 text-[#0b6b3a]" />
+              <span>Sincronizado con Supabase</span>
+            </span>
+          )}
+        </div>
+
+        {/* Top Banner when there are pending changes */}
+        {hasContactChanges && (
+          <div className="bg-[#fef9c3] border-2 border-[#ca8a04] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-6 h-6 text-[#ca8a04] shrink-0" />
+              <div>
+                <p className="font-extrabold text-base text-[#713f12]">Tienes cambios pendientes</p>
+                <p className="text-sm font-semibold text-[#854d0e]">
+                  Presiona &quot;Guardar cambios&quot; para registrar en la tabla contactos de Supabase.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <button
+                onClick={discardContactChanges}
+                className="bg-white border-2 border-[#7a7461] text-[#14213d] px-3.5 py-2 rounded-xl text-sm font-extrabold hover:bg-stone-50 active:scale-95 transition cursor-pointer"
+              >
+                Descartar
+              </button>
+              <button
+                onClick={async () => {
+                  const ok = await saveContactChanges();
+                  if (ok) showSaveSuccess('¡Guardado en Supabase!');
+                }}
+                disabled={isSavingContacts}
+                className="bg-[#0b4f9e] hover:bg-[#093f7e] text-white px-4 py-2 rounded-xl text-sm font-extrabold shadow-md flex items-center gap-1.5 active:scale-95 transition cursor-pointer disabled:opacity-50"
+              >
+                {isSavingContacts ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
+                <span>Guardar cambios</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={handleOpenAdd}
@@ -292,22 +364,36 @@ export const PanelContacts: React.FC = () => {
         )}
       </div>
 
-      {/* Sticky Bottom Save / Discard Bar [27] */}
+      {/* Sticky Bottom Save / Discard Bar [27] - Positioned above 5-tab nav bar */}
       {hasContactChanges && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 bg-[#f6f3ec]/95 backdrop-blur-md border-t-2 border-[#ddd5c3] p-4 flex items-center justify-between gap-4 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom">
-          <button
-            onClick={discardContactChanges}
-            className="w-1/2 bg-white border-2 border-[#7a7461] text-[#14213d] py-3.5 rounded-2xl text-xl font-extrabold shadow-sm active:scale-95 transition cursor-pointer"
-          >
-            Descartar
-          </button>
-          <button
-            onClick={saveContactChanges}
-            className="w-1/2 bg-[#0b4f9e] text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2"
-          >
-            <Check className="w-6 h-6 stroke-[3]" />
-            <span>Guardar</span>
-          </button>
+        <div className="fixed bottom-20 left-4 right-4 z-50 bg-[#14213d] text-white border-2 border-[#ddd5c3] p-3.5 rounded-3xl flex items-center justify-between gap-3 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom">
+          <div className="hidden sm:flex flex-col pl-2">
+            <span className="text-sm font-extrabold text-[#f6f3ec]">Cambios sin guardar</span>
+            <span className="text-xs text-[#ddd5c3]/80">Se enviarán a Supabase</span>
+          </div>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <button
+              onClick={discardContactChanges}
+              className="flex-1 sm:flex-initial bg-white/10 hover:bg-white/20 border border-white/30 text-white py-3 px-4 rounded-2xl text-lg font-extrabold shadow-sm active:scale-95 transition cursor-pointer"
+            >
+              Descartar
+            </button>
+            <button
+              onClick={async () => {
+                const ok = await saveContactChanges();
+                if (ok) showSaveSuccess('¡Guardado en Supabase!');
+              }}
+              disabled={isSavingContacts}
+              className="flex-1 sm:flex-initial bg-[#0b6b3a] hover:bg-[#09572f] text-white py-3 px-5 rounded-2xl text-lg font-extrabold shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isSavingContacts ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Check className="w-5 h-5 stroke-[3]" />
+              )}
+              <span>Guardar cambios</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -411,8 +497,16 @@ export const PanelContacts: React.FC = () => {
               </label>
             </div>
 
+            {/* Sync notice */}
+            <div className="bg-[#eaf5ed] border border-[#0b6b3a]/30 rounded-2xl p-3 flex items-center gap-2 text-[#0b6b3a]">
+              <Cloud className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-semibold">
+                Al presionar &quot;Guardar contacto&quot;, se grabará directamente en la base de datos de Supabase.
+              </p>
+            </div>
+
             {/* Modal Actions */}
-            <div className="grid grid-cols-2 gap-3 pt-4">
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <button
                 onClick={handleCloseModal}
                 className="bg-white border-2 border-[#7a7461] text-[#14213d] py-3.5 rounded-2xl text-xl font-extrabold shadow-sm active:scale-95 transition cursor-pointer"
@@ -422,9 +516,15 @@ export const PanelContacts: React.FC = () => {
 
               <button
                 onClick={handleSaveModal}
-                className="bg-[#0b4f9e] text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md active:scale-95 transition cursor-pointer"
+                disabled={isSavingContacts}
+                className="bg-[#0b4f9e] hover:bg-[#093f7e] text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                Listo
+                {isSavingContacts ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <Check className="w-6 h-6 stroke-[3]" />
+                )}
+                <span>Guardar contacto</span>
               </button>
             </div>
           </div>
