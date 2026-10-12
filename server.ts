@@ -241,6 +241,161 @@ const installTokens: Record<string, {
 // --- API Endpoints ---
 
 // Shared location APIs
+app.get('/api/geocode', async (req, res) => {
+  const query = (req.query.q as string || '').trim();
+  if (!query) {
+    return res.status(400).json({ success: false, message: 'Parámetro de búsqueda q requerido', results: [] });
+  }
+
+  try {
+    const nominatimHeaders = {
+      'User-Agent': 'EsSimple-FamilySafetyApp/1.0 (soporte@essimple.app)',
+      'Accept': 'application/json',
+      'Accept-Language': 'es,es-CO;q=0.9,en;q=0.5',
+    };
+
+    const queriesToTry = [query];
+    const hasCountry = /colombia|bogot|medell|cali|españa|madrid|argentina|mexico|chile|peru|usa|united states|florida|miami/i.test(query);
+    if (!hasCountry) {
+      queriesToTry.push(`${query}, Colombia`);
+    }
+
+    let parsedResults: Array<{ lat: number; lng: number; displayName: string; shortAddress: string }> = [];
+
+    for (const q of queriesToTry) {
+      try {
+        const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`;
+        const nomRes = await fetch(nomUrl, { headers: nominatimHeaders, signal: AbortSignal.timeout(4000) });
+        if (nomRes.ok) {
+          const items: any = await nomRes.json();
+          if (Array.isArray(items) && items.length > 0) {
+            parsedResults = items.map(item => {
+              const parts = (item.display_name || '').split(',').map((s: string) => s.trim());
+              const short = parts.slice(0, 3).join(', ');
+              return {
+                lat: parseFloat(item.lat),
+                lng: parseFloat(item.lon),
+                displayName: item.display_name,
+                shortAddress: short || item.display_name,
+              };
+            });
+            break;
+          }
+        }
+      } catch {
+        // Try next
+      }
+    }
+
+    // Photon fallback if Nominatim has 0 results
+    if (parsedResults.length === 0) {
+      try {
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=es`;
+        const photonRes = await fetch(photonUrl, { signal: AbortSignal.timeout(4000) });
+        if (photonRes.ok) {
+          const data: any = await photonRes.json();
+          if (data && data.features && data.features.length > 0) {
+            parsedResults = data.features.map((f: any) => {
+              const coords = f.geometry?.coordinates || [0, 0];
+              const p = f.properties || {};
+              const title = [p.name, p.street, p.housenumber, p.city || p.county, p.country].filter(Boolean).join(', ');
+              return {
+                lat: coords[1],
+                lng: coords[0],
+                displayName: title || query,
+                shortAddress: [p.name || p.street, p.city || p.state].filter(Boolean).join(', ') || query,
+              };
+            });
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    // Smart Preset fallback for common Latin American / Colombian queries if services fail
+    if (parsedResults.length === 0) {
+      const lower = query.toLowerCase();
+      const presets: Record<string, { lat: number; lng: number; name: string }> = {
+        'bogota': { lat: 4.6533, lng: -74.0836, name: 'Bogotá, Colombia' },
+        'bogotá': { lat: 4.6533, lng: -74.0836, name: 'Bogotá, Colombia' },
+        'carrera 7': { lat: 4.6500, lng: -74.0620, name: 'Carrera 7, Bogotá, Colombia' },
+        'calle 100': { lat: 4.6853, lng: -74.0531, name: 'Calle 100, Bogotá, Colombia' },
+        'calle 26': { lat: 4.6360, lng: -74.0900, name: 'Calle 26 / Av. El Dorado, Bogotá' },
+        'medellin': { lat: 6.2442, lng: -75.5812, name: 'Medellín, Antioquia, Colombia' },
+        'medellín': { lat: 6.2442, lng: -75.5812, name: 'Medellín, Antioquia, Colombia' },
+        'parque lleras': { lat: 6.2088, lng: -75.5684, name: 'Parque Lleras, El Poblado, Medellín' },
+        'el poblado': { lat: 6.2088, lng: -75.5684, name: 'El Poblado, Medellín, Colombia' },
+        'cali': { lat: 3.4516, lng: -76.5320, name: 'Cali, Valle del Cauca, Colombia' },
+        'barranquilla': { lat: 10.9685, lng: -74.7813, name: 'Barranquilla, Atlántico, Colombia' },
+        'bucaramanga': { lat: 7.1254, lng: -73.1198, name: 'Bucaramanga, Santander, Colombia' },
+        'cartagena': { lat: 10.3910, lng: -75.4794, name: 'Cartagena de Indias, Bolívar, Colombia' },
+        'madrid': { lat: 40.4168, lng: -3.7038, name: 'Madrid, España' },
+        'buenos aires': { lat: -34.6037, lng: -58.3816, name: 'Buenos Aires, Argentina' },
+        'miami': { lat: 25.7617, lng: -80.1918, name: 'Miami, Florida, USA' },
+      };
+
+      for (const [key, val] of Object.entries(presets)) {
+        if (lower.includes(key)) {
+          parsedResults.push({
+            lat: val.lat,
+            lng: val.lng,
+            displayName: val.name,
+            shortAddress: val.name,
+          });
+          break;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      query,
+      count: parsedResults.length,
+      results: parsedResults,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : 'Error al buscar dirección',
+      results: [],
+    });
+  }
+});
+
+app.get('/api/reverse-geocode', async (req, res) => {
+  const lat = parseFloat(req.query.lat as string);
+  const lng = parseFloat(req.query.lng as string);
+  if (isNaN(lat) || isNaN(lng)) {
+    return res.status(400).json({ success: false, message: 'Latitud y longitud requeridas' });
+  }
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'EsSimple-FamilySafetyApp/1.0 (soporte@essimple.app)',
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(4000),
+    });
+    if (response.ok) {
+      const data: any = await response.json();
+      const parts = (data.display_name || '').split(',').map((s: string) => s.trim());
+      const shortAddress = parts.slice(0, 3).join(', ');
+      return res.json({
+        success: true,
+        displayName: data.display_name,
+        address: shortAddress || data.display_name,
+      });
+    }
+    res.json({ success: true, address: `Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+  } catch {
+    res.json({ success: true, address: `Coordenadas: ${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+  }
+});
+
+// Shared location APIs
 app.get('/api/share/location/:token', (req, res) => {
   const token = req.params.token;
   const data = sharedLocationTokens[token];

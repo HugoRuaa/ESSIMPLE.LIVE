@@ -33,6 +33,11 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const markerRef = useRef<L.Marker | null>(null);
   const accuracyCircleRef = useRef<L.Circle | null>(null);
   const safeZoneCircleRef = useRef<L.Circle | null>(null);
+  const onLocationSelectRef = useRef(onLocationSelect);
+
+  useEffect(() => {
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -58,15 +63,21 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
       mapInstanceRef.current = map;
 
-      if (interactive && onLocationSelect) {
+      if (interactive) {
         map.on('click', (e: L.LeafletMouseEvent) => {
-          onLocationSelect(e.latlng.lat, e.latlng.lng);
+          if (onLocationSelectRef.current) {
+            onLocationSelectRef.current(e.latlng.lat, e.latlng.lng);
+          }
         });
       }
     }
 
     const map = mapInstanceRef.current;
-    map.setView(center, zoom);
+    try {
+      map.flyTo(center, zoom, { duration: 0.8 });
+    } catch {
+      map.setView(center, zoom);
+    }
 
     // Create custom SVG markers
     let icon: L.DivIcon;
