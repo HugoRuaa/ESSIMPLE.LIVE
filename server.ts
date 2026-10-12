@@ -124,6 +124,68 @@ app.post('/api/familias/login', async (req, res) => {
   }
 });
 
+// Endpoint para obtener contactos de una familia
+app.get('/api/familias/:familiaId/contacts', async (req, res) => {
+  const { familiaId } = req.params;
+  if (!supabaseServerClient || !familiaId) {
+    return res.json({ success: true, data: [] });
+  }
+  try {
+    const { data, error } = await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('contactos')
+      .select('*')
+      .eq('familia_id', familiaId)
+      .order('display_order', { ascending: true });
+
+    if (error) {
+      console.warn('[Supabase Contacts Fetch]:', error.message);
+      return res.json({ success: true, data: [] });
+    }
+    return res.json({ success: true, data: data || [] });
+  } catch (err) {
+    return res.json({ success: true, data: [] });
+  }
+});
+
+// Endpoint para guardar/actualizar contactos de una familia
+app.post('/api/familias/:familiaId/contacts', async (req, res) => {
+  const { familiaId } = req.params;
+  const { contacts } = req.body;
+  if (!supabaseServerClient || !familiaId) {
+    return res.json({ success: false, message: 'Servidor no disponible' });
+  }
+  try {
+    // Eliminar anteriores
+    await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('contactos')
+      .delete()
+      .eq('familia_id', familiaId);
+
+    if (Array.isArray(contacts) && contacts.length > 0) {
+      const rows = contacts.map((c: any) => ({
+        familia_id: familiaId,
+        name: c.name,
+        phone: c.phone,
+        photo_url: c.photoUrl || null,
+        avatar_color: c.avatarColor,
+        is_emergency: !!c.isEmergency,
+        is_safe_zone: !!c.isSafeZone,
+        is_low_battery: !!c.isLowBattery,
+        display_order: c.order || 0,
+      }));
+      await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('contactos')
+        .insert(rows);
+    }
+    return res.json({ success: true });
+  } catch (err: unknown) {
+    return res.json({ success: false, message: err instanceof Error ? err.message : 'Error al guardar contactos' });
+  }
+});
+
 // In-memory data store for live link sharing between screens
 const sharedLocationTokens: Record<string, {
   contactName: string;

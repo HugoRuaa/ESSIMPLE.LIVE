@@ -55,7 +55,8 @@ interface AppContextType {
   // Account & Auth
   account: UserAccount;
   login: (email: string, password?: string) => Promise<{ success: boolean; message?: string }>;
-  signup: (email: string, pin: string, password?: string) => Promise<{ success: boolean; message?: string }>;
+  signup: (email: string, pin: string, password?: string, personName?: string) => Promise<{ success: boolean; message?: string }>;
+  loginDemo: () => void;
   logout: () => void;
   acceptTerms: () => void;
 
@@ -67,7 +68,7 @@ interface AppContextType {
   sendVoiceMessage: (recipientName: string, durationSeconds: number, audioBlobUrl?: string) => string;
 }
 
-const initialContacts: Contact[] = [
+const demoContacts: Contact[] = [
   {
     id: 'c1',
     name: 'Laura',
@@ -130,7 +131,7 @@ const initialContacts: Contact[] = [
   },
 ];
 
-const initialEvents: EventItem[] = [
+const demoEvents: EventItem[] = [
   {
     id: 'e1',
     type: 'sos',
@@ -213,7 +214,7 @@ const initialEvents: EventItem[] = [
   },
 ];
 
-const initialChanges: ChangeItem[] = [
+const demoChanges: ChangeItem[] = [
   {
     id: 'ch1',
     description: 'Cambió el radio de la zona segura a 300 m',
@@ -246,7 +247,7 @@ const initialChanges: ChangeItem[] = [
   },
 ];
 
-const initialSettings: AppSettings = {
+const demoSettings: AppSettings = {
   personName: 'Álvaro',
   fontSize: 'grande',
   countryCode: '57',
@@ -263,22 +264,71 @@ const initialSettings: AppSettings = {
   safeZoneRadius: 300,
 };
 
+// Configuración limpia por defecto para cuentas nuevas (información vacía)
+const cleanEmptySettings: AppSettings = {
+  personName: 'Álvaro',
+  fontSize: 'grande',
+  countryCode: '57',
+  exitPin: '1234',
+  homeAddress: '',
+  homeCenter: { lat: 6.2088, lng: -75.5684 },
+  travelMode: 'pie',
+  safeZoneActive: false,
+  safeZoneCenter: {
+    lat: 6.2088,
+    lng: -75.5684,
+    address: '',
+  },
+  safeZoneRadius: 300,
+};
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Contacts state
+  // Contacts state: vacía por defecto para nuevas cuentas, solo datos si es demo activa o guardada previamente
   const [contacts, setContacts] = useState<Contact[]>(() => {
+    const savedAccount = localStorage.getItem('essimple_account');
+    if (savedAccount) {
+      try {
+        const acc = JSON.parse(savedAccount);
+        if (acc?.email === 'demo@essimple.live') {
+          const saved = localStorage.getItem('essimple_contacts');
+          return saved ? JSON.parse(saved) : demoContacts;
+        }
+      } catch {}
+    }
     const saved = localStorage.getItem('essimple_contacts');
-    return saved ? JSON.parse(saved) : initialContacts;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
   });
 
   const [stagedContacts, setStagedContacts] = useState<Contact[]>(contacts);
   const [hasContactChanges, setHasContactChanges] = useState(false);
 
-  // Settings state
+  // Settings state: vacía por defecto para cuentas nuevas
   const [settings, setSettings] = useState<AppSettings>(() => {
+    const savedAccount = localStorage.getItem('essimple_account');
+    if (savedAccount) {
+      try {
+        const acc = JSON.parse(savedAccount);
+        if (acc?.email === 'demo@essimple.live') {
+          const saved = localStorage.getItem('essimple_settings');
+          return saved ? JSON.parse(saved) : demoSettings;
+        }
+      } catch {}
+    }
     const saved = localStorage.getItem('essimple_settings');
-    return saved ? JSON.parse(saved) : initialSettings;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return cleanEmptySettings;
   });
 
   // Phone status state
@@ -308,31 +358,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     },
   });
 
-  // Events & Changes
+  // Events & Changes: vacíos por defecto para nuevas cuentas
   const [events, setEvents] = useState<EventItem[]>(() => {
+    const savedAccount = localStorage.getItem('essimple_account');
+    if (savedAccount) {
+      try {
+        const acc = JSON.parse(savedAccount);
+        if (acc?.email === 'demo@essimple.live') {
+          const saved = localStorage.getItem('essimple_events');
+          return saved ? JSON.parse(saved) : demoEvents;
+        }
+      } catch {}
+    }
     const saved = localStorage.getItem('essimple_events');
-    return saved ? JSON.parse(saved) : initialEvents;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
   });
 
   const [changes, setChanges] = useState<ChangeItem[]>(() => {
+    const savedAccount = localStorage.getItem('essimple_account');
+    if (savedAccount) {
+      try {
+        const acc = JSON.parse(savedAccount);
+        if (acc?.email === 'demo@essimple.live') {
+          const saved = localStorage.getItem('essimple_changes');
+          return saved ? JSON.parse(saved) : demoChanges;
+        }
+      } catch {}
+    }
     const saved = localStorage.getItem('essimple_changes');
-    return saved ? JSON.parse(saved) : initialChanges;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
   });
 
   // Emergency banner
-  const [activeEmergencyBanner, setActiveEmergencyBanner] = useState<EventItem | null>(() => {
-    // Show top recent emergency if within 24h
-    const sos = initialEvents.find(e => e.type === 'sos' && (Date.now() - e.createdAtMs) < 24 * 3600 * 1000);
-    return sos || null;
-  });
+  const [activeEmergencyBanner, setActiveEmergencyBanner] = useState<EventItem | null>(null);
 
   // Account
   const [account, setAccount] = useState<UserAccount>(() => {
     const saved = localStorage.getItem('essimple_account');
-    return saved ? JSON.parse(saved) : {
-      email: 'laura@correo.com',
-      isAuthenticated: true,
-      termsAccepted: true,
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Only restore if user genuinely registered/logged in with a real account (not mock laura@correo.com)
+        if (parsed && parsed.isAuthenticated && parsed.email && parsed.email !== 'laura@correo.com') {
+          return parsed;
+        }
+      } catch {
+        // ignore error
+      }
+    }
+    // Por defecto para cualquier persona que entra por primera vez: sin sesión (debe registrarse)
+    return {
+      email: '',
+      isAuthenticated: false,
+      termsAccepted: false,
     };
   });
 
@@ -371,9 +461,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const saveContactChanges = () => {
-    // Validate: max 5 emergency contacts, at least 1 emergency contact
+    // Validate: max 5 emergency contacts; if contacts exist, at least 1 emergency contact
     const emergencyCount = stagedContacts.filter(c => c.isEmergency).length;
-    if (emergencyCount === 0) {
+    if (stagedContacts.length > 0 && emergencyCount === 0) {
       alert('Debe haber al menos una persona que reciba las alertas de emergencia.');
       return;
     }
@@ -551,12 +641,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }));
         }
 
-        // Cargar contactos guardados en Supabase (esquema essimple) si existen
+        // Cargar contactos guardados en Supabase (si no tiene, queda [] vacía)
         const loadedContacts = await fetchFamilyContacts(res.familiaId);
-        if (loadedContacts && loadedContacts.length > 0) {
-          setContacts(loadedContacts);
-          setStagedContacts(loadedContacts);
-        }
+        const contactList = loadedContacts || [];
+        setContacts(contactList);
+        setStagedContacts(contactList);
+        setHasContactChanges(false);
+        localStorage.setItem('essimple_contacts', JSON.stringify(contactList));
+
+        // Cargar eventos asociados a esta familia
+        const savedEvents = localStorage.getItem(`essimple_events_${res.familiaId}`);
+        const eventList = savedEvents ? JSON.parse(savedEvents) : [];
+        setEvents(eventList);
+        localStorage.setItem('essimple_events', JSON.stringify(eventList));
+
+        const savedChanges = localStorage.getItem(`essimple_changes_${res.familiaId}`);
+        const changeList = savedChanges ? JSON.parse(savedChanges) : [];
+        setChanges(changeList);
+        localStorage.setItem('essimple_changes', JSON.stringify(changeList));
+        setActiveEmergencyBanner(null);
       }
       setAccount({ email: email.trim().toLowerCase(), isAuthenticated: true, termsAccepted: true });
       return { success: true };
@@ -565,32 +668,100 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const signup = async (email: string, pin: string, password = 'password123'): Promise<{ success: boolean; message?: string }> => {
+  const signup = async (
+    email: string,
+    pin: string,
+    password = 'password123',
+    personName = 'Álvaro'
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const res = await registerFamilyByCode(cleanEmail, password, pin);
+      const accompaniedName = personName?.trim() || 'Álvaro';
+      const cleanPin = pin?.trim() || '1234';
+
+      const res = await registerFamilyByCode(cleanEmail, password, cleanPin, accompaniedName);
       if (!res.success) {
         return { success: false, message: res.message || 'No se pudo registrar la familia en Supabase.' };
       }
 
+      // Toda la información de la nueva cuenta familiar DEBE ESTAR COMPLETAMENTE VACÍA
+      const updatedSettings: AppSettings = {
+        ...cleanEmptySettings,
+        personName: accompaniedName,
+        exitPin: cleanPin,
+        safeZoneActive: false,
+        homeAddress: '',
+      };
+
+      // Resetear estados a vacío absoluto
+      setContacts([]);
+      setStagedContacts([]);
+      setHasContactChanges(false);
+      setEvents([]);
+      setChanges([]);
+      setActiveEmergencyBanner(null);
+      setSettings(updatedSettings);
+
+      // Limpiar y guardar en localStorage
+      localStorage.setItem('essimple_contacts', JSON.stringify([]));
+      localStorage.setItem('essimple_events', JSON.stringify([]));
+      localStorage.setItem('essimple_changes', JSON.stringify([]));
+      localStorage.setItem('essimple_settings', JSON.stringify(updatedSettings));
+
       if (res.familiaId) {
         localStorage.setItem('essimple_family_id', res.familiaId);
-        // Sembrar contactos y casa/zona iniciales en Supabase para la nueva familia
-        syncContactsToSupabase(res.familiaId, contacts);
-        syncHomeZoneToSupabase(res.familiaId, settings);
+        // En Supabase, la lista de contactos queda vacía (0 contactos)
+        syncContactsToSupabase(res.familiaId, []);
+        syncHomeZoneToSupabase(res.familiaId, updatedSettings);
       }
-      setAccount({ email: cleanEmail, isAuthenticated: true, termsAccepted: false });
-      if (pin && pin.length === 4) {
-        setSettings(prev => ({ ...prev, exitPin: pin }));
-      }
+
+      const newAccount = { email: cleanEmail, isAuthenticated: true, termsAccepted: true };
+      localStorage.setItem('essimple_account', JSON.stringify(newAccount));
+      setAccount(newAccount);
+
       return { success: true, message: res.message };
     } catch (err: unknown) {
       return { success: false, message: err instanceof Error ? err.message : 'Error al registrar familia' };
     }
   };
 
+  const loginDemo = () => {
+    setContacts(demoContacts);
+    setStagedContacts(demoContacts);
+    setHasContactChanges(false);
+    setEvents(demoEvents);
+    setChanges(demoChanges);
+    setSettings(demoSettings);
+    const sos = demoEvents.find(e => e.type === 'sos');
+    setActiveEmergencyBanner(sos || null);
+
+    const demoAccount = {
+      email: 'demo@essimple.live',
+      isAuthenticated: true,
+      termsAccepted: true,
+    };
+    localStorage.setItem('essimple_account', JSON.stringify(demoAccount));
+    localStorage.setItem('essimple_contacts', JSON.stringify(demoContacts));
+    localStorage.setItem('essimple_events', JSON.stringify(demoEvents));
+    localStorage.setItem('essimple_changes', JSON.stringify(demoChanges));
+    localStorage.setItem('essimple_settings', JSON.stringify(demoSettings));
+    setAccount(demoAccount);
+  };
+
   const logout = () => {
-    setAccount(prev => ({ ...prev, isAuthenticated: false }));
+    localStorage.removeItem('essimple_account');
+    localStorage.removeItem('essimple_family_id');
+    localStorage.removeItem('essimple_contacts');
+    localStorage.removeItem('essimple_events');
+    localStorage.removeItem('essimple_changes');
+    setContacts([]);
+    setStagedContacts([]);
+    setHasContactChanges(false);
+    setEvents([]);
+    setChanges([]);
+    setActiveEmergencyBanner(null);
+    setSettings(cleanEmptySettings);
+    setAccount({ email: '', isAuthenticated: false, termsAccepted: false });
   };
 
   const acceptTerms = () => {
@@ -688,6 +859,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         account,
         login,
         signup,
+        loginDemo,
         logout,
         acceptTerms,
 

@@ -98,7 +98,15 @@ export const PanelActivity: React.FC = () => {
 
           {/* List of events matching mockup [30] */}
           <div className="space-y-3">
-            {filteredEvents.slice(0, visibleCount).map(event => (
+            {filteredEvents.length === 0 ? (
+              <div className="bg-white border-2 border-dashed border-[#ddd5c3] rounded-3xl p-8 text-center space-y-2">
+                <p className="text-2xl font-extrabold text-[#14213d]">No hay eventos registrados</p>
+                <p className="text-lg font-bold text-[#7a7461]">
+                  Esta cuenta familiar aún no tiene registros de actividad ni alertas.
+                </p>
+              </div>
+            ) : (
+              filteredEvents.slice(0, visibleCount).map(event => (
               <div
                 key={event.id}
                 className={`p-4 rounded-3xl border-2 transition ${
@@ -124,7 +132,8 @@ export const PanelActivity: React.FC = () => {
                   </div>
                 </div>
               </div>
-            ))}
+            ))
+            )}
           </div>
 
           {filteredEvents.length > visibleCount && (
@@ -141,7 +150,15 @@ export const PanelActivity: React.FC = () => {
       {/* Tab 2: Cambios [31] */}
       {activeTab === 'cambios' && (
         <div className="space-y-3">
-          {changes.map(change => (
+          {changes.length === 0 ? (
+            <div className="bg-white border-2 border-dashed border-[#ddd5c3] rounded-3xl p-8 text-center space-y-2">
+              <p className="text-2xl font-extrabold text-[#14213d]">Sin historial de cambios</p>
+              <p className="text-lg font-bold text-[#7a7461]">
+                Las modificaciones que hagas en contactos, zonas o ajustes se guardarán aquí.
+              </p>
+            </div>
+          ) : (
+            changes.map(change => (
             <div
               key={change.id}
               className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-4 shadow-sm space-y-1"
@@ -153,14 +170,17 @@ export const PanelActivity: React.FC = () => {
                 {change.timestamp}
               </p>
             </div>
-          ))}
+          ))
+          )}
 
-          <button
-            onClick={() => alert('No hay más cambios anteriores registrados.')}
-            className="w-full bg-white border-2 border-[#7a7461] rounded-2xl py-3.5 text-xl font-extrabold text-[#14213d] shadow-sm cursor-pointer active:scale-95 transition mt-2"
-          >
-            Cargar más
-          </button>
+          {changes.length > 0 && (
+            <button
+              onClick={() => alert('No hay más cambios anteriores registrados.')}
+              className="w-full bg-white border-2 border-[#7a7461] rounded-2xl py-3.5 text-xl font-extrabold text-[#14213d] shadow-sm cursor-pointer active:scale-95 transition mt-2"
+            >
+              Cargar más
+            </button>
+          )}
         </div>
       )}
     </div>

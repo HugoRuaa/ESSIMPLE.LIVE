@@ -147,8 +147,23 @@ export const loginFamilyByCode = async (
 
 // 3. Sincronizar Contactos con essimple.contactos
 export const syncContactsToSupabase = async (familiaId: string, contacts: Contact[]) => {
+  if (!familiaId || familiaId === 'local-family-id') return;
+
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${familiaId}/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contacts }),
+    });
+    if (res.ok) return;
+  } catch {
+    // fallback to direct client
+  }
+
+  // Intento 2: Directo Supabase
   const client = getSupabaseClient();
-  if (!client || !familiaId || familiaId === 'local-family-id') return;
+  if (!client) return;
 
   try {
     await client.schema(DB_SCHEMA).from('contactos').delete().eq('familia_id', familiaId);
@@ -175,8 +190,33 @@ export const syncContactsToSupabase = async (familiaId: string, contacts: Contac
 
 // 4. Leer Contactos desde essimple.contactos
 export const fetchFamilyContacts = async (familiaId: string): Promise<Contact[] | null> => {
+  if (!familiaId || familiaId === 'local-family-id') return null;
+
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${familiaId}/contacts`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && Array.isArray(json.data)) {
+        return json.data.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          phone: item.phone,
+          photoUrl: item.photo_url || undefined,
+          avatarColor: item.avatar_color,
+          isEmergency: item.is_emergency,
+          isSafeZone: item.is_safe_zone,
+          isLowBattery: item.is_low_battery,
+          order: item.display_order,
+        }));
+      }
+    }
+  } catch {
+    // fallback to direct client
+  }
+
   const client = getSupabaseClient();
-  if (!client || !familiaId || familiaId === 'local-family-id') return null;
+  if (!client) return null;
 
   try {
     const { data, error } = await client

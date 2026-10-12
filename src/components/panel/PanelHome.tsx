@@ -23,6 +23,7 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
     activeEmergencyBanner,
     dismissEmergencyBanner,
     events,
+    contacts,
   } = useApp();
 
   const recentEvents = events.slice(0, 3);
@@ -144,26 +145,71 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
             <span>Instalar Simple en el teléfono familiar</span>
           </div>
 
-          <div className="flex items-center gap-3 text-[#0b6b3a]">
-            <CheckCircle className="w-6 h-6 shrink-0" />
-            <span>Agregar personas a la lista de contactos</span>
+          {/* Contactos */}
+          <div className="flex items-center gap-3">
+            {contacts.length > 0 ? (
+              <>
+                <CheckCircle className="w-6 h-6 shrink-0 text-[#0b6b3a]" />
+                <span className="text-[#0b6b3a]">
+                  Agregar personas a la lista de contactos ({contacts.length} {contacts.length === 1 ? 'contacto' : 'contactos'})
+                </span>
+              </>
+            ) : (
+              <button
+                onClick={() => onNavigateTab('contactos')}
+                className="flex items-center gap-3 text-left w-full hover:text-[#0b4f9e] transition cursor-pointer"
+              >
+                <div className="w-6 h-6 rounded-full border-2 border-[#7a7461] shrink-0" />
+                <span className="text-[#0b4f9e] underline">
+                  Agregar personas a la lista de contactos (pendiente)
+                </span>
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 text-[#0b6b3a]">
-            <CheckCircle className="w-6 h-6 shrink-0" />
-            <span>Elegir a quién avisar en emergencias (SOS)</span>
+          {/* Emergencia */}
+          <div className="flex items-center gap-3">
+            {contacts.some(c => c.isEmergency) ? (
+              <>
+                <CheckCircle className="w-6 h-6 shrink-0 text-[#0b6b3a]" />
+                <span className="text-[#0b6b3a]">
+                  Elegir a quién avisar en emergencias (SOS)
+                </span>
+              </>
+            ) : (
+              <button
+                onClick={() => onNavigateTab('contactos')}
+                className="flex items-center gap-3 text-left w-full hover:text-[#0b4f9e] transition cursor-pointer"
+              >
+                <div className="w-6 h-6 rounded-full border-2 border-[#7a7461] shrink-0" />
+                <span className="text-[#0b4f9e] underline">
+                  Elegir a quién avisar en emergencias (SOS) (pendiente)
+                </span>
+              </button>
+            )}
           </div>
 
-          {/* Pending item with click action */}
-          <button
-            onClick={() => onNavigateTab('casa')}
-            className="flex items-center gap-3 text-left w-full hover:text-[#0b4f9e] transition cursor-pointer"
-          >
-            <div className="w-6 h-6 rounded-full border-2 border-[#7a7461] shrink-0" />
-            <span className="text-[#0b4f9e] underline">
-              Configurar dirección de casa y zona segura
-            </span>
-          </button>
+          {/* Dirección y Zona segura */}
+          <div className="flex items-center gap-3">
+            {settings.homeAddress ? (
+              <>
+                <CheckCircle className="w-6 h-6 shrink-0 text-[#0b6b3a]" />
+                <span className="text-[#0b6b3a]">
+                  Dirección de casa configurada
+                </span>
+              </>
+            ) : (
+              <button
+                onClick={() => onNavigateTab('casa')}
+                className="flex items-center gap-3 text-left w-full hover:text-[#0b4f9e] transition cursor-pointer"
+              >
+                <div className="w-6 h-6 rounded-full border-2 border-[#7a7461] shrink-0" />
+                <span className="text-[#0b4f9e] underline">
+                  Configurar dirección de casa y zona segura (pendiente)
+                </span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -172,7 +218,15 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
         <h2 className="text-2xl font-extrabold text-[#14213d]">Últimos eventos</h2>
 
         <div className="space-y-3">
-          {recentEvents.map(event => (
+          {recentEvents.length === 0 ? (
+            <div className="p-5 rounded-2xl bg-[#f8f7f4] border border-[#ddd5c3] text-center space-y-1">
+              <p className="text-xl font-extrabold text-[#14213d]">Sin eventos recientes</p>
+              <p className="text-base font-bold text-[#7a7461]">
+                Aquí se registrarán automáticamente las llamadas, salidas de zona y alertas del teléfono.
+              </p>
+            </div>
+          ) : (
+            recentEvents.map(event => (
             <div
               key={event.id}
               className={`p-4 rounded-2xl border ${
@@ -192,7 +246,8 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         <button

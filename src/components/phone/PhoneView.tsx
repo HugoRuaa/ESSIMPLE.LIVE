@@ -294,7 +294,20 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel }) => {
 
         {/* Contacts List matching [1] & [2] */}
         <div className="space-y-3 pt-1">
-          {visibleContacts.map(contact => (
+          {visibleContacts.length === 0 ? (
+            <div className="bg-white border-2 border-dashed border-[#ddd5c3] rounded-3xl p-8 text-center space-y-3 shadow-sm">
+              <div className="w-16 h-16 mx-auto bg-[#eef4fb] rounded-full flex items-center justify-center text-[#0b4f9e]">
+                <Phone className="w-8 h-8 stroke-[2.5]" />
+              </div>
+              <p className="text-2xl font-black text-[#14213d]">
+                Sin contactos agregados
+              </p>
+              <p className="text-lg font-bold text-[#7a7461]">
+                Los contactos que la familia agregue desde el Panel aparecerán aquí como botones grandes para llamar o escribir.
+              </p>
+            </div>
+          ) : (
+            visibleContacts.map(contact => (
             <div
               key={contact.id}
               onClick={() => handleSelectContact(contact)}
@@ -310,7 +323,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel }) => {
                 {contact.name}
               </span>
             </div>
-          ))}
+          ))
+          )}
 
           {/* Más contactos button */}
           {contacts.length > 5 && !showAllContacts && (

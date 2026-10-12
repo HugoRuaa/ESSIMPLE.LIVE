@@ -161,7 +161,29 @@ export const PanelContacts: React.FC = () => {
 
       {/* Contact Cards List [27] */}
       <div className="space-y-4 pt-1">
-        {stagedContacts.map((contact, index) => (
+        {stagedContacts.length === 0 ? (
+          <div className="bg-white border-2 border-dashed border-[#ddd5c3] rounded-3xl p-8 text-center space-y-4 shadow-sm">
+            <div className="w-16 h-16 mx-auto bg-[#eef4fb] rounded-full flex items-center justify-center text-[#0b4f9e]">
+              <Plus className="w-8 h-8 stroke-[2.5]" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-2xl font-extrabold text-[#14213d]">
+                No hay contactos registrados todavía
+              </h3>
+              <p className="text-lg font-bold text-[#7a7461] max-w-md mx-auto">
+                Tu lista familiar está vacía. Toca el botón de arriba para agregar a los familiares, cuidadores o médicos.
+              </p>
+            </div>
+            <button
+              onClick={handleOpenAdd}
+              className="bg-[#0b4f9e] hover:bg-[#093f7e] text-white py-3 px-6 rounded-2xl text-lg font-extrabold inline-flex items-center gap-2 shadow-sm cursor-pointer transition active:scale-95"
+            >
+              <Plus className="w-5 h-5 stroke-[2.5]" />
+              <span>Agregar primer contacto</span>
+            </button>
+          </div>
+        ) : (
+          stagedContacts.map((contact, index) => (
           <div
             key={contact.id}
             className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4"
@@ -266,7 +288,8 @@ export const PanelContacts: React.FC = () => {
               </button>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
 
       {/* Sticky Bottom Save / Discard Bar [27] */}

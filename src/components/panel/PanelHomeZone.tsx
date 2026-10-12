@@ -90,7 +90,7 @@ export const PanelHomeZone: React.FC = () => {
         <div className="flex items-start gap-3 bg-[#f8f7f4] p-3.5 rounded-2xl border border-[#ddd5c3]">
           <Home className="w-6 h-6 text-[#0b6b3a] shrink-0 mt-0.5" />
           <p className="text-xl font-extrabold text-[#14213d] leading-snug">
-            <span className="font-bold">Casa:</span> {homeAddress}
+            <span className="font-bold">Casa:</span> {homeAddress || 'No configurada todavía (busca tu dirección abajo)'}
           </p>
         </div>
 
