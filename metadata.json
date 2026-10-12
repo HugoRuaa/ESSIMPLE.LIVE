@@ -1,0 +1,7 @@
+{
+  "name": "essimple.live - Teléfono Adaptado y Cuidado Familiar",
+  "description": "App para que una persona mayor use su celular sin enredarse, con botones grandes, SOS, mensajes de voz, mapas en tiempo real y panel de supervisión familiar.",
+  "requestFramePermissions": ["geolocation", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
