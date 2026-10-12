@@ -82,21 +82,21 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     // Create custom SVG markers
     let icon: L.DivIcon;
     if (markerType === 'home') {
-      // Green house pin with grab cursor and distinct drop shadow
+      // Vivid Blue house pin with grab cursor, bold white border and eye-catching drop shadow
       icon = L.divIcon({
         className: 'custom-home-pin',
         html: `
-          <div style="transform: translate(-19px, -42px); width: 38px; height: 46px; display: flex; flex-direction: column; align-items: center; cursor: grab;">
-            <div style="background-color: #0b6b3a; width: 38px; height: 38px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); border: 2.5px solid white;">
-              <svg style="transform: rotate(45deg); width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
+          <div style="transform: translate(-20px, -44px); width: 40px; height: 48px; display: flex; flex-direction: column; align-items: center; cursor: grab;">
+            <div style="background: linear-gradient(135deg, #2563eb, #0b4f9e); width: 40px; height: 40px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(11, 79, 158, 0.55); border: 1px solid rgba(255,255,255,0.4); transition: transform 0.15s ease;">
+              <svg style="transform: rotate(45deg); width: 22px; height: 22px; fill: white;" viewBox="0 0 24 24">
                 <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
               </svg>
             </div>
-            <div style="width: 8px; height: 4px; background: rgba(0,0,0,0.3); border-radius: 50%; filter: blur(1px); margin-top: 1px;"></div>
+            <div style="width: 10px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; filter: blur(1px); margin-top: 3px;"></div>
           </div>
         `,
-        iconSize: [38, 46],
-        iconAnchor: [19, 44],
+        iconSize: [40, 48],
+        iconAnchor: [20, 46],
       });
     } else {
       // Blue pulsing user dot as in screens [13] and [38]
@@ -143,14 +143,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       markerRef.current = marker;
     }
 
-    if (markerLabel && markerRef.current) {
+    // Clean up any tooltip so the icon is completely unblocked and clearly visible
+    if (markerRef.current) {
       markerRef.current.unbindTooltip();
-      markerRef.current.bindTooltip(markerLabel, {
-        permanent: true,
-        direction: 'top',
-        className: 'leaflet-home-tooltip',
-        offset: [0, -42],
-      });
     }
 
     // Accuracy circle (blue shade)

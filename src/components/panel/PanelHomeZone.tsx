@@ -6,10 +6,8 @@ import {
   Bus,
   Check,
   Loader2,
-  MapPin,
   Navigation,
   CheckCircle2,
-  AlertCircle,
 } from 'lucide-react';
 import { LeafletMap } from '../map/LeafletMap';
 import { useApp } from '../../context/AppContext';
@@ -45,24 +43,14 @@ export const PanelHomeZone: React.FC = () => {
   // Search states & feedback
   const [isSearchingHome, setIsSearchingHome] = useState(false);
   const [isSearchingSafeZone, setIsSearchingSafeZone] = useState(false);
-  const [homeSearchResults, setHomeSearchResults] = useState<GeocodeResult[]>([]);
-  const [searchFeedback, setSearchFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSavedMessage, setIsSavedMessage] = useState(false);
 
   // Address search using server-side geocoding API
   const handleSearchHome = async () => {
     const query = homeSearchQuery.trim();
-    if (!query) {
-      setSearchFeedback({
-        type: 'error',
-        text: 'Escribe una dirección para buscar (ej: Carrera 7 Bogotá o Calle 100).',
-      });
-      return;
-    }
+    if (!query) return;
 
     setIsSearchingHome(true);
-    setSearchFeedback(null);
-    setHomeSearchResults([]);
 
     try {
       const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
@@ -72,22 +60,9 @@ export const PanelHomeZone: React.FC = () => {
         const topResult: GeocodeResult = data.results[0];
         setHomeCoords([topResult.lat, topResult.lng]);
         setHomeAddress(topResult.shortAddress || topResult.displayName);
-        setHomeSearchResults(data.results);
-        setSearchFeedback({
-          type: 'success',
-          text: `✓ Ubicación encontrada: ${topResult.shortAddress}`,
-        });
-      } else {
-        setSearchFeedback({
-          type: 'error',
-          text: `No se encontró "${query}". Intenta agregando ciudad (ej: ${query} Bogotá) o toca el mapa para ubicarla.`,
-        });
       }
     } catch {
-      setSearchFeedback({
-        type: 'error',
-        text: 'Error de conexión al buscar. Puedes tocar directamente en el mapa para marcar la casa.',
-      });
+      // Keep map as is
     } finally {
       setIsSearchingHome(false);
     }
@@ -113,28 +88,11 @@ export const PanelHomeZone: React.FC = () => {
     }
   };
 
-  // Select alternative result from search
-  const handleSelectResult = (result: GeocodeResult) => {
-    setHomeCoords([result.lat, result.lng]);
-    setHomeAddress(result.shortAddress || result.displayName);
-    setSearchFeedback({
-      type: 'success',
-      text: `✓ Ubicación seleccionada: ${result.shortAddress}`,
-    });
-  };
-
   // GPS device current position
   const handleUseGPS = () => {
-    if (!navigator.geolocation) {
-      setSearchFeedback({
-        type: 'error',
-        text: 'La geolocalización GPS no está disponible en este navegador.',
-      });
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     setIsSearchingHome(true);
-    setSearchFeedback(null);
 
     navigator.geolocation.getCurrentPosition(
       async position => {
@@ -147,33 +105,17 @@ export const PanelHomeZone: React.FC = () => {
           const data = await res.json();
           if (data && data.address) {
             setHomeAddress(data.address);
-            setSearchFeedback({
-              type: 'success',
-              text: `✓ Ubicación GPS detectada: ${data.address}`,
-            });
           } else {
             setHomeAddress(`GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-            setSearchFeedback({
-              type: 'success',
-              text: '✓ Ubicación GPS detectada.',
-            });
           }
         } catch {
           setHomeAddress(`GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-          setSearchFeedback({
-            type: 'success',
-            text: '✓ Ubicación GPS detectada.',
-          });
         } finally {
           setIsSearchingHome(false);
         }
       },
-      error => {
+      () => {
         setIsSearchingHome(false);
-        setSearchFeedback({
-          type: 'error',
-          text: `No se pudo obtener el GPS (${error.message}). Puedes buscar por dirección o tocar el mapa.`,
-        });
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -187,10 +129,6 @@ export const PanelHomeZone: React.FC = () => {
       const data = await res.json();
       if (data && data.address) {
         setHomeAddress(data.address);
-        setSearchFeedback({
-          type: 'success',
-          text: `✓ Punto marcado en mapa: ${data.address}`,
-        });
       }
     } catch {
       // Just keep point
@@ -225,8 +163,6 @@ export const PanelHomeZone: React.FC = () => {
     setSafeZoneActive(settings.safeZoneActive);
     setSafeZoneCenter([settings.safeZoneCenter.lat, settings.safeZoneCenter.lng]);
     setSafeZoneRadius(settings.safeZoneRadius);
-    setSearchFeedback(null);
-    setHomeSearchResults([]);
   };
 
   return (
@@ -245,7 +181,7 @@ export const PanelHomeZone: React.FC = () => {
         </div>
 
         <div className="flex items-start gap-3 bg-[#f8f7f4] p-3.5 rounded-2xl border border-[#ddd5c3]">
-          <Home className="w-6 h-6 text-[#0b6b3a] shrink-0 mt-0.5" />
+          <Home className="w-6 h-6 text-[#0b4f9e] shrink-0 mt-0.5" />
           <p className="text-xl font-extrabold text-[#14213d] leading-snug">
             <span className="font-bold">Casa:</span> {homeAddress || 'No configurada todavía (busca tu dirección abajo)'}
           </p>
@@ -300,53 +236,13 @@ export const PanelHomeZone: React.FC = () => {
               O toca directamente cualquier punto del mapa
             </span>
           </div>
-
-          {/* Search feedback alert */}
-          {searchFeedback && (
-            <div
-              className={`p-3 rounded-2xl text-base font-bold flex items-start gap-2.5 animate-in fade-in duration-200 ${
-                searchFeedback.type === 'success'
-                  ? 'bg-[#eaf5ed] border-2 border-[#0b6b3a]/30 text-[#0b6b3a]'
-                  : 'bg-[#fff1c9] border-2 border-[#b7791f]/40 text-[#92400e]'
-              }`}
-            >
-              {searchFeedback.type === 'success' ? (
-                <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-              )}
-              <span className="leading-snug">{searchFeedback.text}</span>
-            </div>
-          )}
-
-          {/* Multiple matches selector if any */}
-          {homeSearchResults.length > 1 && (
-            <div className="bg-[#f8f7f4] border border-[#ddd5c3] p-3 rounded-2xl space-y-1.5">
-              <p className="text-xs font-bold text-[#7a7461] uppercase tracking-wide">
-                Resultados encontrados (toca para mover el mapa):
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {homeSearchResults.map((r, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleSelectResult(r)}
-                    className="text-left text-sm font-bold text-[#14213d] p-2 rounded-xl hover:bg-white border border-transparent hover:border-[#ddd5c3] transition flex items-center gap-2 cursor-pointer"
-                  >
-                    <MapPin className="w-4 h-4 text-[#0b4f9e] shrink-0" />
-                    <span className="truncate">{r.displayName}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Home Map */}
         <div className="pt-1 space-y-2">
-          <div className="bg-[#eef7f0] border border-[#0b6b3a]/40 rounded-2xl p-2.5 px-3 flex items-center gap-2 text-sm font-bold text-[#0b6b3a]">
-            <Home className="w-5 h-5 shrink-0 text-[#0b6b3a]" />
-            <span>Arrastra la casita verde con el ratón o toca cualquier punto del mapa para moverla.</span>
+          <div className="bg-[#eff6ff] border border-[#0b4f9e]/30 rounded-2xl p-2.5 px-3 flex items-center gap-2 text-sm font-bold text-[#0b4f9e]">
+            <Home className="w-5 h-5 shrink-0 text-[#0b4f9e]" />
+            <span>Arrastra la casita azul con el ratón o toca cualquier punto del mapa para moverla.</span>
           </div>
 
           <LeafletMap
@@ -354,7 +250,6 @@ export const PanelHomeZone: React.FC = () => {
             zoom={16}
             interactive={true}
             markerType="home"
-            markerLabel="Casa (arrastra para mover)"
             onLocationSelect={handleMapSelectHome}
             className="h-64 w-full rounded-2xl"
           />
@@ -484,7 +379,6 @@ export const PanelHomeZone: React.FC = () => {
             zoom={15}
             interactive={true}
             markerType="home"
-            markerLabel="Centro zona segura (arrastra para mover)"
             showSafeZoneCircle={true}
             safeZoneRadius={safeZoneRadius}
             onLocationSelect={(lat, lng) => setSafeZoneCenter([lat, lng])}
