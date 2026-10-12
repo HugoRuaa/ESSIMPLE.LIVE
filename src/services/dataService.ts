@@ -244,27 +244,242 @@ export const fetchFamilyContacts = async (familiaId: string): Promise<Contact[] 
   }
 };
 
-// 5. Sincronizar Casa y Zona con essimple.casa_zona
-export const syncHomeZoneToSupabase = async (familiaId: string, settings: AppSettings) => {
-  const client = getSupabaseClient();
-  if (!client || !familiaId || familiaId === 'local-family-id') return;
+// Lookup family info by email
+export const lookupFamilyByEmail = async (email: string): Promise<{ success: boolean; familiaId?: string; familyData?: any } | null> => {
+  if (!email || email === 'demo@essimple.live') return null;
+  const cleanEmail = email.trim().toLowerCase();
 
   try {
-    await client.schema(DB_SCHEMA).from('casa_zona').upsert({
-      familia_id: familiaId,
-      home_address: settings.homeAddress,
-      home_lat: settings.homeCenter.lat,
-      home_lng: settings.homeCenter.lng,
-      travel_mode: settings.travelMode,
-      safe_zone_active: settings.safeZoneActive,
-      safe_zone_lat: settings.safeZoneCenter.lat,
-      safe_zone_lng: settings.safeZoneCenter.lng,
-      safe_zone_address: settings.safeZoneCenter.address,
-      safe_zone_radius: settings.safeZoneRadius,
-      updated_at: new Date().toISOString(),
+    const res = await fetch(`/api/familias/lookup?email=${encodeURIComponent(cleanEmail)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.familiaId) {
+        return json;
+      }
+    }
+  } catch {
+    // fallback to direct client
+  }
+
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .schema(DB_SCHEMA)
+      .from('familias')
+      .select('id, email, person_name, font_size, country_code, exit_pin')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return { success: true, familiaId: data.id, familyData: data };
+  } catch {
+    return null;
+  }
+};
+
+// 5. Sincronizar Casa y Zona con essimple.casa_zona
+export const syncHomeZoneToSupabase = async (
+  familiaIdOrEmail: string,
+  settings: AppSettings
+): Promise<{ success: boolean; familiaId?: string; message?: string }> => {
+  if (!familiaIdOrEmail || familiaIdOrEmail === 'local-family-id') {
+    return { success: false, message: 'No hay cuenta familiar iniciada para asociar la ubicación.' };
+  }
+
+  // Normalizar el travel_mode según el check constraint de Supabase: 'pie' o 'transporte'
+  const rawMode = String(settings.travelMode || '').toLowerCase();
+  const normalizedTravelMode: 'pie' | 'transporte' =
+    rawMode === 'transporte' || rawMode === 'bus' || rawMode.includes('transporte') ? 'transporte' : 'pie';
+
+  const homeLat = typeof settings.homeCenter?.lat === 'number' && !isNaN(settings.homeCenter.lat) ? settings.homeCenter.lat : 4.6097;
+  const homeLng = typeof settings.homeCenter?.lng === 'number' && !isNaN(settings.homeCenter.lng) ? settings.homeCenter.lng : -74.0817;
+  const safeZoneLat = typeof settings.safeZoneCenter?.lat === 'number' && !isNaN(settings.safeZoneCenter.lat) ? settings.safeZoneCenter.lat : homeLat;
+  const safeZoneLng = typeof settings.safeZoneCenter?.lng === 'number' && !isNaN(settings.safeZoneCenter.lng) ? settings.safeZoneCenter.lng : homeLng;
+  const safeZoneRadius = typeof settings.safeZoneRadius === 'number' ? Math.round(settings.safeZoneRadius) : 300;
+
+  // Intento 1: A través del endpoint del servidor (más confiable y resuelve emails a UUID)
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaIdOrEmail)}/home-zone`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        homeAddress: settings.homeAddress,
+        homeLat,
+        homeLng,
+        travelMode: normalizedTravelMode,
+        safeZoneActive: settings.safeZoneActive,
+        safeZoneLat,
+        safeZoneLng,
+        safeZoneAddress: settings.safeZoneCenter?.address || settings.homeAddress,
+        safeZoneRadius,
+      }),
     });
-  } catch (err) {
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      return {
+        success: true,
+        familiaId: data.familiaId,
+        message: data.message || 'Ubicación guardada exitosamente en Supabase',
+      };
+    } else if (data && data.message) {
+      console.warn('Servidor devolvió error al guardar casa y zona:', data.message);
+    }
+  } catch (apiErr) {
+    console.warn('API /api/familias/:id/home-zone falló, intentando cliente directo Supabase:', apiErr);
+  }
+
+  // Intento 2: Directo con cliente Supabase
+  const client = getSupabaseClient();
+  if (!client) {
+    return { success: false, message: 'No hay conexión disponible con Supabase.' };
+  }
+
+  try {
+    let targetFamiliaId = familiaIdOrEmail;
+    // Si es un correo, buscar su UUID en essimple.familias
+    if (familiaIdOrEmail.includes('@')) {
+      const { data: famData } = await client
+        .schema(DB_SCHEMA)
+        .from('familias')
+        .select('id')
+        .eq('email', familiaIdOrEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (famData?.id) {
+        targetFamiliaId = famData.id;
+      } else {
+        return { success: false, message: 'Cuenta familiar no encontrada en Supabase.' };
+      }
+    }
+
+    const { error } = await client.schema(DB_SCHEMA).from('casa_zona').upsert(
+      {
+        familia_id: targetFamiliaId,
+        home_address: settings.homeAddress || '',
+        home_lat: homeLat,
+        home_lng: homeLng,
+        travel_mode: normalizedTravelMode,
+        safe_zone_active: !!settings.safeZoneActive,
+        safe_zone_lat: safeZoneLat,
+        safe_zone_lng: safeZoneLng,
+        safe_zone_address: settings.safeZoneCenter?.address || settings.homeAddress || '',
+        safe_zone_radius: safeZoneRadius,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'familia_id' }
+    );
+
+    if (error) {
+      console.error('Error de Supabase al guardar casa_zona:', error);
+      return { success: false, message: error.message };
+    }
+
+    return {
+      success: true,
+      familiaId: targetFamiliaId,
+      message: 'Ubicación de casa y zona guardadas exitosamente en Supabase',
+    };
+  } catch (err: unknown) {
     console.error('Error al sincronizar casa y zona con Supabase:', err);
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Error inesperado al guardar en Supabase',
+    };
+  }
+};
+
+// 5b. Consultar Casa y Zona desde essimple.casa_zona
+export const fetchFamilyHomeZone = async (
+  familiaIdOrEmail: string
+): Promise<Partial<AppSettings> | null> => {
+  if (!familiaIdOrEmail || familiaIdOrEmail === 'local-family-id') return null;
+
+  // Intento 1: API del servidor
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaIdOrEmail)}/home-zone`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        const item = json.data;
+        const lat = Number(item.home_lat);
+        const lng = Number(item.home_lng);
+        const szLat = Number(item.safe_zone_lat);
+        const szLng = Number(item.safe_zone_lng);
+        return {
+          homeAddress: item.home_address || '',
+          homeCenter: {
+            lat: !isNaN(lat) ? lat : 4.6097,
+            lng: !isNaN(lng) ? lng : -74.0817,
+          },
+          travelMode: item.travel_mode === 'transporte' ? 'transporte' : 'pie',
+          safeZoneActive: !!item.safe_zone_active,
+          safeZoneCenter: {
+            lat: !isNaN(szLat) ? szLat : (!isNaN(lat) ? lat : 4.6097),
+            lng: !isNaN(szLng) ? szLng : (!isNaN(lng) ? lng : -74.0817),
+            address: item.safe_zone_address || item.home_address || '',
+          },
+          safeZoneRadius: Number(item.safe_zone_radius) || 300,
+        };
+      }
+    }
+  } catch {
+    // fallback to direct client
+  }
+
+  // Intento 2: Directo Supabase
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    let targetFamiliaId = familiaIdOrEmail;
+    if (familiaIdOrEmail.includes('@')) {
+      const { data: famData } = await client
+        .schema(DB_SCHEMA)
+        .from('familias')
+        .select('id')
+        .eq('email', familiaIdOrEmail.trim().toLowerCase())
+        .maybeSingle();
+
+      if (famData?.id) {
+        targetFamiliaId = famData.id;
+      } else {
+        return null;
+      }
+    }
+
+    const { data, error } = await client
+      .schema(DB_SCHEMA)
+      .from('casa_zona')
+      .select('*')
+      .eq('familia_id', targetFamiliaId)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    const lat = Number(data.home_lat);
+    const lng = Number(data.home_lng);
+    const szLat = Number(data.safe_zone_lat);
+    const szLng = Number(data.safe_zone_lng);
+    return {
+      homeAddress: data.home_address || '',
+      homeCenter: {
+        lat: !isNaN(lat) ? lat : 4.6097,
+        lng: !isNaN(lng) ? lng : -74.0817,
+      },
+      travelMode: data.travel_mode === 'transporte' ? 'transporte' : 'pie',
+      safeZoneActive: !!data.safe_zone_active,
+      safeZoneCenter: {
+        lat: !isNaN(szLat) ? szLat : (!isNaN(lat) ? lat : 4.6097),
+        lng: !isNaN(szLng) ? szLng : (!isNaN(lng) ? lng : -74.0817),
+        address: data.safe_zone_address || data.home_address || '',
+      },
+      safeZoneRadius: Number(data.safe_zone_radius) || 300,
+    };
+  } catch {
+    return null;
   }
 };
 

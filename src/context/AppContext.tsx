@@ -14,6 +14,8 @@ import {
   syncContactsToSupabase,
   fetchFamilyContacts,
   syncHomeZoneToSupabase,
+  fetchFamilyHomeZone,
+  lookupFamilyByEmail,
   logEventToSupabase,
   logChangeToSupabase,
 } from '../services/dataService';
@@ -35,7 +37,7 @@ interface AppContextType {
   // Settings
   settings: AppSettings;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
-  saveSettings: (newSettings: Partial<AppSettings>) => void;
+  saveSettings: (newSettings: Partial<AppSettings>) => Promise<{ success: boolean; message?: string }>;
 
   // Phone Status
   phoneStatus: PhoneStatus;
@@ -449,6 +451,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('essimple_account', JSON.stringify(account));
   }, [account]);
 
+  // Sincronizar automáticamente datos familiares desde Supabase al iniciar sesión o cargar la app
+  useEffect(() => {
+    if (!account.isAuthenticated || !account.email || account.email === 'demo@essimple.live') return;
+
+    let isMounted = true;
+    const loadCloudData = async () => {
+      try {
+        let familyId = localStorage.getItem('essimple_family_id');
+        if (!familyId || familyId === 'local-family-id') {
+          const lookup = await lookupFamilyByEmail(account.email);
+          if (lookup?.familiaId) {
+            familyId = lookup.familiaId;
+            localStorage.setItem('essimple_family_id', familyId);
+            if (isMounted) {
+              setAccount(prev => ({ ...prev, familiaId: familyId }));
+            }
+          }
+        }
+
+        const identifier = familyId || account.email;
+        if (!identifier) return;
+
+        // 1. Cargar casa y zona segura desde Supabase
+        const homeZone = await fetchFamilyHomeZone(identifier);
+        if (homeZone && isMounted) {
+          setSettings(prev => ({
+            ...prev,
+            ...homeZone,
+          }));
+        }
+
+        // 2. Cargar contactos desde Supabase si la lista actual está vacía
+        if (familyId) {
+          const cloudContacts = await fetchFamilyContacts(familyId);
+          if (cloudContacts && cloudContacts.length > 0 && isMounted) {
+            setContacts(cloudContacts);
+            setStagedContacts(cloudContacts);
+            setHasContactChanges(false);
+          }
+        }
+      } catch (err) {
+        console.warn('Error cargando datos familiares desde Supabase en arranque:', err);
+      }
+    };
+
+    loadCloudData();
+    return () => {
+      isMounted = false;
+    };
+  }, [account.isAuthenticated, account.email]);
+
   // Keep stagedContacts in sync if contacts change externally and not modified
   useEffect(() => {
     if (!hasContactChanges) {
@@ -598,14 +651,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
-  const saveSettings = (newSettings: Partial<AppSettings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...newSettings };
-      const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
-      syncHomeZoneToSupabase(familyId, updated);
-      return updated;
-    });
+  const saveSettings = async (
+    newSettings: Partial<AppSettings>
+  ): Promise<{ success: boolean; message?: string }> => {
+    const updated: AppSettings = { ...settings, ...newSettings };
+    setSettings(updated);
     addChange('Guardó cambios en ajustes y configuración');
+
+    // Identificar la familia asociada: ID guardado o correo de la cuenta iniciada
+    const storedFamilyId = localStorage.getItem('essimple_family_id');
+    const identifier =
+      (storedFamilyId && storedFamilyId !== 'local-family-id' ? storedFamilyId : null) ||
+      account.familiaId ||
+      (account.isAuthenticated && account.email ? account.email : null) ||
+      'local-family-id';
+
+    if (identifier && identifier !== 'local-family-id') {
+      const res = await syncHomeZoneToSupabase(identifier, updated);
+      if (res.success && res.familiaId) {
+        localStorage.setItem('essimple_family_id', res.familiaId);
+        if (account.familiaId !== res.familiaId) {
+          setAccount(prev => ({ ...prev, familiaId: res.familiaId }));
+        }
+      }
+      return res;
+    }
+
+    return { success: true, message: 'Guardado localmente' };
   };
 
   // Phone status
@@ -715,6 +787,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setHasContactChanges(false);
         localStorage.setItem('essimple_contacts', JSON.stringify(contactList));
 
+        // Cargar casa y zona segura asociadas a esta familia en Supabase
+        const loadedHomeZone = await fetchFamilyHomeZone(res.familiaId);
+        if (loadedHomeZone) {
+          setSettings(prev => ({
+            ...prev,
+            ...loadedHomeZone,
+          }));
+        }
+
         // Cargar eventos asociados a esta familia
         const savedEvents = localStorage.getItem(`essimple_events_${res.familiaId}`);
         const eventList = savedEvents ? JSON.parse(savedEvents) : [];
@@ -727,7 +808,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('essimple_changes', JSON.stringify(changeList));
         setActiveEmergencyBanner(null);
       }
-      setAccount({ email: email.trim().toLowerCase(), isAuthenticated: true, termsAccepted: true });
+      setAccount({
+        email: email.trim().toLowerCase(),
+        isAuthenticated: true,
+        termsAccepted: true,
+        familiaId: res.familiaId,
+      });
       return { success: true };
     } catch (err: unknown) {
       return { success: false, message: err instanceof Error ? err.message : 'Error al iniciar sesión' };
@@ -781,7 +867,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         syncHomeZoneToSupabase(res.familiaId, updatedSettings);
       }
 
-      const newAccount = { email: cleanEmail, isAuthenticated: true, termsAccepted: true };
+      const newAccount = {
+        email: cleanEmail,
+        isAuthenticated: true,
+        termsAccepted: true,
+        familiaId: res.familiaId,
+      };
       localStorage.setItem('essimple_account', JSON.stringify(newAccount));
       setAccount(newAccount);
 

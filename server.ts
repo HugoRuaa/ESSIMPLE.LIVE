@@ -148,12 +148,60 @@ app.get('/api/familias/:familiaId/contacts', async (req, res) => {
   }
 });
 
+// Helper to resolve familiaId whether passed as UUID or email
+async function resolveFamiliaId(identifier: string): Promise<string | null> {
+  if (!supabaseServerClient || !identifier) return null;
+  const trimmed = identifier.trim();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
+  if (isUuid) return trimmed;
+
+  try {
+    const cleanEmail = trimmed.toLowerCase();
+    const { data } = await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('familias')
+      .select('id')
+      .eq('email', cleanEmail)
+      .maybeSingle();
+    return data?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+// Endpoint para buscar datos de familia por correo
+app.get('/api/familias/lookup', async (req, res) => {
+  const email = (req.query.email as string || '').trim().toLowerCase();
+  if (!email || !supabaseServerClient) {
+    return res.status(400).json({ success: false, message: 'Correo requerido' });
+  }
+  try {
+    const { data, error } = await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('familias')
+      .select('id, email, person_name, font_size, country_code, exit_pin')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, message: 'Familia no encontrada' });
+    }
+    return res.json({ success: true, familiaId: data.id, familyData: data });
+  } catch (err: unknown) {
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Error en consulta' });
+  }
+});
+
 // Endpoint para guardar/actualizar contactos de una familia
 app.post('/api/familias/:familiaId/contacts', async (req, res) => {
-  const { familiaId } = req.params;
+  const { familiaId: rawId } = req.params;
   const { contacts } = req.body;
-  if (!supabaseServerClient || !familiaId) {
+  if (!supabaseServerClient || !rawId) {
     return res.json({ success: false, message: 'Servidor no disponible' });
+  }
+  const familiaId = await resolveFamiliaId(rawId);
+  if (!familiaId) {
+    return res.json({ success: false, message: 'Cuenta familiar no encontrada' });
   }
   try {
     // Eliminar anteriores
@@ -180,9 +228,114 @@ app.post('/api/familias/:familiaId/contacts', async (req, res) => {
         .from('contactos')
         .insert(rows);
     }
-    return res.json({ success: true });
+    return res.json({ success: true, familiaId });
   } catch (err: unknown) {
     return res.json({ success: false, message: err instanceof Error ? err.message : 'Error al guardar contactos' });
+  }
+});
+
+// Endpoint para guardar/actualizar Casa y Zona Segura de una familia
+app.post('/api/familias/:familiaId/home-zone', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const body = req.body || {};
+  if (!supabaseServerClient || !rawId) {
+    return res.status(500).json({ success: false, message: 'Servicio de base de datos no disponible' });
+  }
+
+  const familiaId = await resolveFamiliaId(rawId);
+  if (!familiaId) {
+    return res.status(404).json({ success: false, message: 'No se encontró la cuenta familiar asociada' });
+  }
+
+  // Normalizar el travel_mode según el check constraint de Supabase: 'pie' o 'transporte'
+  let normalizedTravelMode: 'pie' | 'transporte' = 'pie';
+  const rawMode = String(body.travelMode || '').toLowerCase();
+  if (rawMode === 'transporte' || rawMode === 'bus' || rawMode.includes('transporte')) {
+    normalizedTravelMode = 'transporte';
+  } else {
+    normalizedTravelMode = 'pie';
+  }
+
+  const homeLat = typeof body.homeLat === 'number' && !isNaN(body.homeLat) ? body.homeLat : 4.6097;
+  const homeLng = typeof body.homeLng === 'number' && !isNaN(body.homeLng) ? body.homeLng : -74.0817;
+  const safeZoneLat = typeof body.safeZoneLat === 'number' && !isNaN(body.safeZoneLat) ? body.safeZoneLat : homeLat;
+  const safeZoneLng = typeof body.safeZoneLng === 'number' && !isNaN(body.safeZoneLng) ? body.safeZoneLng : homeLng;
+  const radius = typeof body.safeZoneRadius === 'number' ? Math.round(body.safeZoneRadius) : 300;
+
+  const payload = {
+    familia_id: familiaId,
+    home_address: (body.homeAddress || '').trim(),
+    home_lat: homeLat,
+    home_lng: homeLng,
+    travel_mode: normalizedTravelMode,
+    safe_zone_active: !!body.safeZoneActive,
+    safe_zone_lat: safeZoneLat,
+    safe_zone_lng: safeZoneLng,
+    safe_zone_address: (body.safeZoneAddress || body.homeAddress || '').trim(),
+    safe_zone_radius: radius,
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    const { data, error } = await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('casa_zona')
+      .upsert(payload, { onConflict: 'familia_id' })
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('[Supabase HomeZone Save Error]:', error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    console.log(`[Supabase HomeZone Save] Casa y Zona guardadas para familia ${familiaId}`);
+    return res.json({
+      success: true,
+      familiaId,
+      data,
+      message: 'Ubicación de casa y zona segura guardadas exitosamente en Supabase',
+    });
+  } catch (err: unknown) {
+    console.error('[Supabase HomeZone Save Exception]:', err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : 'Error al guardar ubicación de casa y zona',
+    });
+  }
+});
+
+// Endpoint para consultar Casa y Zona Segura de una familia
+app.get('/api/familias/:familiaId/home-zone', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  if (!supabaseServerClient || !rawId) {
+    return res.status(500).json({ success: false, message: 'Servicio de base de datos no disponible' });
+  }
+
+  const familiaId = await resolveFamiliaId(rawId);
+  if (!familiaId) {
+    return res.status(404).json({ success: false, message: 'Cuenta familiar no encontrada' });
+  }
+
+  try {
+    const { data, error } = await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('casa_zona')
+      .select('*')
+      .eq('familia_id', familiaId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[Supabase HomeZone Get Error]:', error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    return res.json({ success: true, familiaId, data: data || null });
+  } catch (err: unknown) {
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : 'Error al consultar casa y zona',
+    });
   }
 });
 
