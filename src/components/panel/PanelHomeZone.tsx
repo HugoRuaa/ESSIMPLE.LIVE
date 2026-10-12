@@ -343,19 +343,25 @@ export const PanelHomeZone: React.FC = () => {
         </div>
 
         {/* Home Map */}
-        <div className="pt-1">
+        <div className="pt-1 space-y-2">
+          <div className="bg-[#eef7f0] border border-[#0b6b3a]/40 rounded-2xl p-2.5 px-3 flex items-center gap-2 text-sm font-bold text-[#0b6b3a]">
+            <Home className="w-5 h-5 shrink-0 text-[#0b6b3a]" />
+            <span>Arrastra la casita verde con el ratón o toca cualquier punto del mapa para moverla.</span>
+          </div>
+
           <LeafletMap
             center={homeCoords}
             zoom={16}
             interactive={true}
             markerType="home"
-            markerLabel="Casa"
+            markerLabel="Casa (arrastra para mover)"
             onLocationSelect={handleMapSelectHome}
             className="h-64 w-full rounded-2xl"
           />
-          <p className="text-xs font-bold text-[#7a7461] text-center mt-1.5">
-            📍 Coordenadas actuales: {homeCoords[0].toFixed(5)}, {homeCoords[1].toFixed(5)}
-          </p>
+          <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
+            <span>✓ Se actualiza automáticamente al soltarla</span>
+            <span>📍 {homeCoords[0].toFixed(5)}, {homeCoords[1].toFixed(5)}</span>
+          </div>
         </div>
 
         {/* How to return home: A pie vs En transporte [29] */}
@@ -472,21 +478,22 @@ export const PanelHomeZone: React.FC = () => {
         </div>
 
         {/* Safe Zone Map with circular boundary */}
-        <div className="pt-1">
+        <div className="pt-1 space-y-2">
           <LeafletMap
             center={safeZoneCenter}
             zoom={15}
             interactive={true}
             markerType="home"
-            markerLabel="Centro zona segura"
+            markerLabel="Centro zona segura (arrastra para mover)"
             showSafeZoneCircle={true}
             safeZoneRadius={safeZoneRadius}
             onLocationSelect={(lat, lng) => setSafeZoneCenter([lat, lng])}
             className="h-64 w-full rounded-2xl"
           />
-          <p className="text-xs font-bold text-[#7a7461] text-center mt-1.5">
-            📍 Centro de zona: {safeZoneCenter[0].toFixed(5)}, {safeZoneCenter[1].toFixed(5)}
-          </p>
+          <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
+            <span>💡 Arrastra el icono o toca el mapa para reubicar el centro</span>
+            <span>📍 {safeZoneCenter[0].toFixed(5)}, {safeZoneCenter[1].toFixed(5)}</span>
+          </div>
         </div>
 
         {/* Radius slider & input */}

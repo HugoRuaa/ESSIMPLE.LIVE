@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, AlertTriangle, Database, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, AlertTriangle, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { useApp } from '../../context/AppContext';
 
@@ -161,11 +161,6 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
             ? 'Crea tu cuenta familiar para proteger y acompañar a tu ser querido desde cualquier lugar.'
             : 'Accede a la configuración y monitoreo del teléfono de tu familiar.'}
         </p>
-
-        <div className="flex items-center gap-1.5 text-xs font-bold text-[#0b4f9e] bg-[#e3ecf6] py-1 px-3 rounded-full mt-1 border border-[#0b4f9e]/20">
-          <Database className="w-3.5 h-3.5" />
-          <span>Supabase activo · Conexión segura</span>
-        </div>
       </div>
 
       <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 sm:p-7 shadow-lg space-y-5">

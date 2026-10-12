@@ -82,20 +82,21 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     // Create custom SVG markers
     let icon: L.DivIcon;
     if (markerType === 'home') {
-      // Green house pin as in screen [29]
+      // Green house pin with grab cursor and distinct drop shadow
       icon = L.divIcon({
         className: 'custom-home-pin',
         html: `
-          <div style="transform: translate(-18px, -36px); width: 36px; height: 42px; display: flex; flex-direction: column; align-items: center;">
-            <div style="background-color: #0b6b3a; width: 36px; height: 36px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.3); border: 2px solid white;">
-              <svg style="transform: rotate(45deg); width: 18px; height: 18px; fill: white;" viewBox="0 0 24 24">
+          <div style="transform: translate(-19px, -42px); width: 38px; height: 46px; display: flex; flex-direction: column; align-items: center; cursor: grab;">
+            <div style="background-color: #0b6b3a; width: 38px; height: 38px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); border: 2.5px solid white;">
+              <svg style="transform: rotate(45deg); width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
                 <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
               </svg>
             </div>
+            <div style="width: 8px; height: 4px; background: rgba(0,0,0,0.3); border-radius: 50%; filter: blur(1px); margin-top: 1px;"></div>
           </div>
         `,
-        iconSize: [36, 42],
-        iconAnchor: [18, 42],
+        iconSize: [38, 46],
+        iconAnchor: [19, 44],
       });
     } else {
       // Blue pulsing user dot as in screens [13] and [38]
@@ -112,16 +113,44 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       });
     }
 
-    // Update or add marker
+    // Update or add marker with drag support
+    const isDraggable = interactive && !!onLocationSelect;
+
     if (markerRef.current) {
       markerRef.current.setLatLng(center);
       markerRef.current.setIcon(icon);
+      if (isDraggable) {
+        markerRef.current.dragging?.enable();
+      } else {
+        markerRef.current.dragging?.disable();
+      }
     } else {
-      markerRef.current = L.marker(center, { icon }).addTo(map);
+      const marker = L.marker(center, {
+        icon,
+        draggable: isDraggable,
+        autoPan: true,
+        autoPanPadding: [40, 40],
+      }).addTo(map);
+
+      marker.on('dragend', (e: L.LeafletEvent) => {
+        const target = e.target as L.Marker;
+        const pos = target.getLatLng();
+        if (onLocationSelectRef.current) {
+          onLocationSelectRef.current(pos.lat, pos.lng);
+        }
+      });
+
+      markerRef.current = marker;
     }
 
-    if (markerLabel) {
-      markerRef.current.bindTooltip(markerLabel, { permanent: false, direction: 'top' });
+    if (markerLabel && markerRef.current) {
+      markerRef.current.unbindTooltip();
+      markerRef.current.bindTooltip(markerLabel, {
+        permanent: true,
+        direction: 'top',
+        className: 'leaflet-home-tooltip',
+        offset: [0, -42],
+      });
     }
 
     // Accuracy circle (blue shade)
