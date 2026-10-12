@@ -3,6 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -13,6 +14,115 @@ const app = express();
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: '15mb' }));
+
+// Supabase server client configuration
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://mlhsbihiwrrowlxuzqvf.supabase.co';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'sb_secret_LamDJBwJRYqWBaHaLFEdpg_GbQNsjsD';
+const SUPABASE_SCHEMA = process.env.VITE_SUPABASE_SCHEMA || process.env.SUPABASE_SCHEMA || 'essimple';
+
+const supabaseServerClient = (SUPABASE_URL && SUPABASE_KEY)
+  ? createClient(SUPABASE_URL, SUPABASE_KEY, { db: { schema: SUPABASE_SCHEMA } })
+  : null;
+
+// Supabase API endpoints
+app.get('/api/supabase/config', (req, res) => {
+  res.json({
+    url: SUPABASE_URL,
+    anonKey: SUPABASE_KEY,
+    schema: SUPABASE_SCHEMA,
+  });
+});
+
+app.get('/api/supabase/test', async (req, res) => {
+  if (!supabaseServerClient) {
+    return res.status(500).json({ success: false, message: 'Cliente Supabase no configurado en el servidor' });
+  }
+  try {
+    const { data, error } = await supabaseServerClient.schema(SUPABASE_SCHEMA).from('familias').select('id, email').limit(5);
+    if (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    res.json({ success: true, count: data.length, data });
+  } catch (err: unknown) {
+    res.status(500).json({ success: false, error: err instanceof Error ? err.message : 'Error desconocido' });
+  }
+});
+
+app.post('/api/familias/register', async (req, res) => {
+  const { email, password_hash, exit_pin, person_name, font_size, country_code } = req.body;
+  if (!email || !password_hash) {
+    return res.status(400).json({ success: false, message: 'Correo y contraseña requeridos' });
+  }
+
+  if (!supabaseServerClient) {
+    return res.status(500).json({ success: false, message: 'Servicio de base de datos no disponible' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const { data, error } = await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('familias')
+      .insert({
+        email: cleanEmail,
+        password_hash,
+        exit_pin: exit_pin || '1234',
+        person_name: person_name || 'Álvaro',
+        font_size: font_size || 'grande',
+        country_code: country_code || '57',
+      })
+      .select('id, email, exit_pin, person_name, font_size, country_code')
+      .single();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ success: false, message: 'Este correo ya tiene una cuenta familiar registrada.' });
+      }
+      console.error('[Supabase Register Error]:', error);
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    console.log(`[Supabase Register] Familia creada exitosamente: ${cleanEmail} (ID: ${data.id})`);
+    return res.json({ success: true, familiaId: data.id, familyData: data, message: 'Cuenta familiar creada con éxito en Supabase' });
+  } catch (err: unknown) {
+    console.error('[Supabase Register Exception]:', err);
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Error en el servidor al registrar familia' });
+  }
+});
+
+app.post('/api/familias/login', async (req, res) => {
+  const { email, password_hash } = req.body;
+  if (!email || !password_hash) {
+    return res.status(400).json({ success: false, message: 'Correo y contraseña requeridos' });
+  }
+
+  if (!supabaseServerClient) {
+    return res.status(500).json({ success: false, message: 'Servicio de base de datos no disponible' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const { data, error } = await supabaseServerClient
+      .schema(SUPABASE_SCHEMA)
+      .from('familias')
+      .select('id, email, password_hash, exit_pin, person_name, font_size, country_code')
+      .eq('email', cleanEmail)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ success: false, message: 'Correo familiar no encontrado.' });
+    }
+
+    if (data.password_hash !== password_hash) {
+      return res.status(401).json({ success: false, message: 'Contraseña incorrecta.' });
+    }
+
+    return res.json({ success: true, familiaId: data.id, familyData: data });
+  } catch (err: unknown) {
+    console.error('[Supabase Login Exception]:', err);
+    return res.status(500).json({ success: false, message: err instanceof Error ? err.message : 'Error en el servidor al iniciar sesión' });
+  }
+});
 
 // In-memory data store for live link sharing between screens
 const sharedLocationTokens: Record<string, {

@@ -4,7 +4,16 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const STORAGE_KEY_URL = 'essimple_supabase_url';
 const STORAGE_KEY_KEY = 'essimple_supabase_anon_key';
 
+export const DEFAULT_SUPABASE_URL = 'https://mlhsbihiwrrowlxuzqvf.supabase.co';
+export const DEFAULT_SUPABASE_ANON_KEY = 'sb_secret_LamDJBwJRYqWBaHaLFEdpg_GbQNsjsD';
+export const DEFAULT_SUPABASE_SCHEMA = 'essimple';
+
 let cachedClient: SupabaseClient<any, any> | null = null;
+
+export const DB_SCHEMA =
+  (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_SUPABASE_SCHEMA as string)) ||
+  (typeof process !== 'undefined' ? process.env?.VITE_SUPABASE_SCHEMA || process.env?.SUPABASE_SCHEMA : '') ||
+  DEFAULT_SUPABASE_SCHEMA;
 
 export const getSupabaseConfig = () => {
   const envUrl =
@@ -19,8 +28,12 @@ export const getSupabaseConfig = () => {
   const storedUrl = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_URL) : null;
   const storedKey = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY_KEY) : null;
 
-  const url = (storedUrl && storedUrl.trim() !== '') ? storedUrl : envUrl;
-  const anonKey = (storedKey && storedKey.trim() !== '') ? storedKey : envAnonKey;
+  // If storedUrl is empty or placeholder, prefer envUrl or DEFAULT_SUPABASE_URL
+  const cleanStoredUrl = (storedUrl && !storedUrl.includes('tu-proyecto')) ? storedUrl.trim() : '';
+  const cleanStoredKey = (storedKey && !storedKey.includes('tu_supabase_anon_key')) ? storedKey.trim() : '';
+
+  const url = cleanStoredUrl || envUrl || DEFAULT_SUPABASE_URL;
+  const anonKey = cleanStoredKey || envAnonKey || DEFAULT_SUPABASE_ANON_KEY;
 
   return { url, anonKey };
 };
@@ -40,11 +53,6 @@ export const clearSupabaseConfig = () => {
   }
   cachedClient = null;
 };
-
-export const DB_SCHEMA =
-  (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_SUPABASE_SCHEMA as string)) ||
-  (typeof process !== 'undefined' ? process.env?.VITE_SUPABASE_SCHEMA || process.env?.SUPABASE_SCHEMA : '') ||
-  'essimple';
 
 export const getSupabaseClient = (): SupabaseClient<any, any> | null => {
   if (cachedClient) return cachedClient;
@@ -72,9 +80,22 @@ export const getSupabaseClient = (): SupabaseClient<any, any> | null => {
 };
 
 export const testSupabaseConnection = async (): Promise<{ success: boolean; message: string }> => {
+  // First test server-side endpoint if available
+  try {
+    const apiRes = await fetch('/api/supabase/test');
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (data.success) {
+        return { success: true, message: `¡Conexión exitosa al esquema "${DB_SCHEMA}" en Supabase!` };
+      }
+    }
+  } catch {
+    // continue to direct client test
+  }
+
   const client = getSupabaseClient();
   if (!client) {
-    return { success: false, message: 'Falta la dirección (URL) o la llave pública (anon key) de Supabase.' };
+    return { success: false, message: 'Falta la dirección (URL) o la llave pública de Supabase.' };
   }
 
   try {

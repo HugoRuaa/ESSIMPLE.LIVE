@@ -54,8 +54,8 @@ interface AppContextType {
 
   // Account & Auth
   account: UserAccount;
-  login: (email: string, password?: string) => Promise<void> | void;
-  signup: (email: string, pin: string, password?: string) => Promise<void> | void;
+  login: (email: string, password?: string) => Promise<{ success: boolean; message?: string }>;
+  signup: (email: string, pin: string, password?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   acceptTerms: () => void;
 
@@ -531,39 +531,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveEmergencyBanner(null);
   };
 
-  // Auth (gestión por código)
-  const login = async (email: string, password = 'password123') => {
-    const res = await loginFamilyByCode(email, password);
-    if (res.success && res.familiaId) {
-      localStorage.setItem('essimple_family_id', res.familiaId);
-      if (res.familyData) {
-        setSettings(prev => ({
-          ...prev,
-          personName: res.familyData.person_name || prev.personName,
-          fontSize: res.familyData.font_size || prev.fontSize,
-          exitPin: res.familyData.exit_pin || prev.exitPin,
-          countryCode: res.familyData.country_code || prev.countryCode,
-        }));
+  // Auth (gestión por código con Supabase essimple.familias)
+  const login = async (email: string, password = 'password123'): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await loginFamilyByCode(email, password);
+      if (!res.success) {
+        return { success: false, message: res.message || 'No se pudo iniciar sesión.' };
       }
 
-      // Cargar contactos guardados en Supabase (esquema essimple) si existen
-      const loadedContacts = await fetchFamilyContacts(res.familiaId);
-      if (loadedContacts && loadedContacts.length > 0) {
-        setContacts(loadedContacts);
-        setStagedContacts(loadedContacts);
+      if (res.familiaId) {
+        localStorage.setItem('essimple_family_id', res.familiaId);
+        if (res.familyData) {
+          setSettings(prev => ({
+            ...prev,
+            personName: res.familyData.person_name || prev.personName,
+            fontSize: res.familyData.font_size || prev.fontSize,
+            exitPin: res.familyData.exit_pin || prev.exitPin,
+            countryCode: res.familyData.country_code || prev.countryCode,
+          }));
+        }
+
+        // Cargar contactos guardados en Supabase (esquema essimple) si existen
+        const loadedContacts = await fetchFamilyContacts(res.familiaId);
+        if (loadedContacts && loadedContacts.length > 0) {
+          setContacts(loadedContacts);
+          setStagedContacts(loadedContacts);
+        }
       }
+      setAccount({ email: email.trim().toLowerCase(), isAuthenticated: true, termsAccepted: true });
+      return { success: true };
+    } catch (err: unknown) {
+      return { success: false, message: err instanceof Error ? err.message : 'Error al iniciar sesión' };
     }
-    setAccount({ email, isAuthenticated: true, termsAccepted: true });
   };
 
-  const signup = async (email: string, pin: string, password = 'password123') => {
-    const res = await registerFamilyByCode(email, password, pin);
-    if (res.success && res.familiaId) {
-      localStorage.setItem('essimple_family_id', res.familiaId);
-    }
-    setAccount({ email, isAuthenticated: true, termsAccepted: false });
-    if (pin && pin.length === 4) {
-      setSettings(prev => ({ ...prev, exitPin: pin }));
+  const signup = async (email: string, pin: string, password = 'password123'): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const res = await registerFamilyByCode(cleanEmail, password, pin);
+      if (!res.success) {
+        return { success: false, message: res.message || 'No se pudo registrar la familia en Supabase.' };
+      }
+
+      if (res.familiaId) {
+        localStorage.setItem('essimple_family_id', res.familiaId);
+        // Sembrar contactos y casa/zona iniciales en Supabase para la nueva familia
+        syncContactsToSupabase(res.familiaId, contacts);
+        syncHomeZoneToSupabase(res.familiaId, settings);
+      }
+      setAccount({ email: cleanEmail, isAuthenticated: true, termsAccepted: false });
+      if (pin && pin.length === 4) {
+        setSettings(prev => ({ ...prev, exitPin: pin }));
+      }
+      return { success: true, message: res.message };
+    } catch (err: unknown) {
+      return { success: false, message: err instanceof Error ? err.message : 'Error al registrar familia' };
     }
   };
 

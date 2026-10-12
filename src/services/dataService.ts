@@ -15,12 +15,51 @@ export const hashPassword = async (password: string): Promise<string> => {
 };
 
 // 1. Registro por código en tabla essimple.familias (Sin Supabase Auth)
-export const registerFamilyByCode = async (email: string, password: string, pin: string) => {
-  const client = getSupabaseClient();
+export const registerFamilyByCode = async (
+  email: string,
+  password: string,
+  pin: string,
+  personName = 'Álvaro',
+  fontSize = 'grande',
+  countryCode = '57'
+): Promise<{ success: boolean; familiaId?: string; message?: string }> => {
+  const cleanEmail = email.trim().toLowerCase();
   const password_hash = await hashPassword(password);
 
+  // Intento 1: A través del endpoint del servidor (más confiable, sin problemas de CORS ni adblockers)
+  try {
+    const apiRes = await fetch('/api/familias/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: cleanEmail,
+        password_hash,
+        exit_pin: pin,
+        person_name: personName,
+        font_size: fontSize,
+        country_code: countryCode,
+      }),
+    });
+
+    const data = await apiRes.json();
+    if (apiRes.ok && data.success) {
+      console.log('✅ Familia registrada en Supabase vía API del servidor:', data.familiaId);
+      return { success: true, familiaId: data.familiaId, message: data.message || 'Cuenta familiar creada con éxito en Supabase' };
+    } else if (data.message) {
+      console.warn('⚠️ Error al registrar vía API:', data.message);
+      return { success: false, message: data.message };
+    }
+  } catch (apiErr) {
+    console.warn('Endpoint /api/familias/register no disponible, intentando cliente directo Supabase...', apiErr);
+  }
+
+  // Intento 2: Directo desde el navegador con cliente Supabase
+  const client = getSupabaseClient();
   if (!client) {
-    return { success: true, familiaId: 'local-family-id', message: 'Registrado localmente (modo maqueta)' };
+    return {
+      success: false,
+      message: 'No se pudo conectar con Supabase. Revisa la URL y llaves en el archivo .env o en Ajustes.',
+    };
   }
 
   try {
@@ -28,36 +67,60 @@ export const registerFamilyByCode = async (email: string, password: string, pin:
       .schema(DB_SCHEMA)
       .from('familias')
       .insert({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password_hash,
         exit_pin: pin,
-        person_name: 'Álvaro',
-        font_size: 'grande',
-        country_code: '57',
+        person_name: personName,
+        font_size: fontSize,
+        country_code: countryCode,
       })
       .select('id')
       .single();
 
     if (error) {
       if (error.code === '23505') {
-        return { success: false, message: 'Este correo ya tiene una cuenta registrada.' };
+        return { success: false, message: 'Este correo ya tiene una cuenta registrada en essimple.familias.' };
       }
-      return { success: false, message: error.message };
+      return { success: false, message: `Error de Supabase: ${error.message}` };
     }
 
+    console.log('✅ Familia registrada directamente en Supabase:', data.id);
     return { success: true, familiaId: data.id, message: 'Cuenta creada con éxito en Supabase' };
   } catch (err: unknown) {
-    return { success: false, message: err instanceof Error ? err.message : 'Error al registrar' };
+    return { success: false, message: err instanceof Error ? err.message : 'Error al registrar en Supabase' };
   }
 };
 
 // 2. Iniciar sesión por código en tabla essimple.familias (Sin Supabase Auth)
-export const loginFamilyByCode = async (email: string, password: string) => {
-  const client = getSupabaseClient();
+export const loginFamilyByCode = async (
+  email: string,
+  password: string
+): Promise<{ success: boolean; familiaId?: string; familyData?: any; message?: string }> => {
+  const cleanEmail = email.trim().toLowerCase();
   const password_hash = await hashPassword(password);
 
+  // Intento 1: A través del endpoint del servidor
+  try {
+    const apiRes = await fetch('/api/familias/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, password_hash }),
+    });
+
+    const data = await apiRes.json();
+    if (apiRes.ok && data.success) {
+      return { success: true, familiaId: data.familiaId, familyData: data.familyData };
+    } else if (data.message) {
+      return { success: false, message: data.message };
+    }
+  } catch (apiErr) {
+    console.warn('Endpoint /api/familias/login no disponible, intentando cliente directo...', apiErr);
+  }
+
+  // Intento 2: Directo desde el navegador con cliente Supabase
+  const client = getSupabaseClient();
   if (!client) {
-    return { success: true, familiaId: 'local-family-id', message: 'Sesión iniciada localmente (modo maqueta)' };
+    return { success: false, message: 'No se pudo conectar a la base de datos de Supabase.' };
   }
 
   try {
@@ -65,11 +128,11 @@ export const loginFamilyByCode = async (email: string, password: string) => {
       .schema(DB_SCHEMA)
       .from('familias')
       .select('id, exit_pin, person_name, font_size, country_code, password_hash')
-      .eq('email', email.trim().toLowerCase())
+      .eq('email', cleanEmail)
       .single();
 
     if (error || !data) {
-      return { success: false, message: 'Correo no encontrado.' };
+      return { success: false, message: 'Correo no registrado en Supabase.' };
     }
 
     if (data.password_hash !== password_hash) {
