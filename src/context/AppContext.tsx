@@ -8,6 +8,15 @@ import {
   LocationShareState,
   UserAccount,
 } from '../types';
+import {
+  registerFamilyByCode,
+  loginFamilyByCode,
+  syncContactsToSupabase,
+  fetchFamilyContacts,
+  syncHomeZoneToSupabase,
+  logEventToSupabase,
+  logChangeToSupabase,
+} from '../services/dataService';
 
 interface AppContextType {
   // Contacts
@@ -45,8 +54,8 @@ interface AppContextType {
 
   // Account & Auth
   account: UserAccount;
-  login: (email: string) => void;
-  signup: (email: string, pin: string) => void;
+  login: (email: string, password?: string) => Promise<void> | void;
+  signup: (email: string, pin: string, password?: string) => Promise<void> | void;
   logout: () => void;
   acceptTerms: () => void;
 
@@ -375,6 +384,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setContacts(stagedContacts);
     setHasContactChanges(false);
     addChange('Guardó cambios en la lista de contactos');
+    const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
+    syncContactsToSupabase(familyId, stagedContacts);
   };
 
   const discardContactChanges = () => {
@@ -434,6 +445,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const saveSettings = (newSettings: Partial<AppSettings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
+      const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
+      syncHomeZoneToSupabase(familyId, updated);
       return updated;
     });
     addChange('Guardó cambios en ajustes y configuración');
@@ -498,6 +511,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (item.level === 'danger') {
       setActiveEmergencyBanner(newEvent);
     }
+    const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
+    logEventToSupabase(familyId, item);
   };
 
   const addChange = (desc: string) => {
@@ -508,18 +523,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAtMs: Date.now(),
     };
     setChanges(prev => [newChange, ...prev]);
+    const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
+    logChangeToSupabase(familyId, desc);
   };
 
   const dismissEmergencyBanner = () => {
     setActiveEmergencyBanner(null);
   };
 
-  // Auth
-  const login = (email: string) => {
+  // Auth (gestión por código)
+  const login = async (email: string, password = 'password123') => {
+    const res = await loginFamilyByCode(email, password);
+    if (res.success && res.familiaId) {
+      localStorage.setItem('essimple_family_id', res.familiaId);
+      if (res.familyData) {
+        setSettings(prev => ({
+          ...prev,
+          personName: res.familyData.person_name || prev.personName,
+          fontSize: res.familyData.font_size || prev.fontSize,
+          exitPin: res.familyData.exit_pin || prev.exitPin,
+          countryCode: res.familyData.country_code || prev.countryCode,
+        }));
+      }
+
+      // Cargar contactos guardados en Supabase (esquema essimple) si existen
+      const loadedContacts = await fetchFamilyContacts(res.familiaId);
+      if (loadedContacts && loadedContacts.length > 0) {
+        setContacts(loadedContacts);
+        setStagedContacts(loadedContacts);
+      }
+    }
     setAccount({ email, isAuthenticated: true, termsAccepted: true });
   };
 
-  const signup = (email: string, pin: string) => {
+  const signup = async (email: string, pin: string, password = 'password123') => {
+    const res = await registerFamilyByCode(email, password, pin);
+    if (res.success && res.familiaId) {
+      localStorage.setItem('essimple_family_id', res.familiaId);
+    }
     setAccount({ email, isAuthenticated: true, termsAccepted: false });
     if (pin && pin.length === 4) {
       setSettings(prev => ({ ...prev, exitPin: pin }));

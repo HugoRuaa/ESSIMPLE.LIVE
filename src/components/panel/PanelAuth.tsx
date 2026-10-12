@@ -81,7 +81,7 @@ export const PanelAuth: React.FC = () => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    login(email);
+    login(email, password);
   };
 
   // Handle Signup [24]
@@ -95,7 +95,7 @@ export const PanelAuth: React.FC = () => {
       alert('El PIN debe tener 4 números.');
       return;
     }
-    signup(email, pin);
+    signup(email, pin, password);
   };
 
   // Screen [23] & [24]
