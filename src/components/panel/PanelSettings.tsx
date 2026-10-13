@@ -29,7 +29,7 @@ export const PanelSettings: React.FC = () => {
 
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://essimple.live';
   const familyParam = encodeURIComponent(account?.email || '');
-  const installUrl = `${origin}/?view=phone${familyParam ? `&family=${familyParam}` : ''}&token=${installToken}`;
+  const installUrl = `${origin}/instalar/${installToken}${familyParam ? `?family=${familyParam}` : ''}`;
 
   const handleSavePerson = () => {
     saveSettings({
@@ -400,13 +400,19 @@ export const PanelSettings: React.FC = () => {
               </button>
             </div>
 
-            <div className="bg-[#eff6ff] border border-[#0b4f9e]/20 p-3 rounded-2xl text-xs sm:text-sm text-[#14213d] space-y-1">
-              <p className="font-bold text-[#0b4f9e] flex items-center gap-1.5">
+            <div className="bg-[#eff6ff] border border-[#0b4f9e]/20 p-4 rounded-2xl text-xs sm:text-sm text-[#14213d] space-y-2.5">
+              <p className="font-bold text-[#0b4f9e] flex items-center gap-1.5 text-base">
                 <span>📱</span>
-                <span>¿Cómo funciona en el celular del acompañado?</span>
+                <span>¿Cómo funciona este enlace en el celular del acompañado?</span>
               </p>
-              <p className="text-neutral-700">
-                Al abrir este enlace en el teléfono (Google Chrome), se abre directamente la pantalla simplificada. Para dejarlo como aplicación, toca los 3 puntos (⋮) de Chrome y pulsa <strong>"Agregar a la pantalla principal"</strong>.
+              <p className="text-neutral-700 leading-relaxed">
+                <strong>1. Pantalla exclusiva y limpia:</strong> Al abrir este enlace, se carga únicamente la pantalla grande para {settings.personName}. No muestra menús de administración, paneles de control ni formularios que puedan confundir a tus papás.
+              </p>
+              <p className="text-neutral-700 leading-relaxed">
+                <strong>2. Difícil de cerrar o desconfigurar:</strong> El botón "Salir" está bloqueado con tu PIN de 4 dígitos. Además, incluye modo de pantalla completa para ocultar las barras del navegador.
+              </p>
+              <p className="text-neutral-700 leading-relaxed">
+                <strong>3. ¿Es un APK o una aplicación web?</strong> Es una Aplicación Web Progresiva (PWA). No requiere descargar archivos APK desconocidos que bloquee Android. En Google Chrome, toca los 3 puntos (⋮) y selecciona <strong>"Agregar a la pantalla principal"</strong> o <strong>"Instalar aplicación"</strong>. Quedará como un icono directo en el celular que se abre en pantalla completa sin barra de navegación.
               </p>
             </div>
 

@@ -385,9 +385,14 @@ const installTokens: Record<string, {
   expiresAt: number;
 }> = {
   'k7Qp2x9a': {
-    familyEmail: 'laura@correo.com',
+    familyEmail: 'hugofrua@gmail.com',
     used: false,
-    expiresAt: Date.now() + 72 * 3600 * 1000,
+    expiresAt: Date.now() + 365 * 24 * 3600 * 1000,
+  },
+  'k7Qp2x9a4b': {
+    familyEmail: 'hugofrua@gmail.com',
+    used: false,
+    expiresAt: Date.now() + 365 * 24 * 3600 * 1000,
   }
 };
 
@@ -621,11 +626,27 @@ app.post('/api/install/create', (req, res) => {
   const { familyEmail } = req.body;
   const token = Math.random().toString(36).substring(2, 10);
   installTokens[token] = {
-    familyEmail: familyEmail || 'laura@correo.com',
+    familyEmail: familyEmail || 'hugofrua@gmail.com',
     used: false,
     expiresAt: Date.now() + 72 * 3600 * 1000,
   };
   res.json({ token, expiresAt: installTokens[token].expiresAt });
+});
+
+// Enlace directo de instalación para el celular del acompañado (ej: /instalar/k7Qp2x9a4b)
+app.get('/instalar/:token', (req, res) => {
+  const token = req.params.token;
+  const stored = installTokens[token];
+  const familyFromQuery = req.query.family ? String(req.query.family) : (stored?.familyEmail || '');
+  const familyParam = familyFromQuery ? `&family=${encodeURIComponent(familyFromQuery)}` : '';
+  res.redirect(`/?view=phone&token=${encodeURIComponent(token)}${familyParam}`);
+});
+
+// Ruta amigable directa para el celular del acompañado (/acompanado)
+app.get('/acompanado', (req, res) => {
+  const family = req.query.family ? `&family=${encodeURIComponent(String(req.query.family))}` : '';
+  const token = req.query.token ? `&token=${encodeURIComponent(String(req.query.token))}` : '';
+  res.redirect(`/?view=phone${family}${token}`);
 });
 
 // Vite middleware or static serving

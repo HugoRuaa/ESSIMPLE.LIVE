@@ -27,10 +27,23 @@ const MainAppContent: React.FC = () => {
     logout,
   } = useApp();
 
-  const isDirectPhoneView = typeof window !== 'undefined' && (
-    new URLSearchParams(window.location.search).get('view') === 'phone' ||
-    new URLSearchParams(window.location.search).get('mode') === 'phone'
-  );
+  const isDirectPhoneView = typeof window !== 'undefined' && (() => {
+    const search = new URLSearchParams(window.location.search);
+    const path = window.location.pathname.toLowerCase();
+    const isPhoneQuery = (
+      search.get('view') === 'phone' ||
+      search.get('mode') === 'phone' ||
+      search.has('token') ||
+      path.startsWith('/instalar') ||
+      path.startsWith('/acompanado') ||
+      path === '/telefono'
+    );
+    if (isPhoneQuery) {
+      localStorage.setItem('essimple_is_phone_device', 'true');
+      return true;
+    }
+    return localStorage.getItem('essimple_is_phone_device') === 'true';
+  })();
 
   const [mode, setMode] = useState<AppMode>(isDirectPhoneView ? 'phone' : 'panel');
   const [usePhoneFrame, setUsePhoneFrame] = useState(!isDirectPhoneView);
@@ -55,6 +68,63 @@ const MainAppContent: React.FC = () => {
       });
     }
   };
+
+  // 1. PANTALLA EXCLUSIVA PARA EL CELULAR DEL ACOMPAÑADO
+  // Si entra desde el enlace de instalación o modo teléfono, abre DIRECTA Y ÚNICAMENTE la pantalla del acompañado.
+  // Sin barras superiores de administración, sin botones del panel, sin opciones de salir sin PIN.
+  if (isDirectPhoneView && mode === 'phone') {
+    return (
+      <div className="w-full min-h-screen bg-[#f6f3ec] text-[#14213d] flex flex-col font-sans select-none overscroll-contain">
+        {isSimulatingFall ? (
+          <div className="fixed inset-0 z-50 bg-[#0b6b3a] text-white flex flex-col justify-between p-6 select-none animate-in fade-in">
+            <div className="pt-8">
+              <h1 className="text-4xl font-extrabold tracking-tight">¿Está bien?</h1>
+            </div>
+            <div className="flex flex-col items-center justify-center my-auto">
+              <span className="text-[140px] font-extrabold leading-none tracking-tight">30</span>
+            </div>
+            <div className="space-y-6 pb-6">
+              <button
+                onClick={() => {
+                  setIsSimulatingFall(false);
+                  addEvent({
+                    type: 'caida_ok',
+                    title: 'Posible caída: respondió que está bien',
+                    detail: 'Canceló la alarma de caída a tiempo',
+                    timestamp: 'Ahora mismo',
+                    relativeTime: 'Hace 0 min',
+                    level: 'normal',
+                  });
+                }}
+                className="w-full bg-white text-[#0b6b3a] text-4xl font-extrabold py-8 rounded-3xl shadow-xl hover:bg-neutral-100 active:scale-95 transition cursor-pointer"
+              >
+                Estoy bien
+              </button>
+              <p className="text-xl font-bold text-center text-white/90 leading-snug">
+                Si no respondes, avisaremos a tus contactos de emergencia.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <main className="w-full max-w-md mx-auto min-h-screen flex-1 flex flex-col bg-[#f6f3ec] relative">
+            <PhoneView
+              isDedicatedView={true}
+              onExitToPanel={() => {
+                localStorage.removeItem('essimple_is_phone_device');
+                setMode('panel');
+                if (typeof window !== 'undefined') {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('view');
+                  url.searchParams.delete('token');
+                  window.history.replaceState({}, '', url.pathname);
+                }
+              }}
+            />
+          </main>
+        )}
+      </div>
+    );
+  }
 
   // PANTALLA INICIAL: Si la persona no está autenticada y no viene con enlace directo del teléfono, entra al registro
   if (!account.isAuthenticated && !isDirectPhoneView) {

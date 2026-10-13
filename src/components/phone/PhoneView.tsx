@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Phone, MessageSquare, Mic, Share2, ChevronDown, Bell } from 'lucide-react';
+import { MapPin, Phone, MessageSquare, Mic, Share2, ChevronDown, Bell, Lock, Maximize2, Minimize2 } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { TactileButton } from '../common/TactileButton';
 import { SosModal } from './SosModal';
@@ -17,9 +17,10 @@ import { Contact } from '../../types';
 
 interface PhoneViewProps {
   onExitToPanel?: () => void;
+  isDedicatedView?: boolean;
 }
 
-export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel }) => {
+export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicatedView = false }) => {
   const {
     contacts,
     settings,
@@ -100,6 +101,55 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel }) => {
       if (sosIntervalRef.current) clearInterval(sosIntervalRef.current);
     };
   }, []);
+
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Protección anti-salida accidental para que el adulto mayor no cierre la aplicación por error
+  useEffect(() => {
+    if (!isDedicatedView) return;
+
+    // 1. Advertencia del navegador antes de cerrar la pestaña
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    // 2. Trampa de historial para el botón Atrás / gestos de deslizamiento en Android
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      // Si está en una subpantalla, volver suavemente al inicio
+      if (currentScreen !== 'home') {
+        setCurrentScreen('home');
+      }
+      // Mantener siempre un estado en el historial para evitar que el navegador cierre la app
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isDedicatedView, currentScreen]);
 
   // Handle contact click [1] -> [3]
   const handleSelectContact = (contact: Contact) => {
@@ -266,12 +316,30 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel }) => {
       <div className="space-y-3">
         <div className="flex items-center justify-between pt-1">
           <Logo size="md" />
-          <button
-            onClick={() => setShowPinModal(true)}
-            className="px-5 py-2.5 bg-white border-2 border-[#7a7461] rounded-2xl text-xl font-extrabold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition"
-          >
-            Salir
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Modo Kiosco / Pantalla Completa para que no se cierre ni muestre barras del navegador */}
+            <button
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Salir de pantalla completa' : 'Poner en pantalla completa (Modo Kiosco)'}
+              className="p-2.5 bg-white border-2 border-[#7a7461] rounded-2xl text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center justify-center"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="w-6 h-6 stroke-[2.5]" />
+              ) : (
+                <Maximize2 className="w-6 h-6 stroke-[2.5]" />
+              )}
+            </button>
+
+            {/* Salir protegido por PIN para evitar salidas accidentales */}
+            <button
+              onClick={() => setShowPinModal(true)}
+              title="Salir (Protegido por PIN de seguridad)"
+              className="px-4 py-2 bg-white border-2 border-[#7a7461] rounded-2xl text-lg font-extrabold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center gap-1.5"
+            >
+              <Lock className="w-4 h-4 text-[#7a7461]" />
+              <span>Salir</span>
+            </button>
+          </div>
         </div>
 
         {/* Screen [2]: Top green banner while sharing location */}

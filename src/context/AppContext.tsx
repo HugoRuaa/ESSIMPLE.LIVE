@@ -453,13 +453,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sincronizar automáticamente datos familiares desde Supabase al iniciar sesión, cargar la app o abrir enlace del acompañado
   useEffect(() => {
-    const urlFamily = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('family') : null;
-    const targetEmail = account.email || (urlFamily ? decodeURIComponent(urlFamily).trim() : '');
-    if (!targetEmail || targetEmail === 'demo@essimple.live') return;
-
     let isMounted = true;
     const loadCloudData = async () => {
       try {
+        const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        let urlFamily = search?.get('family');
+        const urlToken = search?.get('token');
+        const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+        const pathToken = pathname.startsWith('/instalar/') ? pathname.split('/')[2]?.trim() : null;
+        const activeToken = urlToken || pathToken;
+
+        // Si viene con token y sin email en la url, resolver la familia asociada al token
+        if (!urlFamily && activeToken) {
+          try {
+            const resp = await fetch(`/api/install/${encodeURIComponent(activeToken)}`);
+            const json = await resp.json();
+            if (json?.data?.familyEmail) {
+              urlFamily = json.data.familyEmail;
+            } else if (activeToken === 'k7Qp2x9a4b' || activeToken === 'k7Qp2x9a') {
+              urlFamily = 'hugofrua@gmail.com';
+            }
+          } catch {
+            if (activeToken === 'k7Qp2x9a4b' || activeToken === 'k7Qp2x9a') {
+              urlFamily = 'hugofrua@gmail.com';
+            }
+          }
+        }
+
+        const targetEmail = account.email || (urlFamily ? decodeURIComponent(urlFamily).trim() : '');
+        if (!targetEmail || targetEmail === 'demo@essimple.live') return;
         let familyId = localStorage.getItem('essimple_family_id');
         if (!familyId || familyId === 'local-family-id' || (urlFamily && !account.email)) {
           const lookup = await lookupFamilyByEmail(targetEmail);

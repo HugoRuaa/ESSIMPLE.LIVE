@@ -1,0 +1,17 @@
+{
+  "name": "Simple - Celular de la Persona Acompañada",
+  "short_name": "Simple",
+  "description": "Teléfono adaptado para personas mayores con botones grandes y asistencia familiar.",
+  "start_url": "/?view=phone",
+  "display": "standalone",
+  "background_color": "#f6f3ec",
+  "theme_color": "#14213d",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
