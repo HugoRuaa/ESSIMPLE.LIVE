@@ -18,7 +18,7 @@ habla directo con Supabase y el APK se compila en GitHub Actions.
 | Nombre | Para qué |
 | --- | --- |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Conexión a Supabase dentro del APK. Usa la llave **anon/publishable**, nunca una `service_role` / `sb_secret_`. |
-| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | Firma con tu llave (recomendado: así las actualizaciones se instalan encima). Sin ellos se firma con la llave de depuración. |
+| `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` | Firma con tu llave (recomendado: así las actualizaciones se instalan encima). Se asume alias `simple` y la misma contraseña para la llave; si usas otros, añade la variable `ANDROID_KEY_ALIAS` y/o el secreto `ANDROID_KEY_PASSWORD`. Sin esto se firma con la llave de depuración. |
 | `SUPABASE_SERVICE_KEY` (opcional) | Sube también el APK a Supabase Storage. |
 | `APK_URL` (variable, opcional) | Enlace de descarga que muestra el panel si no usas el release de GitHub. |
 
