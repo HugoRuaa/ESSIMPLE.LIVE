@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { FontSize } from '../../types';
 
 export const PanelSettings: React.FC = () => {
-  const { settings, updateSettings, saveSettings } = useApp();
+  const { settings, updateSettings, saveSettings, account } = useApp();
 
   const [personName, setPersonName] = useState(settings.personName);
   const [fontSize, setFontSize] = useState<FontSize>(settings.fontSize);
@@ -25,8 +25,11 @@ export const PanelSettings: React.FC = () => {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [installToken, setInstallToken] = useState('k7Qp2x9a4b');
   const [copiedLink, setCopiedLink] = useState(false);
+  const [newTokenFeedback, setNewTokenFeedback] = useState(false);
 
-  const installUrl = `https://essimple.live/instalar/${installToken}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://essimple.live';
+  const familyParam = encodeURIComponent(account?.email || '');
+  const installUrl = `${origin}/?view=phone${familyParam ? `&family=${familyParam}` : ''}&token=${installToken}`;
 
   const handleSavePerson = () => {
     saveSettings({
@@ -397,15 +400,32 @@ export const PanelSettings: React.FC = () => {
               </button>
             </div>
 
-            <p className="text-sm font-semibold text-[#3b4863] text-center">
-              Sirve una sola vez y vence en 72 horas. Si lo necesitas de nuevo, crea otro.
+            <div className="bg-[#eff6ff] border border-[#0b4f9e]/20 p-3 rounded-2xl text-xs sm:text-sm text-[#14213d] space-y-1">
+              <p className="font-bold text-[#0b4f9e] flex items-center gap-1.5">
+                <span>📱</span>
+                <span>¿Cómo funciona en el celular del acompañado?</span>
+              </p>
+              <p className="text-neutral-700">
+                Al abrir este enlace en el teléfono (Google Chrome), se abre directamente la pantalla simplificada. Para dejarlo como aplicación, toca los 3 puntos (⋮) de Chrome y pulsa <strong>"Agregar a la pantalla principal"</strong>.
+              </p>
+            </div>
+
+            <p className="text-xs font-semibold text-[#7a7461] text-center">
+              El enlace se mantiene activo para vincular el dispositivo. Si lo necesitas de nuevo, crea otro.
             </p>
+
+            {newTokenFeedback && (
+              <p className="text-xs font-bold text-[#0b6b3a] text-center animate-in fade-in">
+                ✓ Nuevo enlace generado con éxito
+              </p>
+            )}
 
             <div className="flex justify-between items-center pt-2">
               <button
                 onClick={() => {
                   setInstallToken(Math.random().toString(36).substring(2, 10));
-                  alert('Nuevo enlace creado.');
+                  setNewTokenFeedback(true);
+                  setTimeout(() => setNewTokenFeedback(false), 3000);
                 }}
                 className="text-base font-extrabold text-[#0b4f9e] underline cursor-pointer"
               >

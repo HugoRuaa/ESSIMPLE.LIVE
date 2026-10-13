@@ -27,8 +27,13 @@ const MainAppContent: React.FC = () => {
     logout,
   } = useApp();
 
-  const [mode, setMode] = useState<AppMode>('panel');
-  const [usePhoneFrame, setUsePhoneFrame] = useState(true);
+  const isDirectPhoneView = typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.search).get('view') === 'phone' ||
+    new URLSearchParams(window.location.search).get('mode') === 'phone'
+  );
+
+  const [mode, setMode] = useState<AppMode>(isDirectPhoneView ? 'phone' : 'panel');
+  const [usePhoneFrame, setUsePhoneFrame] = useState(!isDirectPhoneView);
   const [isSimulatingFall, setIsSimulatingFall] = useState(false);
 
   const handleSimulateFall = () => {
@@ -51,8 +56,8 @@ const MainAppContent: React.FC = () => {
     }
   };
 
-  // PANTALLA INICIAL: Si la persona no está autenticada, entra directamente a registrarse
-  if (!account.isAuthenticated) {
+  // PANTALLA INICIAL: Si la persona no está autenticada y no viene con enlace directo del teléfono, entra al registro
+  if (!account.isAuthenticated && !isDirectPhoneView) {
     return (
       <div className="min-h-screen bg-[#ede8dc] text-[#14213d] flex flex-col font-sans">
         {/* Barra superior de bienvenida */}

@@ -451,26 +451,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('essimple_account', JSON.stringify(account));
   }, [account]);
 
-  // Sincronizar automáticamente datos familiares desde Supabase al iniciar sesión o cargar la app
+  // Sincronizar automáticamente datos familiares desde Supabase al iniciar sesión, cargar la app o abrir enlace del acompañado
   useEffect(() => {
-    if (!account.isAuthenticated || !account.email || account.email === 'demo@essimple.live') return;
+    const urlFamily = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('family') : null;
+    const targetEmail = account.email || (urlFamily ? decodeURIComponent(urlFamily).trim() : '');
+    if (!targetEmail || targetEmail === 'demo@essimple.live') return;
 
     let isMounted = true;
     const loadCloudData = async () => {
       try {
         let familyId = localStorage.getItem('essimple_family_id');
-        if (!familyId || familyId === 'local-family-id') {
-          const lookup = await lookupFamilyByEmail(account.email);
+        if (!familyId || familyId === 'local-family-id' || (urlFamily && !account.email)) {
+          const lookup = await lookupFamilyByEmail(targetEmail);
           if (lookup?.familiaId) {
             familyId = lookup.familiaId;
             localStorage.setItem('essimple_family_id', familyId);
             if (isMounted) {
-              setAccount(prev => ({ ...prev, familiaId: familyId }));
+              setAccount(prev => ({
+                ...prev,
+                email: targetEmail,
+                isAuthenticated: true,
+                termsAccepted: true,
+                familiaId: familyId,
+              }));
+              if (lookup.familyData?.person_name) {
+                setSettings(prev => ({ ...prev, personName: lookup.familyData.person_name }));
+              }
             }
           }
         }
 
-        const identifier = familyId || account.email;
+        const identifier = familyId || targetEmail;
         if (!identifier) return;
 
         // 1. Cargar casa y zona segura desde Supabase
