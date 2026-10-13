@@ -20,7 +20,8 @@ export type EventType =
   | 'ubicacion_inicio'
   | 'ubicacion_fin'
   | 'sms_enviado'
-  | 'voz_enviada';
+  | 'voz_enviada'
+  | 'llamada';
 
 export interface EventItem {
   id: string;

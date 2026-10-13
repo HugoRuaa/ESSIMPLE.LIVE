@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Phone } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 interface SosModalProps {
@@ -43,6 +43,10 @@ export const SosModal: React.FC<SosModalProps> = ({ isOpen, onClose }) => {
       const t2 = setTimeout(() => setProgressStep(3), 2400);
       const t3 = setTimeout(() => {
         setStep('result');
+        if (emergencyContacts[0]?.phone) {
+          const clean = emergencyContacts[0].phone.replace(/[^\d+]/g, '');
+          if (clean) window.location.href = `tel:${clean}`;
+        }
       }, 4000);
       return () => {
         clearTimeout(t1);
@@ -145,10 +149,20 @@ export const SosModal: React.FC<SosModalProps> = ({ isOpen, onClose }) => {
         </p>
       </div>
 
-      <div className="pb-8">
+      <div className="space-y-4 pb-8">
+        {emergencyContacts[0]?.phone && (
+          <a
+            href={`tel:${emergencyContacts[0].phone.replace(/[^\d+]/g, '')}`}
+            className="w-full bg-[#a61b1b] hover:bg-[#8a1616] text-white text-3xl font-extrabold py-6 rounded-3xl shadow-xl flex items-center justify-center gap-3 active:scale-95 transition text-center cursor-pointer"
+          >
+            <Phone className="w-8 h-8" />
+            <span>Llamar a {firstContactName}</span>
+          </a>
+        )}
+
         <button
           onClick={onClose}
-          className="w-full bg-[#0b6b3a] text-white text-4xl font-extrabold py-8 rounded-3xl shadow-xl hover:bg-[#08542d] active:scale-95 transition cursor-pointer"
+          className="w-full bg-[#0b6b3a] text-white text-4xl font-extrabold py-6 rounded-3xl shadow-xl hover:bg-[#08542d] active:scale-95 transition cursor-pointer"
         >
           Listo
         </button>

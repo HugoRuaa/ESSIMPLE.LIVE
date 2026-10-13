@@ -26,7 +26,36 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     settings,
     locationShare,
     stopLocationShare,
+    addEvent,
   } = useApp();
+
+  const [callingNotice, setCallingNotice] = useState<string | null>(null);
+
+  const handleCallContact = (contact: Contact) => {
+    const raw = (contact.phone || '').trim();
+    const clean = raw.replace(/[^\d+]/g, '');
+
+    if (!clean) {
+      setCallingNotice(`No hay número guardado para ${contact.name}`);
+      setTimeout(() => setCallingNotice(null), 3500);
+      return;
+    }
+
+    addEvent({
+      type: 'llamada',
+      title: `Llamada a ${contact.name}`,
+      detail: `Marcando al ${contact.phone}`,
+      timestamp: 'Ahora mismo',
+      relativeTime: 'Hace un momento',
+      level: 'normal',
+    });
+
+    setCallingNotice(`Marcando a ${contact.name} (${contact.phone})...`);
+    setTimeout(() => setCallingNotice(null), 4000);
+
+    // Disparar llamada telefónica nativa en el celular
+    window.location.href = `tel:${clean}`;
+  };
 
   // Navigation states within phone
   type PhoneScreen =
@@ -178,15 +207,20 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
             </h1>
           </div>
 
+          {/* Aviso visual mientras el teléfono conecta la llamada */}
+          {callingNotice && (
+            <div className="bg-[#0b6b3a] text-white p-4 rounded-2xl text-center text-xl font-extrabold animate-bounce shadow-md">
+              📞 {callingNotice}
+            </div>
+          )}
+
           {/* 4 Large Action Buttons matching [3] */}
           <div className="space-y-3.5 pt-2">
             <TactileButton
               variant="green"
               fontSize={settings.fontSize}
               icon={<Phone className="w-9 h-9 text-white stroke-[2.5]" />}
-              onClick={() => {
-                alert(`Llamando a ${selectedContact.name} (${selectedContact.phone})...`);
-              }}
+              onClick={() => handleCallContact(selectedContact)}
             >
               Llamar
             </TactileButton>
@@ -253,6 +287,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     return (
       <WriteMessageView
         contactName={selectedContact.name}
+        contactPhone={selectedContact.phone}
         onBack={() => setCurrentScreen('contact_detail')}
       />
     );

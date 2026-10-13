@@ -7,6 +7,7 @@ import {
   CheckCircle,
   MessageSquare,
   MapPin,
+  Phone,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -35,6 +36,8 @@ export const PanelActivity: React.FC = () => {
         return <Mic className="w-6 h-6 text-[#0b4f9e]" />;
       case 'sms_enviado':
         return <MessageSquare className="w-6 h-6 text-[#0b4f9e]" />;
+      case 'llamada':
+        return <Phone className="w-6 h-6 text-[#0b6b3a]" />;
       case 'ubicacion_inicio':
       case 'ubicacion_fin':
         return <Share2 className="w-6 h-6 text-[#0b4f9e]" />;
