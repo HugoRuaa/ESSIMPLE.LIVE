@@ -61,7 +61,15 @@ jobs:
 
       - name: Compilar el APK
         working-directory: android
-        run: ./gradlew assembleRelease -PversionCode=${{ github.run_number }}
+        run: |
+          set -o pipefail
+          ./gradlew assembleRelease -PversionCode=${{ github.run_number }} --stacktrace 2>&1 | tee "$GITHUB_WORKSPACE/gradle.log"
+
+      - name: Resumen del error de compilación (solo si falló)
+        if: failure()
+        run: |
+          msg=$(grep -nE "error:|e: |FAILURE|What went wrong|Caused by|Execution failed|cannot find symbol|not found|licen" -A2 gradle.log | head -50 | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error title=Gradle::${msg}"
 
       - name: Renombrar el APK
         run: cp android/app/build/outputs/apk/release/app-release.apk simple.apk
