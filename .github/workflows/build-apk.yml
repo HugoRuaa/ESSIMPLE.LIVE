@@ -1,0 +1,85 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'android/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'capacitor.config.ts'
+      - 'vite.config.ts'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      VITE_SUPABASE_SCHEMA: essimple
+      VITE_APK_URL: ${{ vars.APK_URL }}
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Compilar la web y sincronizar con Android
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Preparar llave de firma (opcional)
+        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/simple.keystore"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/simple.keystore" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+
+      - name: Compilar el APK
+        working-directory: android
+        run: ./gradlew assembleRelease -PversionCode=${{ github.run_number }}
+
+      - name: Renombrar el APK
+        run: cp android/app/build/outputs/apk/release/app-release.apk simple.apk
+
+      - name: Publicar en GitHub Releases (enlace estable)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view apk >/dev/null 2>&1 || gh release create apk --title "Simple (APK)" --notes "Última versión del APK de Simple" --latest=false
+          gh release upload apk simple.apk --clobber
+
+      - name: Publicar en Supabase Storage (opcional, enlace público sin necesidad de repo público)
+        if: ${{ env.SUPABASE_SERVICE_KEY != '' }}
+        run: |
+          curl -sS -f -X POST "$SUPABASE_URL/storage/v1/object/apk/simple.apk" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_KEY" \
+            -H "x-upsert: true" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            --data-binary @simple.apk
+          echo "APK público: $SUPABASE_URL/storage/v1/object/public/apk/simple.apk"

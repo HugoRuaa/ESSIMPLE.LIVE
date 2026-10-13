@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, MessageSquare, Check, Phone } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
+import { callNumber } from '../../lib/native';
 import { useApp } from '../../context/AppContext';
 
 interface WriteMessageViewProps {
@@ -81,21 +82,23 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
     ? `https://api.whatsapp.com/send?phone=${fullWhatsAppPhone}&text=${encodedMsg}`
     : `https://api.whatsapp.com/send?text=${encodedMsg}`;
 
-  const handleSendSms = () => {
+  const handleSendSms = async () => {
     if (!message.trim()) return;
-    testSendSms(contactName, message);
     setSentMethod('sms');
     setIsSent(true);
 
-    // Abrir de inmediato la aplicación de mensajería SMS del celular
-    setTimeout(() => {
-      window.location.href = smsUrl;
-    }, 150);
+    // En el APK el SMS sale directo, sin abrir otra app. En el navegador abre la app de mensajes.
+    const sentDirectly = await testSendSms(contactName, message);
+    if (!sentDirectly) {
+      setTimeout(() => {
+        window.location.href = smsUrl;
+      }, 150);
+    }
   };
 
   const handleSendWhatsApp = () => {
     if (!message.trim()) return;
-    testSendSms(contactName, `[WhatsApp] ${message}`);
+    void testSendSms(contactName, `[WhatsApp] ${message}`, false);
     setSentMethod('whatsapp');
     setIsSent(true);
 
@@ -141,6 +144,10 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
           {cleanPhone && (
             <a
               href={`tel:${cleanPhone}`}
+              onClick={e => {
+                e.preventDefault();
+                void callNumber(cleanPhone);
+              }}
               className="w-full bg-[#0b6b3a] hover:bg-[#08542d] text-white py-4 rounded-3xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-md active:scale-95 transition text-center"
             >
               <Phone className="w-6 h-6" />

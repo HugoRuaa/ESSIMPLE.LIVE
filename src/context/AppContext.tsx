@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { sendSmsNative, getPairedFamily } from '../lib/native';
 import {
   Contact,
   EventItem,
@@ -67,7 +68,7 @@ interface AppContextType {
   triggerSos: () => void;
   triggerFall: () => void;
   resolveFallOk: () => void;
-  testSendSms: (contactName: string, message: string) => void;
+  testSendSms: (contactName: string, message: string, viaSms?: boolean) => Promise<boolean>;
   sendVoiceMessage: (recipientName: string, durationSeconds: number, audioBlobUrl?: string) => string;
 }
 
@@ -457,7 +458,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const loadCloudData = async () => {
       try {
         const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        let urlFamily = search?.get('family');
+        let urlFamily = search?.get('family') || getPairedFamily();
         const urlToken = search?.get('token');
         const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
         const pathToken = pathname.startsWith('/instalar/') ? pathname.split('/')[2]?.trim() : null;
@@ -974,6 +975,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setEvents(prev => [newEv, ...prev]);
     setActiveEmergencyBanner(newEv);
+
+    // En el APK de Android envía el SMS de auxilio directamente, con la ubicación si está disponible.
+    void (async () => {
+      let place = '';
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, maximumAge: 60000 })
+        );
+        place = ` Ubicación: https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+      } catch {
+        // sin ubicación: se envía igual
+      }
+      const text = `${settings.personName} pidió ayuda (SOS).${place}`;
+      for (const c of emergencyContacts) {
+        if (c.phone) await sendSmsNative(c.phone, text);
+      }
+    })();
   };
 
   const triggerFall = () => {
@@ -991,15 +1009,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const testSendSms = (contactName: string, message: string) => {
+  const testSendSms = async (contactName: string, message: string, viaSms: boolean = true): Promise<boolean> => {
+    const target =
+      contacts.find(c => c.name.toLowerCase() === contactName.toLowerCase()) ||
+      contacts.find(c => c.isEmergency) ||
+      contacts[0];
+    const sent = viaSms && target?.phone ? await sendSmsNative(target.phone, message) : false;
     addEvent({
       type: 'sms_enviado',
       title: 'Envió un mensaje de texto',
-      detail: `Para ${contactName}: "${message}"`,
+      detail: `Para ${target?.name || contactName}: "${message}"`,
       timestamp: 'Ahora mismo',
       relativeTime: 'Hace un momento',
       level: 'normal',
     });
+    return sent;
   };
 
   const sendVoiceMessage = (recipientName: string, durationSeconds: number) => {

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { Eye, EyeOff, QrCode, Copy, Share2, MessageCircle, Check } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FontSize } from '../../types';
+import { APK_URL } from '../../lib/config';
+import { buildPairCode } from '../../lib/native';
 
 export const PanelSettings: React.FC = () => {
   const { settings, updateSettings, saveSettings, account } = useApp();
@@ -23,13 +26,27 @@ export const PanelSettings: React.FC = () => {
 
   // Install Link Modal [33]
   const [showInstallModal, setShowInstallModal] = useState(false);
-  const [installToken, setInstallToken] = useState('k7Qp2x9a4b');
   const [copiedLink, setCopiedLink] = useState(false);
-  const [newTokenFeedback, setNewTokenFeedback] = useState(false);
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://essimple.live';
-  const familyParam = encodeURIComponent(account?.email || '');
-  const installUrl = `${origin}/instalar/${installToken}${familyParam ? `?family=${familyParam}` : ''}`;
+  // El enlace es la descarga directa del APK; el código de vinculación viaja en el mismo mensaje.
+  const installUrl = APK_URL;
+  const pairCode = account?.email ? buildPairCode(account.email) : '';
+  const shareText =
+    `Instala Simple en tu teléfono: ${installUrl}` +
+    (pairCode ? `\n\nCódigo de vinculación (copia este mensaje antes de abrir la app): ${pairCode}` : '');
+
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    QRCode.toDataURL(installUrl, { margin: 1, width: 300, color: { dark: '#14213d', light: '#ffffff' } })
+      .then(url => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [installUrl]);
 
   const handleSavePerson = () => {
     saveSettings({
@@ -63,7 +80,7 @@ export const PanelSettings: React.FC = () => {
   };
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(installUrl);
+    navigator.clipboard.writeText(shareText);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2500);
   };
@@ -224,7 +241,7 @@ export const PanelSettings: React.FC = () => {
           Instalar Simple en el teléfono de {settings.personName}
         </h2>
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
-          Crea un enlace y envíaselo: al abrirlo descarga Simple y el teléfono se conecta solo, sin escribir códigos.
+          Comparte el enlace: descarga Simple directamente en el teléfono y el asistente lo deja configurado en un solo recorrido.
         </p>
 
         <button
@@ -232,7 +249,7 @@ export const PanelSettings: React.FC = () => {
           className="w-full bg-[#0b4f9e] hover:bg-[#093f7e] text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md cursor-pointer transition active:scale-95 flex items-center justify-center gap-2"
         >
           <QrCode className="w-6 h-6" />
-          <span>Crear enlace de instalación</span>
+          <span>Enlace de descarga del APK</span>
         </button>
       </div>
 
@@ -319,44 +336,17 @@ export const PanelSettings: React.FC = () => {
               Instalar Simple en el teléfono de {settings.personName}
             </h2>
             <p className="text-lg font-semibold text-[#3b4863] text-center leading-snug">
-              Envía este enlace por WhatsApp o muéstrale el QR desde el teléfono de {settings.personName}.
+              Envía este enlace por WhatsApp o muéstrale el QR: al tocarlo descarga el APK directamente.
             </p>
 
-            {/* Generated QR Code representation */}
+            {/* QR real del enlace de descarga */}
             <div className="flex justify-center py-2">
-              <div className="p-4 bg-white border-2 border-[#14213d] rounded-2xl shadow-md">
-                <svg viewBox="0 0 100 100" className="w-48 h-48">
-                  {/* Outer markers */}
-                  <rect x="5" y="5" width="28" height="28" fill="#14213d" />
-                  <rect x="9" y="9" width="20" height="20" fill="white" />
-                  <rect x="13" y="13" width="12" height="12" fill="#14213d" />
-
-                  <rect x="67" y="5" width="28" height="28" fill="#14213d" />
-                  <rect x="71" y="9" width="20" height="20" fill="white" />
-                  <rect x="75" y="13" width="12" height="12" fill="#14213d" />
-
-                  <rect x="5" y="67" width="28" height="28" fill="#14213d" />
-                  <rect x="9" y="71" width="20" height="20" fill="white" />
-                  <rect x="13" y="75" width="12" height="12" fill="#14213d" />
-
-                  {/* QR Pattern dots */}
-                  <rect x="38" y="8" width="6" height="6" fill="#14213d" />
-                  <rect x="48" y="14" width="6" height="6" fill="#14213d" />
-                  <rect x="38" y="24" width="6" height="6" fill="#14213d" />
-                  <rect x="54" y="24" width="6" height="6" fill="#14213d" />
-                  <rect x="12" y="38" width="6" height="6" fill="#14213d" />
-                  <rect x="24" y="44" width="6" height="6" fill="#14213d" />
-                  <rect x="38" y="38" width="6" height="6" fill="#14213d" />
-                  <rect x="48" y="48" width="6" height="6" fill="#14213d" />
-                  <rect x="60" y="38" width="6" height="6" fill="#14213d" />
-                  <rect x="74" y="44" width="6" height="6" fill="#14213d" />
-                  <rect x="84" y="38" width="6" height="6" fill="#14213d" />
-                  <rect x="38" y="60" width="6" height="6" fill="#14213d" />
-                  <rect x="48" y="70" width="6" height="6" fill="#14213d" />
-                  <rect x="60" y="60" width="6" height="6" fill="#14213d" />
-                  <rect x="74" y="68" width="6" height="6" fill="#14213d" />
-                  <rect x="84" y="78" width="6" height="6" fill="#14213d" />
-                </svg>
+              <div className="p-3 bg-white border-2 border-[#14213d] rounded-2xl shadow-md">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt="Código QR para descargar Simple" className="w-48 h-48" />
+                ) : (
+                  <div className="w-48 h-48" />
+                )}
               </div>
             </div>
 
@@ -369,7 +359,7 @@ export const PanelSettings: React.FC = () => {
             <div className="space-y-3">
               <button
                 onClick={() => {
-                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent('Instala Simple desde aquí: ' + installUrl)}`, '_blank');
+                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
                 }}
                 className="w-full bg-[#0b6b3a] hover:bg-[#08542d] text-white py-3.5 rounded-2xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-md cursor-pointer transition active:scale-95"
               >
@@ -388,7 +378,7 @@ export const PanelSettings: React.FC = () => {
               <button
                 onClick={() => {
                   if (navigator.share) {
-                    navigator.share({ title: 'Instalar Simple', url: installUrl });
+                    navigator.share({ title: 'Instalar Simple', text: shareText });
                   } else {
                     handleCopyLink();
                   }
@@ -403,40 +393,25 @@ export const PanelSettings: React.FC = () => {
             <div className="bg-[#eff6ff] border border-[#0b4f9e]/20 p-4 rounded-2xl text-xs sm:text-sm text-[#14213d] space-y-2.5">
               <p className="font-bold text-[#0b4f9e] flex items-center gap-1.5 text-base">
                 <span>📱</span>
-                <span>¿Cómo funciona este enlace en el celular del acompañado?</span>
+                <span>¿Cómo funciona en el celular del acompañado?</span>
               </p>
               <p className="text-neutral-700 leading-relaxed">
-                <strong>1. Pantalla exclusiva y limpia:</strong> Al abrir este enlace, se carga únicamente la pantalla grande para {settings.personName}. No muestra menús de administración, paneles de control ni formularios que puedan confundir a tus papás.
+                <strong>1. Descarga directa:</strong> el enlace baja el APK de Simple. Android pide una sola vez permitir instalar desde esa fuente (descargas del navegador o de WhatsApp).
               </p>
               <p className="text-neutral-700 leading-relaxed">
-                <strong>2. Difícil de cerrar o desconfigurar:</strong> El botón "Salir" está bloqueado con tu PIN de 4 dígitos. Además, incluye modo de pantalla completa para ocultar las barras del navegador.
+                <strong>2. Una sola configuración:</strong> al abrir Simple por primera vez, el asistente pide todos los permisos reales (SMS, llamadas, ubicación, micrófono) y se vincula con el código del mensaje. Después ya no vuelve a preguntar: las llamadas y los SMS salen directos.
               </p>
               <p className="text-neutral-700 leading-relaxed">
-                <strong>3. ¿Es un APK o una aplicación web?</strong> Es una Aplicación Web Progresiva (PWA). No requiere descargar archivos APK desconocidos que bloquee Android. En Google Chrome, toca los 3 puntos (⋮) y selecciona <strong>"Agregar a la pantalla principal"</strong> o <strong>"Instalar aplicación"</strong>. Quedará como un icono directo en el celular que se abre en pantalla completa sin barra de navegación.
+                <strong>3. Difícil de cerrar:</strong> pantalla completa sin barras, el botón Atrás no cierra la app y Simple se elige como pantalla de inicio. Salir requiere tu PIN de 4 dígitos.
               </p>
             </div>
 
             <p className="text-xs font-semibold text-[#7a7461] text-center">
-              El enlace se mantiene activo para vincular el dispositivo. Si lo necesitas de nuevo, crea otro.
+              Si actualizas Simple, comparte de nuevo este mismo enlace: instala encima de la versión anterior.
             </p>
 
-            {newTokenFeedback && (
-              <p className="text-xs font-bold text-[#0b6b3a] text-center animate-in fade-in">
-                ✓ Nuevo enlace generado con éxito
-              </p>
-            )}
-
             <div className="flex justify-between items-center pt-2">
-              <button
-                onClick={() => {
-                  setInstallToken(Math.random().toString(36).substring(2, 10));
-                  setNewTokenFeedback(true);
-                  setTimeout(() => setNewTokenFeedback(false), 3000);
-                }}
-                className="text-base font-extrabold text-[#0b4f9e] underline cursor-pointer"
-              >
-                Crear otro enlace
-              </button>
+              <span />
 
               <button
                 onClick={() => setShowInstallModal(false)}

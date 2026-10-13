@@ -13,6 +13,7 @@ import { ShareLocationView } from './ShareLocationView';
 import { WhereAmIView } from './WhereAmIView';
 import { ContactAlertsView } from './ContactAlertsView';
 import { useApp } from '../../context/AppContext';
+import { callNumber, isNative, enterKiosk, exitKiosk, onBackButton } from '../../lib/native';
 import { Contact } from '../../types';
 
 interface PhoneViewProps {
@@ -53,8 +54,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     setCallingNotice(`Marcando a ${contact.name} (${contact.phone})...`);
     setTimeout(() => setCallingNotice(null), 4000);
 
-    // Disparar llamada telefónica nativa en el celular
-    window.location.href = `tel:${clean}`;
+    // Llamada directa en Android (sin pasar por el marcador); en web abre el enlace tel:
+    void callNumber(clean);
   };
 
   // Navigation states within phone
@@ -69,7 +70,14 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     | 'maintenance'
     | 'wizard';
 
-  const [currentScreen, setCurrentScreen] = useState<PhoneScreen>('home');
+  const WIZARD_DONE_KEY = 'essimple_wizard_done';
+  const [currentScreen, setCurrentScreen] = useState<PhoneScreen>(() => {
+    try {
+      return isNative() && localStorage.getItem(WIZARD_DONE_KEY) !== 'true' ? 'wizard' : 'home';
+    } catch {
+      return 'home';
+    }
+  });
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showAllContacts, setShowAllContacts] = useState(false);
 
@@ -149,9 +157,28 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Protección anti-salida accidental para que el adulto mayor no cierre la aplicación por error
+  // APK de Android: modo kiosco (barras ocultas, pantalla encendida) salvo en la pantalla de mantenimiento,
+  // y el botón Atrás nunca cierra la app: solo vuelve al inicio de Simple.
   useEffect(() => {
-    if (!isDedicatedView) return;
+    if (!isNative()) return;
+    if (currentScreen === 'maintenance') {
+      void exitKiosk();
+    } else {
+      void enterKiosk();
+    }
+  }, [currentScreen]);
+
+  useEffect(() => {
+    if (!isNative()) return;
+    return onBackButton(() => {
+      setShowPinModal(false);
+      setCurrentScreen(prev => (prev === 'maintenance' || prev === 'wizard' ? prev : 'home'));
+    });
+  }, []);
+
+  // Protección anti-salida accidental para que el adulto mayor no cierre la aplicación por error (solo navegador)
+  useEffect(() => {
+    if (!isDedicatedView || isNative()) return;
 
     // 1. Advertencia del navegador antes de cerrar la pestaña
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -338,7 +365,15 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
   if (currentScreen === 'wizard') {
     return (
       <WizardView
-        onFinish={() => setCurrentScreen('home')}
+        onFinish={() => {
+          try {
+            sessionStorage.removeItem('essimple_wizard_step');
+            localStorage.setItem(WIZARD_DONE_KEY, 'true');
+          } catch {
+            // ignorar
+          }
+          setCurrentScreen('home');
+        }}
         onCancel={() => setCurrentScreen('maintenance')}
       />
     );
@@ -504,7 +539,12 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
         onClose={() => setShowPinModal(false)}
         onSuccess={() => {
           setShowPinModal(false);
-          if (onExitToPanel) onExitToPanel();
+          if (isNative()) {
+            // En el APK, "salir" lleva al menú de mantenimiento de la familia (ajustes, permisos, desactivar protección).
+            setCurrentScreen('maintenance');
+          } else if (onExitToPanel) {
+            onExitToPanel();
+          }
         }}
         onOpenMaintenance={() => {
           setShowPinModal(false);

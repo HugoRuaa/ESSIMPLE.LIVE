@@ -1,6 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TactileButton } from '../common/TactileButton';
 import { useApp } from '../../context/AppContext';
+import {
+  isNative,
+  getNativeStatus,
+  requestPermission,
+  requestBatteryUnrestricted,
+  requestFullScreenAlerts,
+  requestHomeLauncher,
+  enterKiosk,
+  openAppSettings,
+  readClipboardText,
+  parsePairCode,
+  getPairedFamily,
+  savePairedFamily,
+  PermissionName,
+} from '../../lib/native';
 
 interface WizardViewProps {
   onFinish: () => void;
@@ -9,21 +24,70 @@ interface WizardViewProps {
 
 export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) => {
   const { testSendSms, updatePhoneStatus } = useApp();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [grantedPermissions, setGrantedPermissions] = useState<Record<string, boolean>>({
-    linked: true,
-    sms: true,
-    calls: false,
-    location: true,
-    backgroundLocation: true,
-    microphone: true,
-    notifications: true,
-    batteryUnrestricted: true,
-    fullScreenAlerts: true,
-    homeLauncher: true,
-    protectedMode: true,
-    testSms: true,
+  const native = isNative();
+  const STEP_KEY = 'essimple_wizard_step';
+  const [currentStep, setCurrentStep] = useState(() => {
+    try {
+      const saved = parseInt(sessionStorage.getItem(STEP_KEY) || '1', 10);
+      return saved >= 1 && saved <= 14 ? saved : 1;
+    } catch {
+      return 1;
+    }
   });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STEP_KEY, String(currentStep));
+    } catch {
+      // ignorar
+    }
+  }, [currentStep]);
+
+  // En el navegador (vista previa) los pasos son una simulación; en el APK piden los permisos reales de Android.
+  const [grantedPermissions, setGrantedPermissions] = useState<Record<string, boolean>>(
+    native
+      ? {}
+      : {
+          linked: true,
+          sms: true,
+          calls: false,
+          location: true,
+          backgroundLocation: true,
+          microphone: true,
+          notifications: true,
+          batteryUnrestricted: true,
+          fullScreenAlerts: true,
+          homeLauncher: true,
+          protectedMode: true,
+          testSms: true,
+        }
+  );
+  const [busy, setBusy] = useState(false);
+  const [pairText, setPairText] = useState('');
+  const [pairMessage, setPairMessage] = useState('');
+  const pairedFamily = getPairedFamily();
+  const isLinked = !native || !!pairedFamily;
+
+  // Lee el estado real de Android al abrir el asistente.
+  useEffect(() => {
+    if (!native) return;
+    getNativeStatus().then(status => {
+      if (!status) return;
+      setGrantedPermissions(prev => ({
+        ...prev,
+        sms: status.sms,
+        calls: status.calls,
+        location: status.location,
+        backgroundLocation: status.backgroundLocation,
+        microphone: status.microphone,
+        notifications: status.notifications,
+        batteryUnrestricted: status.batteryUnrestricted,
+        fullScreenAlerts: status.fullScreenAlerts,
+        homeLauncher: status.homeLauncher,
+      }));
+      if (status.calls) updatePhoneStatus({ missingPermissions: [] });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const togglePermission = (key: string) => {
     setGrantedPermissions(prev => {
@@ -33,6 +97,85 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       }
       return next;
     });
+  };
+
+  const markGranted = (key: string, ok: boolean) => {
+    setGrantedPermissions(prev => ({ ...prev, [key]: ok }));
+    if (key === 'calls' && ok) updatePhoneStatus({ missingPermissions: [] });
+  };
+
+  const NATIVE_PERMISSIONS: PermissionName[] = ['sms', 'calls', 'location', 'backgroundLocation', 'microphone', 'notifications'];
+
+  const handlePermission = async (key: string) => {
+    if (!native) {
+      togglePermission(key);
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    try {
+      let ok = false;
+      if ((NATIVE_PERMISSIONS as string[]).includes(key)) {
+        ok = await requestPermission(key as PermissionName);
+        if (!ok && key === 'backgroundLocation') {
+          // Android 11+ exige elegir "Permitir todo el tiempo" en los ajustes de la app.
+          await openAppSettings();
+        }
+      } else if (key === 'batteryUnrestricted') {
+        ok = await requestBatteryUnrestricted();
+      } else if (key === 'fullScreenAlerts') {
+        ok = await requestFullScreenAlerts();
+      } else if (key === 'homeLauncher') {
+        ok = await requestHomeLauncher();
+      } else if (key === 'protectedMode') {
+        ok = (await enterKiosk()) !== null;
+      } else {
+        ok = true;
+      }
+      markGranted(key, ok);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Pide todos los permisos de Android seguidos, para hacerlo una sola vez y con la familia presente.
+  const handleAllPermissions = async () => {
+    if (!native) {
+      setGrantedPermissions(prev => ({ ...prev, sms: true, calls: true, location: true, backgroundLocation: true, microphone: true, notifications: true }));
+      updatePhoneStatus({ missingPermissions: [] });
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    try {
+      for (const name of NATIVE_PERMISSIONS) {
+        const ok = await requestPermission(name);
+        markGranted(name, ok);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyPairCode = (text: string): boolean => {
+    const email = parsePairCode(text);
+    if (!email) return false;
+    savePairedFamily(email);
+    setPairMessage('Vinculado. Cargando datos de la familia...');
+    // Recarga para que la app lea la familia vinculada; el asistente continúa en este mismo paso.
+    setTimeout(() => window.location.reload(), 700);
+    return true;
+  };
+
+  const handleFindLink = async () => {
+    if (!native) {
+      setPairMessage('En el navegador no hace falta vincular.');
+      return;
+    }
+    const text = await readClipboardText();
+    if (!applyPairCode(text)) {
+      setPairMessage('No encontré el código en lo copiado. Copia el mensaje completo de la familia o pega el código abajo.');
+    }
   };
 
   const nextStep = () => {
@@ -56,19 +199,41 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           </p>
 
           <div className="space-y-4 pt-4">
-            <div className="border-2 border-[#0b6b3a] bg-[#eef7f0] rounded-2xl p-5 text-center font-bold text-[#0b6b3a] text-xl">
-              Listo: el teléfono quedó vinculado.
-            </div>
+            {isLinked ? (
+              <div className="border-2 border-[#0b6b3a] bg-[#eef7f0] rounded-2xl p-5 text-center font-bold text-[#0b6b3a] text-xl">
+                Listo: el teléfono quedó vinculado.
+              </div>
+            ) : (
+              <div className="border-2 border-[#b7791f] bg-[#fff1c9] rounded-2xl p-5 text-center font-bold text-[#5c3a00] text-xl">
+                Falta vincular con la familia.
+              </div>
+            )}
 
-            <TactileButton
-              variant="card"
-              fontSize="normal"
-              minHeight={false}
-              onClick={() => alert('Buscando enlace de vinculación en el portapapeles... ¡Enlace encontrado!')}
-              className="!py-4 !text-xl"
-            >
-              Buscar el enlace
-            </TactileButton>
+            {!isLinked && (
+              <>
+                <TactileButton
+                  variant="card"
+                  fontSize="normal"
+                  minHeight={false}
+                  onClick={handleFindLink}
+                  className="!py-4 !text-xl"
+                >
+                  Buscar el enlace
+                </TactileButton>
+                <input
+                  type="text"
+                  value={pairText}
+                  onChange={e => {
+                    setPairText(e.target.value);
+                    if (parsePairCode(e.target.value)) applyPairCode(e.target.value);
+                  }}
+                  placeholder="O pega aquí el código (SIMPLE-...)"
+                  className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e]"
+                />
+              </>
+            )}
+
+            {pairMessage && <p className="text-lg font-semibold text-[#3b4863]">{pairMessage}</p>}
           </div>
         </div>
 
@@ -100,10 +265,20 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               variant={isGranted ? 'card' : 'green'}
               fontSize="grande"
               minHeight={false}
-              onClick={() => togglePermission('sms')}
+              onClick={() => handlePermission('sms')}
               className="!py-5"
             >
               {isGranted ? '✓ Permiso de SMS concedido' : 'Dar permiso de SMS'}
+            </TactileButton>
+
+            <TactileButton
+              variant="card"
+              fontSize="normal"
+              minHeight={false}
+              onClick={handleAllPermissions}
+              className="!py-4 !text-xl"
+            >
+              Dar todos los permisos de una vez
             </TactileButton>
 
             <div className="bg-[#fff1c9] border-2 border-[#b7791f] rounded-2xl p-5 text-[#5c3a00] space-y-3">
@@ -114,7 +289,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
                 Puedes seguir sin este permiso, o activarlo a mano en los ajustes de la app.
               </p>
               <button
-                onClick={() => alert('Abriendo ajustes de permisos de Android...')}
+                onClick={() => (native ? openAppSettings() : alert('Solo disponible en el APK de Android.'))}
                 className="w-full bg-white text-[#14213d] border-2 border-[#7a7461] rounded-2xl py-3 text-lg font-bold shadow-sm cursor-pointer"
               >
                 Abrir ajustes de Simple
@@ -200,7 +375,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       },
       13: {
         title: 'Mensaje de prueba',
-        desc: 'Enviaremos un SMS de prueba con el texto "Prueba de Simple" a Laura para verificar la señal.',
+        desc: 'Enviaremos un SMS de prueba con el texto "Prueba de Simple" al contacto de emergencia principal para verificar la señal.',
         permKey: 'testSms',
         buttonText: 'Enviar mensaje de prueba',
       },
@@ -229,11 +404,13 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               variant={isDone ? 'card' : 'green'}
               fontSize="grande"
               minHeight={false}
-              onClick={() => {
-                togglePermission(stepData.permKey);
+              onClick={async () => {
                 if (currentStep === 13) {
-                  testSendSms('Laura', 'Prueba de Simple: la app está lista.');
+                  const sent = await testSendSms('Laura', 'Prueba de Simple: la app está lista.');
+                  markGranted('testSms', native ? sent : true);
+                  return;
                 }
+                await handlePermission(stepData.permKey);
               }}
               className="!py-5"
             >
@@ -261,27 +438,44 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
         <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 14 de 14</p>
         <h1 className="text-4xl font-extrabold tracking-tight">Resumen</h1>
 
-        {/* Falta card */}
-        {!grantedPermissions.calls && (
-          <div className="bg-[#fff1c9] border-2 border-[#b7791f] rounded-2xl p-5 text-[#5c3a00]">
-            <h2 className="text-xl font-extrabold mb-2">Falta</h2>
-            <ul className="list-disc list-inside space-y-1 font-semibold text-lg">
-              <li>Permiso de llamadas pendiente</li>
-            </ul>
-          </div>
-        )}
-
-        {/* Está bien card */}
-        <div className="bg-[#eef7f0] border-2 border-[#0b6b3a] rounded-2xl p-5 text-[#0b6b3a]">
-          <h2 className="text-xl font-extrabold mb-3">Está bien</h2>
-          <ul className="list-disc list-inside space-y-2 font-bold text-lg text-[#14213d]">
-            <li>Teléfono vinculado con el panel familiar</li>
-            <li>Permiso de SMS concedido</li>
-            <li>Permiso de ubicación concedido</li>
-            <li>Simple configurada como pantalla de inicio</li>
-            <li>Prueba de mensaje completada con éxito</li>
-          </ul>
-        </div>
+        {(() => {
+          const checks: { key: string; ok: boolean; good: string; bad: string }[] = [
+            { key: 'linked', ok: isLinked, good: 'Teléfono vinculado con el panel familiar', bad: 'Falta vincular con el panel familiar' },
+            { key: 'sms', ok: !!grantedPermissions.sms, good: 'Permiso de SMS concedido', bad: 'Permiso de SMS pendiente' },
+            { key: 'calls', ok: !!grantedPermissions.calls, good: 'Permiso de llamadas concedido', bad: 'Permiso de llamadas pendiente' },
+            { key: 'location', ok: !!grantedPermissions.location, good: 'Permiso de ubicación concedido', bad: 'Permiso de ubicación pendiente' },
+            { key: 'microphone', ok: !!grantedPermissions.microphone, good: 'Micrófono concedido', bad: 'Permiso de micrófono pendiente' },
+            { key: 'notifications', ok: !!grantedPermissions.notifications, good: 'Notificaciones activadas', bad: 'Notificaciones pendientes' },
+            { key: 'homeLauncher', ok: !!grantedPermissions.homeLauncher, good: 'Simple configurada como pantalla de inicio', bad: 'Simple aún no es la pantalla de inicio' },
+            { key: 'testSms', ok: !!grantedPermissions.testSms, good: 'Prueba de mensaje completada con éxito', bad: 'Prueba de mensaje pendiente' },
+          ];
+          const missing = checks.filter(c => !c.ok);
+          const okItems = checks.filter(c => c.ok);
+          return (
+            <>
+              {missing.length > 0 && (
+                <div className="bg-[#fff1c9] border-2 border-[#b7791f] rounded-2xl p-5 text-[#5c3a00]">
+                  <h2 className="text-xl font-extrabold mb-2">Falta</h2>
+                  <ul className="list-disc list-inside space-y-1 font-semibold text-lg">
+                    {missing.map(c => (
+                      <li key={c.key}>{c.bad}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {okItems.length > 0 && (
+                <div className="bg-[#eef7f0] border-2 border-[#0b6b3a] rounded-2xl p-5 text-[#0b6b3a]">
+                  <h2 className="text-xl font-extrabold mb-3">Está bien</h2>
+                  <ul className="list-disc list-inside space-y-2 font-bold text-lg text-[#14213d]">
+                    {okItems.map(c => (
+                      <li key={c.key}>{c.good}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <div className="pb-6 pt-8 space-y-4">

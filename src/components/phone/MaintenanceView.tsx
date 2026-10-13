@@ -1,5 +1,6 @@
 import React from 'react';
 import { TactileButton } from '../common/TactileButton';
+import { isNative, exitKiosk, openSystemSettings, minimizeApp } from '../../lib/native';
 
 interface MaintenanceViewProps {
   onBackToSimple: () => void;
@@ -33,7 +34,14 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             variant="card"
             fontSize="normal"
             minHeight={false}
-            onClick={() => alert('Abriendo ajustes del sistema Android...')}
+            onClick={async () => {
+              if (!isNative()) {
+                alert('Solo disponible en el APK de Android.');
+                return;
+              }
+              await exitKiosk();
+              await openSystemSettings();
+            }}
             className="!py-4 !text-xl"
           >
             Abrir ajustes del teléfono
@@ -53,7 +61,11 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
             variant="card"
             fontSize="normal"
             minHeight={false}
-            onClick={() => alert('Modo protegido desactivado temporalmente.')}
+            onClick={async () => {
+              await exitKiosk();
+              if (isNative()) await minimizeApp();
+              else alert('Modo protegido desactivado temporalmente.');
+            }}
             className="!py-4 !text-xl"
           >
             Desactivar modo protegido

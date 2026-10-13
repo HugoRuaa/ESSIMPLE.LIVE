@@ -13,6 +13,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { PhoneView } from './components/phone/PhoneView';
 import { FamilyPanel } from './components/panel/FamilyPanel';
 import { PanelAuth } from './components/panel/PanelAuth';
+import { isNative } from './lib/native';
 
 type AppMode = 'phone' | 'panel';
 
@@ -31,6 +32,7 @@ const MainAppContent: React.FC = () => {
     const search = new URLSearchParams(window.location.search);
     const path = window.location.pathname.toLowerCase();
     const isPhoneQuery = (
+      isNative() ||
       search.get('view') === 'phone' ||
       search.get('mode') === 'phone' ||
       search.has('token') ||

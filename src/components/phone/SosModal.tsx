@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Check, Phone } from 'lucide-react';
+import { callNumber } from '../../lib/native';
 import { useApp } from '../../context/AppContext';
 
 interface SosModalProps {
@@ -45,7 +46,7 @@ export const SosModal: React.FC<SosModalProps> = ({ isOpen, onClose }) => {
         setStep('result');
         if (emergencyContacts[0]?.phone) {
           const clean = emergencyContacts[0].phone.replace(/[^\d+]/g, '');
-          if (clean) window.location.href = `tel:${clean}`;
+          if (clean) void callNumber(clean);
         }
       }, 4000);
       return () => {
@@ -153,6 +154,10 @@ export const SosModal: React.FC<SosModalProps> = ({ isOpen, onClose }) => {
         {emergencyContacts[0]?.phone && (
           <a
             href={`tel:${emergencyContacts[0].phone.replace(/[^\d+]/g, '')}`}
+            onClick={e => {
+              e.preventDefault();
+              void callNumber(emergencyContacts[0].phone);
+            }}
             className="w-full bg-[#a61b1b] hover:bg-[#8a1616] text-white text-3xl font-extrabold py-6 rounded-3xl shadow-xl flex items-center justify-center gap-3 active:scale-95 transition text-center cursor-pointer"
           >
             <Phone className="w-8 h-8" />

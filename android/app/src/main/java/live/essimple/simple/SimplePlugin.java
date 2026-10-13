@@ -1,0 +1,409 @@
+package live.essimple.simple;
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.NotificationManager;
+import android.app.admin.DevicePolicyManager;
+import android.app.role.RoleManager;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
+import android.telecom.TelecomManager;
+import android.telephony.SmsManager;
+import android.view.WindowManager;
+
+import androidx.activity.result.ActivityResult;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+
+import com.getcapacitor.JSObject;
+import com.getcapacitor.PermissionState;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.annotation.ActivityCallback;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Puente nativo de Simple: permisos reales, llamadas directas, SMS, modo kiosco
+ * (inmersivo + pantalla de inicio + bloqueo de tarea cuando la app es propietaria del dispositivo).
+ */
+@CapacitorPlugin(
+    name = "Simple",
+    permissions = {
+        @Permission(alias = "sms", strings = { Manifest.permission.SEND_SMS }),
+        @Permission(alias = "calls", strings = { Manifest.permission.CALL_PHONE }),
+        @Permission(
+            alias = "location",
+            strings = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION }
+        ),
+        @Permission(alias = "backgroundLocation", strings = { Manifest.permission.ACCESS_BACKGROUND_LOCATION }),
+        @Permission(alias = "microphone", strings = { Manifest.permission.RECORD_AUDIO }),
+        @Permission(alias = "notifications", strings = { "android.permission.POST_NOTIFICATIONS" })
+    }
+)
+public class SimplePlugin extends Plugin {
+
+    /** Lo lee MainActivity para reaplicar el modo inmersivo al recuperar el foco. */
+    public static volatile boolean kioskEnabled = false;
+
+    private static final String[] RUNTIME_PERMISSIONS = new String[] {
+        Manifest.permission.SEND_SMS,
+        Manifest.permission.CALL_PHONE,
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION,
+        Manifest.permission.RECORD_AUDIO
+    };
+
+    // ------------------------------------------------------------------
+    // Permisos
+    // ------------------------------------------------------------------
+
+    private boolean isAutoGranted(String alias) {
+        if ("notifications".equals(alias)) return Build.VERSION.SDK_INT < 33;
+        if ("backgroundLocation".equals(alias)) return Build.VERSION.SDK_INT < 29;
+        return false;
+    }
+
+    private boolean isGranted(String alias) {
+        if (isAutoGranted(alias)) return true;
+        return getPermissionState(alias) == PermissionState.GRANTED;
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void requestPermission(PluginCall call) {
+        String name = call.getString("name");
+        if (name == null) {
+            call.reject("Falta el nombre del permiso");
+            return;
+        }
+        if (isGranted(name)) {
+            call.resolve(granted(true));
+            return;
+        }
+        if ("backgroundLocation".equals(name) && !isGranted("location")) {
+            call.reject("Primero hay que dar el permiso de ubicación");
+            return;
+        }
+        requestPermissionForAlias(name, call, "permissionResult");
+    }
+
+    @PermissionCallback
+    private void permissionResult(PluginCall call) {
+        String name = call.getString("name");
+        call.resolve(granted(name != null && isGranted(name)));
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void getStatus(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("sms", isGranted("sms"));
+        out.put("calls", isGranted("calls"));
+        out.put("location", isGranted("location"));
+        out.put("backgroundLocation", isGranted("backgroundLocation"));
+        out.put("microphone", isGranted("microphone"));
+        out.put("notifications", isGranted("notifications"));
+        out.put("batteryUnrestricted", isBatteryUnrestricted());
+        out.put("fullScreenAlerts", canFullScreenIntent());
+        out.put("homeLauncher", isDefaultHome());
+        out.put("deviceOwner", isDeviceOwner());
+        out.put("kiosk", kioskEnabled);
+        call.resolve(out);
+    }
+
+    // ------------------------------------------------------------------
+    // Ajustes del sistema (batería, alertas, pantalla de inicio)
+    // ------------------------------------------------------------------
+
+    private boolean isBatteryUnrestricted() {
+        PowerManager pm = (PowerManager) getContext().getSystemService(Context.POWER_SERVICE);
+        return pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName());
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void requestBatteryUnrestricted(PluginCall call) {
+        if (isBatteryUnrestricted()) {
+            call.resolve(granted(true));
+            return;
+        }
+        Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+        intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+        try {
+            startActivityForResult(call, intent, "batteryResult");
+        } catch (Exception e) {
+            call.resolve(granted(false));
+        }
+    }
+
+    @ActivityCallback
+    private void batteryResult(PluginCall call, ActivityResult result) {
+        call.resolve(granted(isBatteryUnrestricted()));
+    }
+
+    private boolean canFullScreenIntent() {
+        if (Build.VERSION.SDK_INT < 34) return true;
+        NotificationManager nm = (NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        return nm != null && nm.canUseFullScreenIntent();
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void requestFullScreenAlerts(PluginCall call) {
+        if (canFullScreenIntent()) {
+            call.resolve(granted(true));
+            return;
+        }
+        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+        intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+        try {
+            startActivityForResult(call, intent, "fullScreenResult");
+        } catch (Exception e) {
+            call.resolve(granted(false));
+        }
+    }
+
+    @ActivityCallback
+    private void fullScreenResult(PluginCall call, ActivityResult result) {
+        call.resolve(granted(canFullScreenIntent()));
+    }
+
+    private boolean isDefaultHome() {
+        Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        ResolveInfo info = getContext().getPackageManager().resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY);
+        return info != null
+            && info.activityInfo != null
+            && getContext().getPackageName().equals(info.activityInfo.packageName);
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void requestHomeLauncher(PluginCall call) {
+        if (isDefaultHome()) {
+            call.resolve(granted(true));
+            return;
+        }
+        Intent intent = null;
+        if (Build.VERSION.SDK_INT >= 29) {
+            RoleManager rm = (RoleManager) getContext().getSystemService(Context.ROLE_SERVICE);
+            if (rm != null && rm.isRoleAvailable(RoleManager.ROLE_HOME)) {
+                intent = rm.createRequestRoleIntent(RoleManager.ROLE_HOME);
+            }
+        }
+        if (intent == null) {
+            intent = new Intent(Settings.ACTION_HOME_SETTINGS);
+        }
+        try {
+            startActivityForResult(call, intent, "homeResult");
+        } catch (Exception e) {
+            call.resolve(granted(false));
+        }
+    }
+
+    @ActivityCallback
+    private void homeResult(PluginCall call, ActivityResult result) {
+        call.resolve(granted(isDefaultHome()));
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void openAppSettings(PluginCall call) {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(intent);
+        call.resolve();
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void openSystemSettings(PluginCall call) {
+        Intent intent = new Intent(Settings.ACTION_SETTINGS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(intent);
+        call.resolve();
+    }
+
+    // ------------------------------------------------------------------
+    // Llamadas y SMS directos (sin pasos intermedios)
+    // ------------------------------------------------------------------
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void callDirect(PluginCall call) {
+        String number = call.getString("number");
+        if (number == null || number.trim().isEmpty()) {
+            call.reject("Falta el número");
+            return;
+        }
+        String clean = number.replaceAll("[^\\d+*#]", "");
+        Intent intent;
+        if (isGranted("calls")) {
+            intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(clean)));
+        } else {
+            // Sin permiso: abre el marcador con el número escrito, que es lo mejor posible.
+            intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(clean)));
+        }
+        try {
+            getActivity().startActivity(intent);
+            call.resolve(granted(true));
+        } catch (Exception e) {
+            call.reject("No se pudo iniciar la llamada: " + e.getMessage());
+        }
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void sendSms(PluginCall call) {
+        String number = call.getString("number");
+        String text = call.getString("text");
+        if (number == null || text == null || number.trim().isEmpty()) {
+            call.reject("Faltan el número o el texto");
+            return;
+        }
+        if (!isGranted("sms")) {
+            call.reject("Falta el permiso de SMS");
+            return;
+        }
+        try {
+            SmsManager sms = Build.VERSION.SDK_INT >= 31
+                ? getContext().getSystemService(SmsManager.class)
+                : SmsManager.getDefault();
+            String clean = number.replaceAll("[^\\d+]", "");
+            ArrayList<String> parts = sms.divideMessage(text);
+            sms.sendMultipartTextMessage(clean, null, parts, null, null);
+            call.resolve(granted(true));
+        } catch (Exception e) {
+            call.reject("No se pudo enviar el SMS: " + e.getMessage());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Modo kiosco
+    // ------------------------------------------------------------------
+
+    private boolean isDeviceOwner() {
+        DevicePolicyManager dpm = (DevicePolicyManager) getContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
+        return dpm != null && dpm.isDeviceOwnerApp(getContext().getPackageName());
+    }
+
+    public static void applyImmersive(Activity activity) {
+        WindowInsetsControllerCompat controller =
+            WindowCompat.getInsetsController(activity.getWindow(), activity.getWindow().getDecorView());
+        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        controller.hide(WindowInsetsCompat.Type.systemBars());
+    }
+
+    /** Solo si la app es propietaria del dispositivo: concede permisos sin diálogos y fija la tarea. */
+    private void applyOwnerPolicies(Activity activity) {
+        DevicePolicyManager dpm = (DevicePolicyManager) getContext().getSystemService(Context.DEVICE_POLICY_SERVICE);
+        ComponentName admin = new ComponentName(getContext(), SimpleAdminReceiver.class);
+        String pkg = getContext().getPackageName();
+
+        if (Build.VERSION.SDK_INT >= 23) {
+            for (String permission : RUNTIME_PERMISSIONS) {
+                try {
+                    dpm.setPermissionGrantState(admin, pkg, permission, DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED);
+                } catch (Exception ignored) {
+                    // Permiso no aplicable en esta versión.
+                }
+            }
+            if (Build.VERSION.SDK_INT >= 29) {
+                try {
+                    dpm.setPermissionGrantState(
+                        admin, pkg, Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED
+                    );
+                } catch (Exception ignored) {
+                }
+            }
+            if (Build.VERSION.SDK_INT >= 33) {
+                try {
+                    dpm.setPermissionGrantState(
+                        admin, pkg, "android.permission.POST_NOTIFICATIONS",
+                        DevicePolicyManager.PERMISSION_GRANT_STATE_GRANTED
+                    );
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
+        // Paquetes permitidos dentro del bloqueo: Simple y el marcador por defecto (para las llamadas).
+        List<String> allowed = new ArrayList<>();
+        allowed.add(pkg);
+        try {
+            TelecomManager tm = (TelecomManager) getContext().getSystemService(Context.TELECOM_SERVICE);
+            String dialer = tm != null ? tm.getDefaultDialerPackage() : null;
+            if (dialer != null) allowed.add(dialer);
+        } catch (Exception ignored) {
+        }
+        allowed.add("com.android.phone");
+        allowed.add("com.android.server.telecom");
+        allowed.add("com.android.incallui");
+        dpm.setLockTaskPackages(admin, allowed.toArray(new String[0]));
+
+        if (Build.VERSION.SDK_INT >= 28) {
+            dpm.setLockTaskFeatures(admin, DevicePolicyManager.LOCK_TASK_FEATURE_NONE);
+        }
+        activity.startLockTask();
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void enterKiosk(PluginCall call) {
+        final Activity activity = getActivity();
+        activity.runOnUiThread(() -> {
+            kioskEnabled = true;
+            applyImmersive(activity);
+            activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (Build.VERSION.SDK_INT >= 27) {
+                activity.setShowWhenLocked(true);
+                activity.setTurnScreenOn(true);
+            }
+            String level = isDefaultHome() ? "launcher" : "basic";
+            if (isDeviceOwner()) {
+                try {
+                    applyOwnerPolicies(activity);
+                    level = "owner";
+                } catch (Exception ignored) {
+                }
+            }
+            JSObject out = new JSObject();
+            out.put("level", level);
+            call.resolve(out);
+        });
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void exitKiosk(PluginCall call) {
+        final Activity activity = getActivity();
+        activity.runOnUiThread(() -> {
+            kioskEnabled = false;
+            try {
+                activity.stopLockTask();
+            } catch (Exception ignored) {
+                // No estaba fijada.
+            }
+            WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(activity.getWindow(), activity.getWindow().getDecorView());
+            controller.show(WindowInsetsCompat.Type.systemBars());
+            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            call.resolve();
+        });
+    }
+
+    @com.getcapacitor.annotation.PluginMethod
+    public void minimize(PluginCall call) {
+        getActivity().moveTaskToBack(true);
+        call.resolve();
+    }
+
+    private static JSObject granted(boolean value) {
+        JSObject out = new JSObject();
+        out.put("granted", value);
+        return out;
+    }
+}
