@@ -1,5 +1,8 @@
 apply plugin: 'com.android.application'
 
+// Número de versión: lo pasa el workflow con -PversionCode=<n° de ejecución>.
+def appVersionCode = Integer.parseInt((project.findProperty("versionCode") ?: "1").toString())
+
 android {
     namespace = "live.essimple.simple"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -8,8 +11,8 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // El workflow pasa -PversionCode=<n° de ejecución> para que cada APK nuevo se instale encima del anterior.
-        versionCode (project.findProperty("versionCode") ?: "1").toInteger()
-        versionName "1.0.${project.findProperty("versionCode") ?: "0"}"
+        versionCode appVersionCode
+        versionName "1.0.${appVersionCode}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
