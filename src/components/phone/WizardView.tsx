@@ -67,6 +67,11 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   const pairedFamily = getPairedFamily();
   const isLinked = !native || !!pairedFamily;
 
+  // Al abrir el asistente se elige: todo de una vez o paso a paso (si ya iba por un paso, se retoma paso a paso).
+  const [mode, setMode] = useState<'choose' | 'steps' | 'all'>(() => (currentStep === 1 ? 'choose' : 'steps'));
+  const [allStatus, setAllStatus] = useState<Record<string, 'pending' | 'running' | 'ok' | 'fail'>>({});
+  const [allDone, setAllDone] = useState(false);
+
   // Lee el estado real de Android al abrir el asistente.
   useEffect(() => {
     if (!native) return;
@@ -106,6 +111,16 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
   const NATIVE_PERMISSIONS: PermissionName[] = ['sms', 'calls', 'location', 'backgroundLocation', 'microphone', 'notifications'];
 
+  // Pide un permiso o ajuste concreto de Android y devuelve si quedó concedido.
+  const requestByKey = async (key: string): Promise<boolean> => {
+    if ((NATIVE_PERMISSIONS as string[]).includes(key)) return requestPermission(key as PermissionName);
+    if (key === 'batteryUnrestricted') return requestBatteryUnrestricted();
+    if (key === 'fullScreenAlerts') return requestFullScreenAlerts();
+    if (key === 'homeLauncher') return requestHomeLauncher();
+    if (key === 'protectedMode') return (await enterKiosk()) !== null;
+    return true;
+  };
+
   const handlePermission = async (key: string) => {
     if (!native) {
       togglePermission(key);
@@ -114,27 +129,84 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     if (busy) return;
     setBusy(true);
     try {
-      let ok = false;
-      if ((NATIVE_PERMISSIONS as string[]).includes(key)) {
-        ok = await requestPermission(key as PermissionName);
-        if (!ok && key === 'backgroundLocation') {
-          // Android 11+ exige elegir "Permitir todo el tiempo" en los ajustes de la app.
-          await openAppSettings();
-        }
-      } else if (key === 'batteryUnrestricted') {
-        ok = await requestBatteryUnrestricted();
-      } else if (key === 'fullScreenAlerts') {
-        ok = await requestFullScreenAlerts();
-      } else if (key === 'homeLauncher') {
-        ok = await requestHomeLauncher();
-      } else if (key === 'protectedMode') {
-        ok = (await enterKiosk()) !== null;
-      } else {
-        ok = true;
+      const ok = await requestByKey(key);
+      if (!ok && key === 'backgroundLocation') {
+        // Android 11+ exige elegir "Permitir todo el tiempo" en los ajustes de la app.
+        await openAppSettings();
       }
       markGranted(key, ok);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Modo "todo de una vez": recorre todos los permisos en cadena; la persona solo toca "Permitir" en cada cuadro de Android.
+  const ALL_ITEMS: { key: string; label: string }[] = [
+    { key: 'sms', label: 'Enviar mensajes (SMS)' },
+    { key: 'calls', label: 'Hacer llamadas' },
+    { key: 'location', label: 'Ubicación' },
+    { key: 'microphone', label: 'Micrófono' },
+    { key: 'notifications', label: 'Notificaciones' },
+    { key: 'batteryUnrestricted', label: 'Sin ahorro de batería' },
+    { key: 'fullScreenAlerts', label: 'Alertas en pantalla completa' },
+    { key: 'homeLauncher', label: 'Simple como pantalla de inicio' },
+    { key: 'protectedMode', label: 'Modo protegido' },
+    { key: 'backgroundLocation', label: 'Ubicación todo el tiempo' },
+    { key: 'testSms', label: 'Mensaje de prueba' },
+    { key: 'linked', label: 'Vincular con la familia' },
+  ];
+
+  const runAll = async () => {
+    if (busy) return;
+    setMode('all');
+    setAllDone(false);
+    setBusy(true);
+    setAllStatus(Object.fromEntries(ALL_ITEMS.map(i => [i.key, 'pending'])));
+    const setItem = (key: string, value: 'pending' | 'running' | 'ok' | 'fail') =>
+      setAllStatus(prev => ({ ...prev, [key]: value }));
+    let pairedNow = false;
+    try {
+      for (const item of ALL_ITEMS) {
+        setItem(item.key, 'running');
+        let ok = false;
+        if (item.key === 'testSms') {
+          const sent = await testSendSms('Laura', 'Prueba de Simple: la app está lista.');
+          ok = native ? sent : true;
+          markGranted('testSms', ok);
+        } else if (item.key === 'linked') {
+          if (isLinked) {
+            ok = true;
+          } else {
+            const email = parsePairCode(await readClipboardText());
+            if (email) {
+              savePairedFamily(email);
+              pairedNow = true;
+              ok = true;
+            }
+          }
+        } else if (native) {
+          ok = await requestByKey(item.key);
+          markGranted(item.key, ok);
+        } else {
+          // Vista previa en navegador: simula la cadena.
+          await new Promise(resolve => setTimeout(resolve, 250));
+          ok = true;
+          markGranted(item.key, true);
+        }
+        setItem(item.key, ok ? 'ok' : 'fail');
+      }
+    } finally {
+      setBusy(false);
+    }
+    setAllDone(true);
+    if (pairedNow) {
+      // Recarga para leer los datos de la familia recién vinculada y cae directo en el resumen.
+      try {
+        sessionStorage.setItem(STEP_KEY, '14');
+      } catch {
+        // ignorar
+      }
+      setTimeout(() => window.location.reload(), 900);
     }
   };
 
@@ -162,6 +234,11 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     if (!email) return false;
     savePairedFamily(email);
     setPairMessage('Vinculado. Cargando datos de la familia...');
+    try {
+      sessionStorage.setItem(STEP_KEY, '2');
+    } catch {
+      // ignorar
+    }
     // Recarga para que la app lea la familia vinculada; el asistente continúa en este mismo paso.
     setTimeout(() => window.location.reload(), 700);
     return true;
@@ -184,8 +261,95 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
   const prevStep = () => {
     if (currentStep > 1) setCurrentStep(s => s - 1);
-    else onCancel();
+    else setMode('choose');
   };
+
+  // Pantalla inicial: elegir cómo configurar
+  if (mode === 'choose' && currentStep === 1) {
+    return (
+      <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
+        <div className="space-y-6 pt-4">
+          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez</p>
+          <h1 className="text-4xl font-extrabold tracking-tight leading-tight">Configurar Simple</h1>
+          <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
+            Android va a mostrar varios cuadros pidiendo permisos. En cada uno toca <strong>Permitir</strong>.
+          </p>
+
+          <div className="space-y-3 pt-2">
+            <TactileButton variant="green" fontSize="grande" minHeight={false} onClick={runAll} className="!py-5">
+              Configurar todo de una vez
+            </TactileButton>
+            <p className="text-base text-[#3b4863] font-medium leading-snug">
+              Pide todos los permisos seguidos, deja Simple como pantalla de inicio y envía un SMS de prueba al contacto de emergencia.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <TactileButton variant="card" fontSize="grande" minHeight={false} onClick={() => setMode('steps')} className="!py-5">
+              Paso a paso
+            </TactileButton>
+            <p className="text-base text-[#3b4863] font-medium leading-snug">
+              14 pantallas, un permiso en cada una. Útil si algo falla o quieres revisar cada permiso.
+            </p>
+          </div>
+        </div>
+
+        <div className="pb-6 pt-8">
+          <TactileButton variant="card" fontSize="grande" onClick={onCancel}>
+            Atrás
+          </TactileButton>
+        </div>
+      </div>
+    );
+  }
+
+  // Progreso del modo "todo de una vez"
+  if (mode === 'all') {
+    const failedBackground = allStatus.backgroundLocation === 'fail';
+    return (
+      <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
+        <div className="space-y-5 pt-4">
+          <p className="text-base text-[#3b4863] font-semibold">Configuración de una vez</p>
+          <h1 className="text-4xl font-extrabold tracking-tight leading-tight">
+            {allDone ? 'Terminamos' : 'Configurando...'}
+          </h1>
+          {!allDone && (
+            <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
+              Cuando Android pregunte, toca <strong>Permitir</strong>.
+            </p>
+          )}
+
+          <ul className="space-y-2">
+            {ALL_ITEMS.map(item => {
+              const state = allStatus[item.key] || 'pending';
+              const icon = state === 'ok' ? '✓' : state === 'fail' ? '✗' : state === 'running' ? '…' : '○';
+              const color =
+                state === 'ok' ? 'text-[#0b6b3a]' : state === 'fail' ? 'text-[#a61b1b]' : state === 'running' ? 'text-[#0b4f9e]' : 'text-[#7a7461]';
+              return (
+                <li key={item.key} className={`flex items-center gap-3 text-xl font-bold ${color}`}>
+                  <span className="w-7 text-center">{icon}</span>
+                  <span className="text-[#14213d]">{item.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {allDone && (
+          <div className="pb-6 pt-8 space-y-4">
+            {failedBackground && native && (
+              <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={() => openAppSettings()} className="!py-4 !text-xl">
+                Abrir ajustes: elegir "Permitir todo el tiempo"
+              </TactileButton>
+            )}
+            <TactileButton variant="green" fontSize="grande" onClick={() => { setCurrentStep(14); setMode('steps'); }}>
+              Ver resumen
+            </TactileButton>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // Step 1: Vincular [20]
   if (currentStep === 1) {
