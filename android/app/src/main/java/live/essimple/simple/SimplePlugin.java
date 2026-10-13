@@ -27,6 +27,7 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.PermissionState;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
@@ -81,7 +82,7 @@ public class SimplePlugin extends Plugin {
         return getPermissionState(alias) == PermissionState.GRANTED;
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void requestPermission(PluginCall call) {
         String name = call.getString("name");
         if (name == null) {
@@ -105,7 +106,7 @@ public class SimplePlugin extends Plugin {
         call.resolve(granted(name != null && isGranted(name)));
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void getStatus(PluginCall call) {
         JSObject out = new JSObject();
         out.put("sms", isGranted("sms"));
@@ -131,7 +132,7 @@ public class SimplePlugin extends Plugin {
         return pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName());
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void requestBatteryUnrestricted(PluginCall call) {
         if (isBatteryUnrestricted()) {
             call.resolve(granted(true));
@@ -157,7 +158,7 @@ public class SimplePlugin extends Plugin {
         return nm != null && nm.canUseFullScreenIntent();
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void requestFullScreenAlerts(PluginCall call) {
         if (canFullScreenIntent()) {
             call.resolve(granted(true));
@@ -185,7 +186,7 @@ public class SimplePlugin extends Plugin {
             && getContext().getPackageName().equals(info.activityInfo.packageName);
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void requestHomeLauncher(PluginCall call) {
         if (isDefaultHome()) {
             call.resolve(granted(true));
@@ -213,7 +214,7 @@ public class SimplePlugin extends Plugin {
         call.resolve(granted(isDefaultHome()));
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void openAppSettings(PluginCall call) {
         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         intent.setData(Uri.parse("package:" + getContext().getPackageName()));
@@ -222,7 +223,7 @@ public class SimplePlugin extends Plugin {
         call.resolve();
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void openSystemSettings(PluginCall call) {
         Intent intent = new Intent(Settings.ACTION_SETTINGS);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -234,7 +235,7 @@ public class SimplePlugin extends Plugin {
     // Llamadas y SMS directos (sin pasos intermedios)
     // ------------------------------------------------------------------
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void callDirect(PluginCall call) {
         String number = call.getString("number");
         if (number == null || number.trim().isEmpty()) {
@@ -257,7 +258,7 @@ public class SimplePlugin extends Plugin {
         }
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void sendSms(PluginCall call) {
         String number = call.getString("number");
         String text = call.getString("text");
@@ -352,7 +353,7 @@ public class SimplePlugin extends Plugin {
         activity.startLockTask();
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void enterKiosk(PluginCall call) {
         final Activity activity = getActivity();
         activity.runOnUiThread(() -> {
@@ -377,7 +378,7 @@ public class SimplePlugin extends Plugin {
         });
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void exitKiosk(PluginCall call) {
         final Activity activity = getActivity();
         activity.runOnUiThread(() -> {
@@ -395,7 +396,7 @@ public class SimplePlugin extends Plugin {
         });
     }
 
-    @com.getcapacitor.annotation.PluginMethod
+    @PluginMethod
     public void minimize(PluginCall call) {
         getActivity().moveTaskToBack(true);
         call.resolve();
