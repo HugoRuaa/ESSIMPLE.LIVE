@@ -7,3 +7,13 @@
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]
 </IfModule>
+
+# Permite que el APK (que corre en https://localhost) cargue la versión más reciente desde este sitio.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|json|map|woff2?)$">
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+  <FilesMatch "^live\.json$">
+    Header set Cache-Control "no-store, max-age=0"
+  </FilesMatch>
+</IfModule>
