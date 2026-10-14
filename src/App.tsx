@@ -14,6 +14,7 @@ import { PhoneView } from './components/phone/PhoneView';
 import { FamilyPanel } from './components/panel/FamilyPanel';
 import { PanelAuth } from './components/panel/PanelAuth';
 import { isNative } from './lib/native';
+import { LandingPage } from './components/landing/LandingPage';
 
 type AppMode = 'phone' | 'panel';
 
@@ -47,6 +48,21 @@ const MainAppContent: React.FC = () => {
     return localStorage.getItem('essimple_is_phone_device') === 'true';
   })();
 
+  const readHash = (): 'signup' | 'login' | null => {
+    const h = typeof window !== 'undefined' ? window.location.hash : '';
+    return h === '#entrar' ? 'login' : h === '#crear' ? 'signup' : null;
+  };
+  const [authView, setAuthView] = useState<'signup' | 'login' | null>(readHash);
+  const goAuth = (v: 'signup' | 'login' | null) => {
+    window.location.hash = v === 'login' ? 'entrar' : v === 'signup' ? 'crear' : '';
+    setAuthView(v);
+    window.scrollTo(0, 0);
+  };
+  React.useEffect(() => {
+    const onHash = () => setAuthView(readHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   const [mode, setMode] = useState<AppMode>(isDirectPhoneView ? 'phone' : 'panel');
   const [usePhoneFrame, setUsePhoneFrame] = useState(!isDirectPhoneView);
   const [isSimulatingFall, setIsSimulatingFall] = useState(false);
@@ -128,39 +144,34 @@ const MainAppContent: React.FC = () => {
     );
   }
 
-  // PANTALLA INICIAL: Si la persona no está autenticada y no viene con enlace directo del teléfono, entra al registro
+  // PANTALLA INICIAL: página de inicio; "#entrar" (o "#crear") abre el registro / inicio de sesión
   if (!account.isAuthenticated && !isDirectPhoneView) {
-    return (
-      <div className="min-h-screen bg-[#ede8dc] text-[#14213d] flex flex-col font-sans">
-        {/* Barra superior de bienvenida */}
-        <header className="bg-[#14213d] text-white px-4 py-3 shadow-md z-40 sticky top-0">
-          <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#0b6b3a] inline-block animate-ping" />
-              <span className="font-extrabold text-xl tracking-tight text-white flex items-center">
+    if (authView) {
+      return (
+        <div className="min-h-screen bg-[#ede8dc] text-[#14213d] flex flex-col font-sans">
+          <header className="bg-[#14213d] text-white px-4 py-3 shadow-md z-40 sticky top-0">
+            <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 text-sm">
+              <a href="#" onClick={() => goAuth(null)} className="font-extrabold text-xl tracking-tight text-white flex items-center">
                 essimple<span className="text-[#38bdf8]">.live</span>
-              </span>
-              <span className="hidden sm:inline text-xs font-semibold text-neutral-300 ml-2 border-l border-white/20 pl-2">
-                Acompañamiento y protección para adultos mayores
-              </span>
+              </a>
+              <button
+                onClick={loginDemo}
+                className="bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-white/20 active:scale-95"
+                title="Explorar cómo funciona sin necesidad de registrarse ahora"
+              >
+                <Sparkles className="w-4 h-4 text-[#38bdf8]" />
+                <span>Ver demostración</span>
+              </button>
             </div>
-
-            <button
-              onClick={loginDemo}
-              className="bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-bold px-3 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-white/20 active:scale-95"
-              title="Explorar cómo funciona sin necesidad de registrarse ahora"
-            >
-              <Sparkles className="w-4 h-4 text-[#38bdf8]" />
-              <span>Ver demostración</span>
-            </button>
-          </div>
-        </header>
-
-        {/* Formulario principal de Registro / Inicio de sesión */}
-        <main className="flex-1 flex flex-col items-center justify-center p-4">
-          <PanelAuth initialTab="signup" />
-        </main>
-      </div>
+          </header>
+          <main className="flex-1 flex flex-col items-center justify-center p-4">
+            <PanelAuth key={authView} initialTab={authView === 'login' ? 'login' : 'signup'} />
+          </main>
+        </div>
+      );
+    }
+    return (
+      <LandingPage onSignup={() => goAuth('signup')} onLogin={() => goAuth('login')} onDemo={loginDemo} />
     );
   }
 
