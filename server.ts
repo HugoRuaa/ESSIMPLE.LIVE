@@ -284,7 +284,6 @@ app.post('/api/familias/login', async (req, res) => {
   return res.json({ success: true, familiaId: DEFAULT_FAMILIA_ID, familyData: fallback });
 });
 
-// Endpoint para obtener contactos de una familia
 app.get('/api/familias/:familiaId/contacts', async (req, res) => {
   const { familiaId: rawId } = req.params;
   const familiaId = await resolveFamiliaId(rawId);
@@ -298,7 +297,7 @@ app.get('/api/familias/:familiaId/contacts', async (req, res) => {
         .eq('familia_id', familiaId)
         .order('display_order', { ascending: true });
 
-      if (!error && Array.isArray(data) && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         contactsStore.set(familiaId, data);
         return res.json({ success: true, data });
       }
@@ -307,8 +306,14 @@ app.get('/api/familias/:familiaId/contacts', async (req, res) => {
     }
   }
 
-  const list = contactsStore.get(familiaId) || contactsStore.get(rawId?.toLowerCase()) || contactsStore.get(DEFAULT_FAMILIA_ID) || defaultContactsList;
-  return res.json({ success: true, data: list });
+  if (contactsStore.has(familiaId)) {
+    return res.json({ success: true, data: contactsStore.get(familiaId) });
+  }
+  if (rawId && contactsStore.has(rawId.toLowerCase())) {
+    return res.json({ success: true, data: contactsStore.get(rawId.toLowerCase()) });
+  }
+
+  return res.json({ success: true, data: [] });
 });
 
 // Endpoint para buscar datos de familia por correo

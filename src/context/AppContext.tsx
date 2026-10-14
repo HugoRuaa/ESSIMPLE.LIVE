@@ -563,37 +563,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [contacts, hasContactChanges]);
 
-  // Contacts operations
-  const updateStagedContacts = (newContacts: Contact[]) => {
-    setStagedContacts(newContacts);
-    setHasContactChanges(true);
+  // Helper para identificar la familia activa
+  const resolveCurrentFamilyId = () => {
+    const stored = localStorage.getItem('essimple_family_id');
+    return (
+      (stored && stored !== 'local-family-id' ? stored : null) ||
+      account.familiaId ||
+      (account.isAuthenticated && account.email ? account.email : null) ||
+      'hugofrua@gmail.com'
+    );
   };
 
-  const saveContactChanges = async (): Promise<boolean> => {
-    // Validate: max 5 emergency contacts; if contacts exist, at least 1 emergency contact
-    const emergencyCount = stagedContacts.filter(c => c.isEmergency).length;
-    if (stagedContacts.length > 0 && emergencyCount === 0) {
-      alert('Debe haber al menos una persona que reciba las alertas de emergencia.');
-      return false;
+  // Guardado y sincronización automática inmediata de contactos
+  const autoSaveContacts = async (newContacts: Contact[], changeDesc?: string) => {
+    setContacts(newContacts);
+    setStagedContacts(newContacts);
+    setHasContactChanges(false);
+    try {
+      localStorage.setItem('essimple_contacts', JSON.stringify(newContacts));
+    } catch {
+      // ignore
     }
-    if (emergencyCount > 5) {
-      alert('Máximo 5 contactos de emergencia permitidos.');
-      return false;
+    if (changeDesc) {
+      addChange(changeDesc);
     }
+    const familyId = resolveCurrentFamilyId();
     setIsSavingContacts(true);
     try {
-      setContacts(stagedContacts);
-      setHasContactChanges(false);
-      addChange('Guardó cambios en la lista de contactos');
-      const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
-      await syncContactsToSupabase(familyId, stagedContacts);
-      return true;
+      await syncContactsToSupabase(familyId, newContacts);
     } catch (err) {
-      console.error('Error al guardar contactos:', err);
-      return false;
+      console.error('Error sincronizando contactos:', err);
     } finally {
       setIsSavingContacts(false);
     }
+  };
+
+  // Contacts operations (100% automáticas)
+  const updateStagedContacts = async (newContacts: Contact[]) => {
+    await autoSaveContacts(newContacts);
+  };
+
+  const saveContactChanges = async (): Promise<boolean> => {
+    await autoSaveContacts(stagedContacts);
+    return true;
   };
 
   const discardContactChanges = () => {
@@ -602,102 +614,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addContact = async (contactData: Omit<Contact, 'id' | 'order'>): Promise<void> => {
-    if (stagedContacts.length >= 20) {
-      alert('Has alcanzado el límite máximo de 20 contactos.');
+    if (contacts.length >= 20) {
       return;
     }
     const newContact: Contact = {
       ...contactData,
       id: `c_${Date.now()}`,
-      order: stagedContacts.length + 1,
+      order: contacts.length + 1,
     };
-    const updated = [...stagedContacts, newContact];
-    const emergencyCount = updated.filter(c => c.isEmergency).length;
-
-    // Si tiene contactos de emergencia válidos, guardar y sincronizar inmediatamente con Supabase
-    if (emergencyCount > 0 && emergencyCount <= 5) {
-      setIsSavingContacts(true);
-      try {
-        setStagedContacts(updated);
-        setContacts(updated);
-        setHasContactChanges(false);
-        addChange(`Agregó a ${contactData.name} a los contactos`);
-        const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
-        await syncContactsToSupabase(familyId, updated);
-      } catch (err) {
-        console.error('Error sincronizando nuevo contacto:', err);
-      } finally {
-        setIsSavingContacts(false);
-      }
-    } else {
-      setStagedContacts(updated);
-      setHasContactChanges(true);
-    }
+    const updated = [...contacts, newContact];
+    await autoSaveContacts(updated, `Agregó a ${contactData.name} a los contactos`);
   };
 
   const editContact = async (id: string, contactData: Partial<Contact>): Promise<void> => {
-    const updated = stagedContacts.map(c => (c.id === id ? { ...c, ...contactData } : c));
-    const emergencyCount = updated.filter(c => c.isEmergency).length;
-
-    if (emergencyCount > 0 && emergencyCount <= 5) {
-      setIsSavingContacts(true);
-      try {
-        setStagedContacts(updated);
-        setContacts(updated);
-        setHasContactChanges(false);
-        addChange('Actualizó datos de un contacto');
-        const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
-        await syncContactsToSupabase(familyId, updated);
-      } catch (err) {
-        console.error('Error sincronizando edición de contacto:', err);
-      } finally {
-        setIsSavingContacts(false);
-      }
-    } else {
-      setStagedContacts(updated);
-      setHasContactChanges(true);
-    }
+    const updated = contacts.map(c => (c.id === id ? { ...c, ...contactData } : c));
+    await autoSaveContacts(updated, 'Actualizó datos de un contacto');
   };
 
   const deleteContact = async (id: string): Promise<void> => {
-    const remaining = stagedContacts.filter(c => c.id !== id);
+    const remaining = contacts.filter(c => c.id !== id);
     const reindexed = remaining.map((c, i) => ({ ...c, order: i + 1 }));
-    const emergencyCount = reindexed.filter(c => c.isEmergency).length;
-
-    if (reindexed.length === 0 || (emergencyCount > 0 && emergencyCount <= 5)) {
-      setIsSavingContacts(true);
-      try {
-        setStagedContacts(reindexed);
-        setContacts(reindexed);
-        setHasContactChanges(false);
-        addChange('Eliminó un contacto de la lista');
-        const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
-        await syncContactsToSupabase(familyId, reindexed);
-      } catch (err) {
-        console.error('Error sincronizando eliminación de contacto:', err);
-      } finally {
-        setIsSavingContacts(false);
-      }
-    } else {
-      setStagedContacts(reindexed);
-      setHasContactChanges(true);
-    }
+    await autoSaveContacts(reindexed, 'Eliminó un contacto de la lista');
   };
 
-  const reorderContact = (id: string, direction: 'up' | 'down') => {
-    const index = stagedContacts.findIndex(c => c.id === id);
+  const reorderContact = async (id: string, direction: 'up' | 'down') => {
+    const index = contacts.findIndex(c => c.id === id);
     if (index === -1) return;
     if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === stagedContacts.length - 1) return;
+    if (direction === 'down' && index === contacts.length - 1) return;
 
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    const newItems = [...stagedContacts];
+    const newItems = [...contacts];
     const [moved] = newItems.splice(index, 1);
     newItems.splice(targetIndex, 0, moved);
 
     const reordered = newItems.map((c, idx) => ({ ...c, order: idx + 1 }));
-    setStagedContacts(reordered);
-    setHasContactChanges(true);
+    await autoSaveContacts(reordered);
   };
 
   // Settings

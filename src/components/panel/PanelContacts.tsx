@@ -32,6 +32,7 @@ export const PanelContacts: React.FC = () => {
 
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
 
   // Form states for modal [28]
@@ -137,7 +138,7 @@ export const PanelContacts: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleToggleEmergency = (id: string, currentVal: boolean) => {
+  const handleToggleEmergency = async (id: string, currentVal: boolean) => {
     const nextVal = !currentVal;
     if (nextVal) {
       const currentEmergencyCount = stagedContacts.filter(c => c.isEmergency).length;
@@ -147,17 +148,19 @@ export const PanelContacts: React.FC = () => {
       }
     }
     const updated = stagedContacts.map(c => (c.id === id ? { ...c, isEmergency: nextVal } : c));
-    updateStagedContacts(updated);
+    await updateStagedContacts(updated);
+    showSaveSuccess('¡Guardado!');
   };
 
-  const handleToggleCheckbox = (id: string, key: 'isSafeZone' | 'isLowBattery', currentVal: boolean) => {
+  const handleToggleCheckbox = async (id: string, key: 'isSafeZone' | 'isLowBattery', currentVal: boolean) => {
     const updated = stagedContacts.map(c => (c.id === id ? { ...c, [key]: !currentVal } : c));
-    updateStagedContacts(updated);
+    await updateStagedContacts(updated);
+    showSaveSuccess('¡Guardado!');
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-150 pb-28">
-      {/* Top Header & Counters matching [27] */}
+    <div className="space-y-4 animate-in fade-in duration-150 pb-6">
+      {/* Top Header & Counters */}
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xl font-bold text-[#14213d]">
@@ -175,11 +178,6 @@ export const PanelContacts: React.FC = () => {
               <CheckCircle2 className="w-4 h-4 text-[#0b6b3a]" />
               <span>{saveFeedback}</span>
             </span>
-          ) : hasContactChanges ? (
-            <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#854d0e] bg-[#fef9c3] border border-[#ca8a04]/40 px-3 py-1 rounded-full shadow-xs">
-              <AlertCircle className="w-4 h-4 text-[#ca8a04]" />
-              <span>Cambios pendientes</span>
-            </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#0b6b3a] bg-[#eaf5ed] border border-[#0b6b3a]/20 px-3 py-1 rounded-full shadow-xs">
               <Cloud className="w-4 h-4 text-[#0b6b3a]" />
@@ -187,40 +185,6 @@ export const PanelContacts: React.FC = () => {
             </span>
           )}
         </div>
-
-        {/* Top Banner when there are pending changes */}
-        {hasContactChanges && (
-          <div className="bg-[#fef9c3] border-2 border-[#ca8a04] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-in fade-in">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="w-6 h-6 text-[#ca8a04] shrink-0" />
-              <div>
-                <p className="font-extrabold text-base text-[#713f12]">Tienes cambios pendientes</p>
-                <p className="text-sm font-semibold text-[#854d0e]">
-                  Presiona &quot;Guardar cambios&quot; para guardar los cambios.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-              <button
-                onClick={discardContactChanges}
-                className="bg-white border-2 border-[#7a7461] text-[#14213d] px-3.5 py-2 rounded-xl text-sm font-extrabold hover:bg-stone-50 active:scale-95 transition cursor-pointer"
-              >
-                Descartar
-              </button>
-              <button
-                onClick={async () => {
-                  const ok = await saveContactChanges();
-                  if (ok) showSaveSuccess('¡Guardado!');
-                }}
-                disabled={isSavingContacts}
-                className="bg-[#0b4f9e] hover:bg-[#093f7e] text-white px-4 py-2 rounded-xl text-sm font-extrabold shadow-md flex items-center gap-1.5 active:scale-95 transition cursor-pointer disabled:opacity-50"
-              >
-                {isSavingContacts ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
-                <span className="whitespace-nowrap">Guardar<span className="max-[399px]:hidden"> cambios</span></span>
-              </button>
-            </div>
-          </div>
-        )}
 
         <button
           onClick={handleOpenAdd}
@@ -348,11 +312,7 @@ export const PanelContacts: React.FC = () => {
               </button>
 
               <button
-                onClick={() => {
-                  if (confirm(`¿Estás seguro de eliminar a ${contact.name}?`)) {
-                    deleteContact(contact.id);
-                  }
-                }}
+                onClick={() => setContactToDelete(contact)}
                 className="bg-white border-2 border-[#7a7461] rounded-2xl py-3 px-2 flex items-center justify-center gap-2 text-lg font-extrabold text-[#a61b1b] shadow-sm cursor-pointer active:scale-95 transition"
               >
                 <Trash2 className="w-5 h-5 text-[#a61b1b] stroke-[2.5]" />
@@ -363,39 +323,6 @@ export const PanelContacts: React.FC = () => {
         ))
         )}
       </div>
-
-      {/* Sticky Bottom Save / Discard Bar [27] - Positioned above 5-tab nav bar */}
-      {hasContactChanges && (
-        <div className="fixed bottom-[calc(var(--nav-h)+0.5rem)] left-4 right-4 z-50 bg-[#14213d] text-white border-2 border-[#ddd5c3] p-3.5 rounded-3xl flex items-center justify-between gap-3 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom">
-          <div className="hidden sm:flex flex-col pl-2">
-            <span className="text-sm font-extrabold text-[#f6f3ec]">Cambios sin guardar</span>
-            <span className="text-xs text-[#ddd5c3]/80">Se guardarán en la nube</span>
-          </div>
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <button
-              onClick={discardContactChanges}
-              className="flex-1 sm:flex-initial bg-white/10 hover:bg-white/20 border border-white/30 text-white py-3 px-4 rounded-2xl text-lg font-extrabold shadow-sm active:scale-95 transition cursor-pointer"
-            >
-              Descartar
-            </button>
-            <button
-              onClick={async () => {
-                const ok = await saveContactChanges();
-                if (ok) showSaveSuccess('¡Guardado!');
-              }}
-              disabled={isSavingContacts}
-              className="flex-1 sm:flex-initial bg-[#0b6b3a] hover:bg-[#09572f] text-white py-3 px-5 rounded-2xl text-lg font-extrabold shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {isSavingContacts ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Check className="w-5 h-5 stroke-[3]" />
-              )}
-              <span className="whitespace-nowrap">Guardar<span className="max-[399px]:hidden"> cambios</span></span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Modal Agregar / Editar contacto [28] */}
       {(editingContact || isAddingNew) && (
@@ -525,6 +452,46 @@ export const PanelContacts: React.FC = () => {
                   <Check className="w-6 h-6 stroke-[3]" />
                 )}
                 <span>Guardar contacto</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminar Contacto */}
+      {contactToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 mx-auto bg-red-100 rounded-full flex items-center justify-center text-[#a61b1b]">
+              <Trash2 className="w-8 h-8 stroke-[2.5]" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-2xl font-extrabold text-[#14213d]">
+                ¿Eliminar a {contactToDelete.name}?
+              </h3>
+              <p className="text-base font-semibold text-[#7a7461]">
+                El contacto se eliminará de la lista y se sincronizará automáticamente.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setContactToDelete(null)}
+                className="bg-white border-2 border-[#7a7461] text-[#14213d] py-3.5 rounded-2xl text-lg font-extrabold hover:bg-stone-50 cursor-pointer active:scale-95 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = contactToDelete.id;
+                  setContactToDelete(null);
+                  await deleteContact(targetId);
+                  showSaveSuccess('Contacto eliminado');
+                }}
+                className="bg-[#a61b1b] hover:bg-[#8a1515] text-white py-3.5 rounded-2xl text-lg font-extrabold shadow-md cursor-pointer active:scale-95 transition"
+              >
+                Sí, eliminar
               </button>
             </div>
           </div>
