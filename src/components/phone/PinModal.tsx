@@ -6,19 +6,16 @@ interface PinModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  onOpenMaintenance?: () => void;
 }
 
 export const PinModal: React.FC<PinModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  onOpenMaintenance,
 }) => {
   const { settings } = useApp();
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
 
   if (!isOpen) return null;
 
@@ -30,11 +27,7 @@ export const PinModal: React.FC<PinModalProps> = ({
 
     if (newPin.length === 4) {
       if (newPin === settings.exitPin) {
-        if (isMaintenanceMode && onOpenMaintenance) {
-          onOpenMaintenance();
-        } else {
-          onSuccess();
-        }
+        onSuccess();
         setPin('');
       } else {
         setTimeout(() => {
@@ -50,22 +43,11 @@ export const PinModal: React.FC<PinModalProps> = ({
     setErrorMsg('');
   };
 
-  const handleTitleLongPress = () => {
-    setIsMaintenanceMode(prev => !prev);
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
       <div className="pt-8">
-        <h1
-          onContextMenu={e => {
-            e.preventDefault();
-            handleTitleLongPress();
-          }}
-          className="text-4xl font-extrabold tracking-tight text-[#14213d] select-none cursor-pointer"
-          title="Mantén presionado para modo mantenimiento"
-        >
-          {isMaintenanceMode ? 'PIN de mantenimiento' : 'Escribe el PIN para salir'}
+        <h1 className="text-4xl font-extrabold tracking-tight text-[#14213d] select-none">
+          Escribe el PIN para salir
         </h1>
       </div>
 

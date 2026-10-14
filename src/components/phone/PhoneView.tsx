@@ -5,7 +5,6 @@ import { TactileButton } from '../common/TactileButton';
 import { SosModal } from './SosModal';
 import { FallModal } from './FallModal';
 import { PinModal } from './PinModal';
-import { MaintenanceView } from './MaintenanceView';
 import { ExitMenuView } from './ExitMenuView';
 import { WizardView } from './WizardView';
 import { WriteMessageView } from './WriteMessageView';
@@ -79,7 +78,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     | 'share_location'
     | 'where_am_i'
     | 'contact_alerts'
-    | 'maintenance'
     | 'exit_menu'
     | 'wizard';
 
@@ -170,15 +168,11 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // APK de Android: modo kiosco (barras ocultas, pantalla encendida) salvo en la pantalla de mantenimiento,
+  // APK de Android: modo kiosco (barras ocultas, pantalla encendida),
   // y el botón Atrás nunca cierra la app: solo vuelve al inicio de essimple.
   useEffect(() => {
     if (!isNative()) return;
-    if (currentScreen === 'maintenance') {
-      void exitKiosk();
-    } else {
-      void enterKiosk();
-    }
+    void enterKiosk();
   }, [currentScreen]);
 
   // Si la familia soltó la pantalla de inicio ("volver al estado normal"), al abrir essimple.live de nuevo se recupera:
@@ -217,7 +211,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     if (!isNative()) return;
     return onBackButton(() => {
       setShowPinModal(false);
-      setCurrentScreen(prev => (prev === 'maintenance' || prev === 'wizard' ? prev : 'home'));
+      setCurrentScreen('home');
     });
   }, []);
 
@@ -409,15 +403,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     );
   }
 
-  if (currentScreen === 'maintenance') {
-    return (
-      <MaintenanceView
-        onBackToSimple={() => setCurrentScreen('home')}
-        onOpenWizard={() => setCurrentScreen('wizard')}
-      />
-    );
-  }
-
   if (currentScreen === 'wizard') {
     return (
       <WizardView
@@ -430,7 +415,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
           }
           setCurrentScreen('home');
         }}
-        onCancel={() => setCurrentScreen('maintenance')}
+        onCancel={() => setCurrentScreen('home')}
       />
     );
   }
@@ -633,10 +618,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
           } else if (onExitToPanel) {
             onExitToPanel();
           }
-        }}
-        onOpenMaintenance={() => {
-          setShowPinModal(false);
-          setCurrentScreen('maintenance');
         }}
       />
     </div>

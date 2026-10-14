@@ -451,7 +451,10 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
                 Abrir ajustes: elegir "Permitir todo el tiempo"
               </TactileButton>
             )}
-            <TactileButton variant="green" fontSize="grande" onClick={() => { setCurrentStep(13); setMode('steps'); }}>
+            <TactileButton variant="green" fontSize="grande" onClick={onFinish}>
+              Abrir essimple.live
+            </TactileButton>
+            <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={() => { setCurrentStep(13); setMode('steps'); }} className="!py-4 !text-xl">
               Ver resumen
             </TactileButton>
           </div>
@@ -719,7 +722,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
       <div className="pb-6 pt-8 space-y-4">
         <TactileButton variant="green" fontSize="grande" onClick={onFinish}>
-          Terminar y dejar el teléfono en modo normal
+          Abrir essimple.live
         </TactileButton>
         <TactileButton variant="card" fontSize="grande" onClick={prevStep}>
           Atrás
