@@ -17,7 +17,8 @@ app.use(express.json({ limit: '15mb' }));
 
 // Supabase server client configuration
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://mlhsbihiwrrowlxuzqvf.supabase.co';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'sb_secret_LamDJBwJRYqWBaHaLFEdpg_GbQNsjsD';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+// Solo la llave PUBLICABLE (sb_publishable_…) va aquí: /api/supabase/config se la entrega al navegador. Nunca uses la secret key.
 const SUPABASE_SCHEMA = process.env.VITE_SUPABASE_SCHEMA || process.env.SUPABASE_SCHEMA || 'essimple';
 
 const supabaseServerClient = (SUPABASE_URL && SUPABASE_KEY)

@@ -5,7 +5,8 @@ const STORAGE_KEY_URL = 'essimple_supabase_url';
 const STORAGE_KEY_KEY = 'essimple_supabase_anon_key';
 
 export const DEFAULT_SUPABASE_URL = 'https://mlhsbihiwrrowlxuzqvf.supabase.co';
-export const DEFAULT_SUPABASE_ANON_KEY = 'sb_secret_LamDJBwJRYqWBaHaLFEdpg_GbQNsjsD';
+// La llave NO va en el código: se lee de VITE_SUPABASE_ANON_KEY (llave publicable, sb_publishable_…).
+export const DEFAULT_SUPABASE_ANON_KEY = '';
 export const DEFAULT_SUPABASE_SCHEMA = 'essimple';
 
 let cachedClient: SupabaseClient<any, any> | null = null;
