@@ -25,13 +25,13 @@ interface WizardViewProps {
 }
 
 export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) => {
-  const { testSendSms, updatePhoneStatus } = useApp();
+  const { updatePhoneStatus } = useApp();
   const native = isNative();
   const STEP_KEY = 'essimple_wizard_step';
   const [currentStep, setCurrentStep] = useState(() => {
     try {
       const saved = parseInt(sessionStorage.getItem(STEP_KEY) || '1', 10);
-      return saved >= 1 && saved <= 14 ? saved : 1;
+      return saved >= 1 && saved <= 13 ? saved : 1;
     } catch {
       return 1;
     }
@@ -60,7 +60,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           fullScreenAlerts: true,
           homeLauncher: true,
           protectedMode: true,
-          testSms: true,
         }
   );
   const [busy, setBusy] = useState(false);
@@ -170,7 +169,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     { key: 'homeLauncher', label: 'essimple.live como pantalla de inicio' },
     { key: 'protectedMode', label: 'Modo protegido' },
     { key: 'backgroundLocation', label: 'Ubicación todo el tiempo' },
-    { key: 'testSms', label: 'Mensaje de prueba' },
     { key: 'linked', label: 'Vincular con la familia' },
   ];
 
@@ -187,11 +185,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       for (const item of ALL_ITEMS) {
         setItem(item.key, 'running');
         let ok = false;
-        if (item.key === 'testSms') {
-          const sent = await testSendSms('Laura', 'Prueba de essimple.live: la app está lista.');
-          ok = native ? sent : true;
-          markGranted('testSms', ok);
-        } else if (item.key === 'linked') {
+        if (item.key === 'linked') {
           if (isLinked) {
             ok = true;
           } else {
@@ -220,7 +214,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     if (pairedNow) {
       // Recarga para leer los datos de la familia recién vinculada y cae directo en el resumen.
       try {
-        sessionStorage.setItem(STEP_KEY, '14');
+        sessionStorage.setItem(STEP_KEY, '13');
       } catch {
         // ignorar
       }
@@ -298,6 +292,14 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     return null;
   };
 
+  // Lo que Android va a pedir aprobar (cada uno es un cuadro o una pantalla de ajustes con un toque).
+  const APPROVAL_KEYS = ['sms', 'calls', 'location', 'microphone', 'notifications', 'batteryUnrestricted', 'fullScreenAlerts', 'homeLauncher', 'backgroundLocation'];
+  const approvalItems = ALL_ITEMS.filter(i => APPROVAL_KEYS.includes(i.key));
+  const approvalsLeft = approvalItems.filter(i => {
+    const st = allStatus[i.key] || 'pending';
+    return st === 'pending' || st === 'running';
+  }).length;
+
   const handleFindLink = async () => {
     if (!native) {
       setPairMessage('En el navegador no hace falta vincular.');
@@ -310,7 +312,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   };
 
   const nextStep = () => {
-    if (currentStep < 14) setCurrentStep(s => s + 1);
+    if (currentStep < 13) setCurrentStep(s => s + 1);
   };
 
   const prevStep = () => {
@@ -331,12 +333,25 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
           {renderAutoLinkCard()}
 
+          <div className="rounded-2xl bg-white border-2 border-[#ddd5c3] p-4 space-y-2">
+            <p className="text-lg font-extrabold">Vas a aprobar {approvalItems.length} cosas:</p>
+            <ul className="space-y-1">
+              {approvalItems.map(item => (
+                <li key={item.key} className="flex items-center gap-2 text-lg font-semibold text-[#14213d]">
+                  <span className="text-[#7a7461]">○</span>
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+            <p className="text-base text-[#3b4863] font-medium leading-snug">En cada aviso de Android toca Permitir. Los avisos salen uno tras otro, sin que tengas que volver aquí.</p>
+          </div>
+
           <div className="space-y-3 pt-2">
             <TactileButton variant="green" fontSize="grande" minHeight={false} onClick={runAll} className="!py-5">
               Configurar todo de una vez
             </TactileButton>
             <p className="text-base text-[#3b4863] font-medium leading-snug">
-              Pide todos los permisos seguidos, deja essimple.live como pantalla de inicio y envía un SMS de prueba al contacto de emergencia.
+              Pide todos los permisos seguidos y deja essimple.live como pantalla de inicio.
             </p>
           </div>
 
@@ -345,7 +360,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               Paso a paso
             </TactileButton>
             <p className="text-base text-[#3b4863] font-medium leading-snug">
-              14 pantallas, un permiso en cada una. Útil si algo falla o quieres revisar cada permiso.
+              13 pantallas, un permiso en cada una. Útil si algo falla o quieres revisar cada permiso.
             </p>
           </div>
         </div>
@@ -371,7 +386,8 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           </h1>
           {!allDone && (
             <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
-              Cuando Android pregunte, toca <strong>Permitir</strong>.
+              Cuando Android pregunte, toca <strong>Permitir</strong>.{' '}
+              {approvalsLeft > 0 ? `Faltan ${approvalsLeft}.` : ''}
             </p>
           )}
 
@@ -398,7 +414,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
                 Abrir ajustes: elegir "Permitir todo el tiempo"
               </TactileButton>
             )}
-            <TactileButton variant="green" fontSize="grande" onClick={() => { setCurrentStep(14); setMode('steps'); }}>
+            <TactileButton variant="green" fontSize="grande" onClick={() => { setCurrentStep(13); setMode('steps'); }}>
               Ver resumen
             </TactileButton>
           </div>
@@ -412,7 +428,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     return (
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-6 pt-4">
-          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 1 de 14</p>
+          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 1 de 13</p>
           <h1 className="text-4xl font-extrabold tracking-tight">Vincular con el panel</h1>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
             Si instalaste essimple.live desde el enlace que te envió tu familia, se vincula sola: no tienes que escribir nada. Si no pasa, toca el botón de abajo.
@@ -474,7 +490,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     return (
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-6 pt-4">
-          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 2 de 14</p>
+          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 2 de 13</p>
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight">
             Permiso para enviar mensajes (SMS)
           </h1>
@@ -533,7 +549,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   }
 
   // Steps 3 to 13: Generic permissions steps
-  if (currentStep < 14) {
+  if (currentStep < 13) {
     const stepTitles: Record<number, { title: string; desc: string; permKey: string; buttonText: string }> = {
       3: {
         title: 'Permiso para realizar llamadas',
@@ -595,12 +611,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
         permKey: 'brandTips',
         buttonText: 'Optimización configurada',
       },
-      13: {
-        title: 'Mensaje de prueba',
-        desc: 'Enviaremos un SMS de prueba con el texto "Prueba de essimple.live" al contacto de emergencia principal para verificar la señal.',
-        permKey: 'testSms',
-        buttonText: 'Enviar mensaje de prueba',
-      },
     };
 
     const stepData = stepTitles[currentStep] || {
@@ -616,7 +626,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-6 pt-4">
           <p className="text-base text-[#3b4863] font-semibold">
-            Asistente de primera vez · paso {currentStep} de 14
+            Asistente de primera vez · paso {currentStep} de 13
           </p>
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight">{stepData.title}</h1>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">{stepData.desc}</p>
@@ -627,11 +637,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               fontSize="grande"
               minHeight={false}
               onClick={async () => {
-                if (currentStep === 13) {
-                  const sent = await testSendSms('Laura', 'Prueba de essimple.live: la app está lista.');
-                  markGranted('testSms', native ? sent : true);
-                  return;
-                }
                 await handlePermission(stepData.permKey);
               }}
               className="!py-5"
@@ -653,11 +658,11 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     );
   }
 
-  // Step 14: Resumen [22]
+  // Step 13: Resumen [22]
   return (
     <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
       <div className="space-y-6 pt-4">
-        <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 14 de 14</p>
+        <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 13 de 13</p>
         <h1 className="text-4xl font-extrabold tracking-tight">Resumen</h1>
 
         {(() => {
@@ -669,7 +674,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
             { key: 'microphone', ok: !!grantedPermissions.microphone, good: 'Micrófono concedido', bad: 'Permiso de micrófono pendiente' },
             { key: 'notifications', ok: !!grantedPermissions.notifications, good: 'Notificaciones activadas', bad: 'Notificaciones pendientes' },
             { key: 'homeLauncher', ok: !!grantedPermissions.homeLauncher, good: 'essimple.live configurada como pantalla de inicio', bad: 'essimple.live aún no es la pantalla de inicio' },
-            { key: 'testSms', ok: !!grantedPermissions.testSms, good: 'Prueba de mensaje completada con éxito', bad: 'Prueba de mensaje pendiente' },
           ];
           const missing = checks.filter(c => !c.ok);
           const okItems = checks.filter(c => c.ok);
