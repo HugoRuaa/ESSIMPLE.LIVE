@@ -39,6 +39,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const accuracyCircleRef = useRef<L.Circle | null>(null);
   const safeZoneCircleRef = useRef<L.Circle | null>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
+  const isDraggingRef = useRef(false);
+  const lastInternalPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
 
   useEffect(() => {
     onLocationSelectRef.current = onLocationSelect;
@@ -60,7 +62,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         attributionControl: true,
       });
 
-      // Add OpenStreetMap tile layer (exact match to screenshots: OpenStreetMap)
+      // Add OpenStreetMap tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap',
         maxZoom: 19,
@@ -70,41 +72,74 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
       if (interactive) {
         map.on('click', (e: L.LeafletMouseEvent) => {
-          if (onLocationSelectRef.current) {
-            onLocationSelectRef.current(e.latlng.lat, e.latlng.lng);
+          if (!onLocationSelectRef.current) return;
+          const { lat, lng } = e.latlng;
+
+          // Immediately reflect position on screen for instant, fluid feedback
+          if (markerRef.current) {
+            markerRef.current.setLatLng(e.latlng);
           }
+          if (safeZoneCircleRef.current) {
+            safeZoneCircleRef.current.setLatLng(e.latlng);
+          }
+          if (accuracyCircleRef.current) {
+            accuracyCircleRef.current.setLatLng(e.latlng);
+          }
+
+          // Mark internal user move so effect doesn't jerk the viewport
+          lastInternalPosRef.current = { lat, lng, time: Date.now() };
+          onLocationSelectRef.current(lat, lng);
         });
       }
     }
 
     const map = mapInstanceRef.current;
-    try {
-      map.flyTo(center, zoom, { duration: 0.8 });
-    } catch {
-      map.setView(center, zoom);
+
+    // Determine if this update came from the user dragging/clicking within this map
+    const isInternalUserMove =
+      lastInternalPosRef.current &&
+      Date.now() - lastInternalPosRef.current.time < 2000 &&
+      Math.abs(lastInternalPosRef.current.lat - center[0]) < 0.0001 &&
+      Math.abs(lastInternalPosRef.current.lng - center[1]) < 0.0001;
+
+    // If change is external (e.g. search bar, GPS button, initial load), smooth pan without violent flyTo bouncing
+    if (!isInternalUserMove) {
+      const curCenter = map.getCenter();
+      const distLat = Math.abs(curCenter.lat - center[0]);
+      const distLng = Math.abs(curCenter.lng - center[1]);
+      const curZoom = map.getZoom();
+
+      if (distLat > 0.00005 || distLng > 0.00005 || curZoom !== zoom) {
+        if (curZoom !== zoom || distLat > 1.5 || distLng > 1.5) {
+          map.setView(center, zoom);
+        } else {
+          map.panTo(center, { animate: true, duration: 0.35 });
+        }
+      }
     }
 
     // Create custom SVG markers
     let icon: L.DivIcon;
     if (markerType === 'home') {
-      // Vivid Blue house pin with grab cursor, bold white border and eye-catching drop shadow
+      // Vivid Blue house pin with grab cursor, bold white border and drop shadow.
+      // Clean structure with NO conflicting internal translate transforms or transition lags.
       icon = L.divIcon({
         className: 'custom-home-pin',
         html: `
-          <div style="transform: translate(-20px, -44px); width: 40px; height: 48px; display: flex; flex-direction: column; align-items: center; cursor: grab;">
-            <div style="background: linear-gradient(135deg, #2563eb, #0b4f9e); width: 40px; height: 40px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(11, 79, 158, 0.55); border: 1px solid rgba(255,255,255,0.4); transition: transform 0.15s ease;">
-              <svg style="transform: rotate(45deg); width: 22px; height: 22px; fill: white;" viewBox="0 0 24 24">
+          <div style="width: 40px; height: 48px; display: flex; flex-direction: column; align-items: center; pointer-events: auto;">
+            <div style="background: linear-gradient(135deg, #2563eb, #0b4f9e); width: 38px; height: 38px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(11, 79, 158, 0.55); border: 1px solid rgba(255,255,255,0.4);">
+              <svg style="transform: rotate(45deg); width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
                 <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
               </svg>
             </div>
-            <div style="width: 10px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; filter: blur(1px); margin-top: 3px;"></div>
+            <div style="width: 10px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; filter: blur(1px); margin-top: 2px;"></div>
           </div>
         `,
         iconSize: [40, 48],
         iconAnchor: [20, 46],
       });
     } else {
-      // Blue pulsing user dot as in screens [13] and [38]
+      // Blue pulsing user dot
       icon = L.divIcon({
         className: 'custom-user-dot',
         html: `
@@ -122,7 +157,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     const isDraggable = interactive && !!onLocationSelect;
 
     if (markerRef.current) {
-      markerRef.current.setLatLng(center);
+      if (!isDraggingRef.current) {
+        markerRef.current.setLatLng(center);
+      }
       markerRef.current.setIcon(icon);
       if (isDraggable) {
         markerRef.current.dragging?.enable();
@@ -133,13 +170,30 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       const marker = L.marker(center, {
         icon,
         draggable: isDraggable,
-        autoPan: true,
-        autoPanPadding: [40, 40],
+        autoPan: false, // Prevents map from jerking / bouncing violently when dragging near borders
       }).addTo(map);
+
+      marker.on('dragstart', () => {
+        isDraggingRef.current = true;
+      });
+
+      marker.on('drag', (e: L.LeafletEvent) => {
+        const target = e.target as L.Marker;
+        const pos = target.getLatLng();
+        // Keep safe zone and accuracy circles in sync in real-time during drag
+        if (safeZoneCircleRef.current) {
+          safeZoneCircleRef.current.setLatLng(pos);
+        }
+        if (accuracyCircleRef.current) {
+          accuracyCircleRef.current.setLatLng(pos);
+        }
+      });
 
       marker.on('dragend', (e: L.LeafletEvent) => {
         const target = e.target as L.Marker;
         const pos = target.getLatLng();
+        isDraggingRef.current = false;
+        lastInternalPosRef.current = { lat: pos.lat, lng: pos.lng, time: Date.now() };
         if (onLocationSelectRef.current) {
           onLocationSelectRef.current(pos.lat, pos.lng);
         }
@@ -155,13 +209,13 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           ? L.divIcon({
               className: 'custom-home-pin',
               html: `
-                <div style="transform: translate(-20px, -44px); width: 40px; height: 48px; display: flex; flex-direction: column; align-items: center;">
-                  <div style="background: linear-gradient(135deg, #0b6b3a, #08542d); width: 40px; height: 40px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(11, 107, 58, 0.55); border: 1px solid rgba(255,255,255,0.4);">
-                    <svg style="transform: rotate(45deg); width: 22px; height: 22px; fill: white;" viewBox="0 0 24 24">
+                <div style="width: 40px; height: 48px; display: flex; flex-direction: column; align-items: center;">
+                  <div style="background: linear-gradient(135deg, #0b6b3a, #08542d); width: 38px; height: 38px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(11, 107, 58, 0.55); border: 1px solid rgba(255,255,255,0.4);">
+                    <svg style="transform: rotate(45deg); width: 20px; height: 20px; fill: white;" viewBox="0 0 24 24">
                       <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                     </svg>
                   </div>
-                  <div style="width: 10px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; filter: blur(1px); margin-top: 3px;"></div>
+                  <div style="width: 10px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; filter: blur(1px); margin-top: 2px;"></div>
                 </div>
               `,
               iconSize: [40, 48],
@@ -213,7 +267,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       accuracyCircleRef.current = null;
     }
 
-    // Safe zone circle (dashed blue boundary as in screen [29])
+    // Safe zone circle (dashed blue boundary)
     if (showSafeZoneCircle) {
       if (safeZoneCircleRef.current) {
         safeZoneCircleRef.current.setLatLng(center);
@@ -254,7 +308,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     accuracyRadius,
     showSafeZoneCircle,
     safeZoneRadius,
-    onLocationSelect,
   ]);
 
   // Cleanup on unmount

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Search,
   Home,
@@ -134,19 +134,34 @@ export const PanelHomeZone: React.FC = () => {
     );
   };
 
-  // When user taps/clicks map directly
-  const handleMapSelectHome = async (lat: number, lng: number) => {
+  const geocodeAbortRef = useRef<AbortController | null>(null);
+
+  // When user taps/clicks/drags home map directly
+  const handleMapSelectHome = useCallback(async (lat: number, lng: number) => {
     setHomeCoords([lat, lng]);
+
+    if (geocodeAbortRef.current) {
+      geocodeAbortRef.current.abort();
+    }
+    const ac = new AbortController();
+    geocodeAbortRef.current = ac;
+
     try {
-      const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
+      const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`, {
+        signal: ac.signal,
+      });
       const data = await res.json();
       if (data && data.address) {
         setHomeAddress(data.address);
       }
     } catch {
-      // Just keep point
+      // Aborted or fetch error: coordinates remain accurate
     }
-  };
+  }, []);
+
+  const handleMapSelectSafeZone = useCallback((lat: number, lng: number) => {
+    setSafeZoneCenter([lat, lng]);
+  }, []);
 
   const handleUseHomeAsCenter = () => {
     setSafeZoneCenter(homeCoords);
@@ -462,7 +477,7 @@ export const PanelHomeZone: React.FC = () => {
             markerType="home"
             showSafeZoneCircle={true}
             safeZoneRadius={safeZoneRadius}
-            onLocationSelect={(lat, lng) => setSafeZoneCenter([lat, lng])}
+            onLocationSelect={handleMapSelectSafeZone}
             className="h-64 w-full rounded-2xl"
           />
           <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
