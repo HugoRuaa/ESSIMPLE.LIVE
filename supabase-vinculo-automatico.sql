@@ -63,3 +63,6 @@ $$;
 
 revoke all on function essimple.registrar_descarga(text), essimple.buscar_vinculo(), essimple.marcar_vinculo_usado(text) from public;
 grant execute on function essimple.registrar_descarga(text), essimple.buscar_vinculo(), essimple.marcar_vinculo_usado(text) to anon, authenticated;
+
+-- Para que la API vea las funciones nuevas sin esperar
+notify pgrst, 'reload schema';
