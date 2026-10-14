@@ -220,8 +220,8 @@ export const PanelHomeZone: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150 pb-36">
-      {/* Indicador de cuenta familiar Supabase */}
+    <div className="space-y-6 animate-in fade-in duration-150 pb-10">
+      {/* Indicador de cuenta familiar */}
       <div className="bg-[#f0f6ff] border-2 border-[#0b4f9e]/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-3.5 h-3.5 rounded-full bg-[#0b6b3a] shrink-0 animate-pulse" />
@@ -233,12 +233,12 @@ export const PanelHomeZone: React.FC = () => {
               </span>
             </p>
             <p className="text-xs font-semibold text-[#3b4863]">
-              Los cambios en la dirección de la casa y el perímetro de la zona segura se guardan en la nube.
+              Los cambios en la dirección de la casa y el perímetro de la zona segura se guardan y sincronizan automáticamente.
             </p>
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0b6b3a] bg-[#e6f4ea] px-3 py-1.5 rounded-full border border-[#0b6b3a]/30 shrink-0 self-start sm:self-auto">
-          ☁️ Guardado en la nube
+          ☁️ Sincronizado
         </span>
       </div>
 
@@ -257,23 +257,6 @@ export const PanelHomeZone: React.FC = () => {
       <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-2xl font-extrabold text-[#14213d]">Dirección de casa</h2>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-[#0b4f9e] hover:bg-[#093f7e] disabled:opacity-70 text-white px-4 min-h-11 rounded-2xl text-base font-extrabold flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Guardando...</span>
-              </>
-            ) : (
-              <>
-                <Check className="w-5 h-5 stroke-[2.5]" />
-                <span>Guardar</span>
-              </>
-            )}
-          </button>
         </div>
 
         <div className="flex items-start gap-3 bg-[#f8f7f4] p-3.5 rounded-2xl border border-[#ddd5c3]">
@@ -398,6 +381,28 @@ export const PanelHomeZone: React.FC = () => {
               <span className="text-xl font-extrabold text-[#14213d]">En transporte</span>
             </label>
           </div>
+        </div>
+
+        {/* Botón fijo para guardar dirección de casa */}
+        <div className="pt-2 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-full sm:w-auto bg-[#0b4f9e] hover:bg-[#093f7e] disabled:opacity-70 text-white min-h-12 px-6 rounded-2xl text-lg font-extrabold shadow-sm active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Guardando...</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-5 h-5 stroke-[2.5]" />
+                <span>Guardar</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -530,41 +535,43 @@ export const PanelHomeZone: React.FC = () => {
               Al guardar, el teléfono reiniciará la vigilancia de la zona segura con el nuevo centro o radio.
             </span>
           </div>
-        </div>
-      </div>
 
-      {/* Sticky Bottom Save / Discard Bar [29] - Elevated above 5-tab menu */}
-      <div className="fixed bottom-[calc(var(--nav-h)+0.5rem)] left-4 right-4 z-50 bg-[#14213d] text-white border-2 border-[#ddd5c3] p-3.5 rounded-3xl flex items-center justify-between gap-3 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom duration-200">
-        <button
-          onClick={handleDiscard}
-          disabled={isSaving}
-          className="w-1/2 bg-white/10 hover:bg-white/20 disabled:opacity-50 border border-white/20 text-white min-h-12 px-2 rounded-2xl text-base min-[400px]:text-lg font-extrabold whitespace-nowrap shadow-sm active:scale-95 transition cursor-pointer"
-        >
-          Descartar
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="w-1/2 bg-[#0b6b3a] hover:bg-[#09572f] disabled:opacity-70 text-white min-h-12 px-2 rounded-2xl text-base min-[400px]:text-lg font-extrabold whitespace-nowrap shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Guardando...</span>
-            </>
-          ) : (
-            <>
-              <Check className="w-5 h-5 stroke-[3]" />
-              <span>Guardar<span className="max-[399px]:hidden"> cambios</span></span>
-            </>
-          )}
-        </button>
+          {/* Botón fijo abajo del mapa donde se escoge la ubicación y el radio */}
+          <div className="pt-3 border-t-2 border-[#f0ece1] flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex-1 bg-[#0b6b3a] hover:bg-[#09572f] disabled:opacity-70 text-white min-h-14 py-3.5 px-6 rounded-2xl text-xl font-extrabold shadow-md active:scale-95 transition flex items-center justify-center gap-2.5 cursor-pointer"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span>Guardando...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-6 h-6 stroke-[3]" />
+                  <span>Guardar</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscard}
+              disabled={isSaving}
+              className="sm:w-auto px-6 min-h-14 py-3.5 rounded-2xl border-2 border-[#7a7461] bg-white hover:bg-[#f8f7f4] text-[#14213d] text-lg font-bold transition active:scale-95 disabled:opacity-50 cursor-pointer text-center"
+            >
+              Descartar
+            </button>
+          </div>
+        </div>
       </div>
 
       {isSavedMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0b6b3a] text-white px-6 py-3 rounded-full text-base sm:text-lg font-bold shadow-2xl animate-in fade-in flex items-center gap-2 text-center max-w-[90vw]">
           <CheckCircle2 className="w-6 h-6 shrink-0" />
-          <span>¡Guardado para la cuenta familiar!</span>
+          <span>¡Guardado correctamente!</span>
         </div>
       )}
     </div>

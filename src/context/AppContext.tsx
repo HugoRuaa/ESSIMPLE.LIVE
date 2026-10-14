@@ -974,7 +974,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const res = await registerFamilyByCode(cleanEmail, password, cleanPin, accompaniedName);
       if (!res.success) {
-        return { success: false, message: res.message || 'No se pudo registrar la familia en Supabase.' };
+        return { success: false, message: res.message || 'No se pudo registrar la familia.' };
       }
 
       // Toda la información de la nueva cuenta familiar DEBE ESTAR COMPLETAMENTE VACÍA

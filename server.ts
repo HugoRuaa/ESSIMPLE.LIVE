@@ -207,7 +207,7 @@ app.post('/api/familias/register', async (req, res) => {
       if (!error && data) {
         familiesStore.set(cleanEmail, data);
         familiesStore.set(data.id, data);
-        return res.json({ success: true, familiaId: data.id, familyData: data, message: 'Cuenta familiar creada con éxito en Supabase' });
+        return res.json({ success: true, familiaId: data.id, familyData: data, message: 'Cuenta familiar creada con éxito' });
       }
       if (error && error.code === '23505') {
         return res.status(409).json({ success: false, message: 'Este correo ya tiene una cuenta familiar registrada.' });
@@ -562,9 +562,7 @@ app.post('/api/familias/:familiaId/home-zone', async (req, res) => {
     success: true,
     familiaId,
     data: homeZoneStore.get(familiaId) || payload,
-    message: supabaseSaved
-      ? 'Ubicación de casa y zona segura guardadas exitosamente en Supabase'
-      : 'Ubicación de casa y zona segura guardadas correctamente',
+    message: 'Ubicación de casa y zona segura guardadas correctamente',
   });
 });
 

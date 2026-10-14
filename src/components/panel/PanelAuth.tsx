@@ -16,6 +16,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
   const [personName, setPersonName] = useState('');
   const [pin, setPin] = useState('1234');
   const [showPass, setShowPass] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [acceptedTermsBox, setAcceptedTermsBox] = useState(true);
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,10 +141,10 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
       const chosenPersonName = personName.trim() || 'Álvaro';
       const res = await signup(email, pin, password, chosenPersonName);
       if (!res.success) {
-        setAuthError(res.message || 'No se pudo registrar la familia en Supabase.');
+        setAuthError(res.message || 'No se pudo registrar la familia.');
       }
     } catch (err: unknown) {
-      setAuthError(err instanceof Error ? err.message : 'Error al registrar en Supabase');
+      setAuthError(err instanceof Error ? err.message : 'Error al registrar');
     } finally {
       setIsSubmitting(false);
     }
@@ -286,16 +287,27 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                 <label className="text-base font-bold text-[#14213d]">
                   PIN de salida (4 dígitos)
                 </label>
-                <input
-                  type="password"
-                  maxLength={4}
-                  required
-                  value={pin}
-                  onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                  placeholder="1234"
-                  disabled={isSubmitting}
-                  className="w-full border-2 border-[#7a7461] rounded-2xl p-3 text-xl font-bold tracking-widest text-[#14213d] focus:outline-none focus:border-[#0b4f9e] disabled:opacity-60 bg-white"
-                />
+                <div className="relative">
+                  <input
+                    type={showPin ? 'text' : 'password'}
+                    maxLength={4}
+                    inputMode="numeric"
+                    required
+                    value={pin}
+                    onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="1234"
+                    disabled={isSubmitting}
+                    className="w-full border-2 border-[#7a7461] rounded-2xl p-3 pr-28 text-xl font-bold tracking-widest text-[#14213d] focus:outline-none focus:border-[#0b4f9e] disabled:opacity-60 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(!showPin)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 min-h-11 text-sm sm:text-base font-bold text-[#3b4863] cursor-pointer"
+                  >
+                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <span>{showPin ? 'Ocultar' : 'Mostrar'}</span>
+                  </button>
+                </div>
                 <p className="text-xs font-semibold text-[#6b7280]">
                   Para desbloquear el teléfono normal.
                 </p>

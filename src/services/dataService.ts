@@ -43,14 +43,14 @@ export const registerFamilyByCode = async (
 
     const data = await apiRes.json();
     if (apiRes.ok && data.success) {
-      console.log('✅ Familia registrada en Supabase vía API del servidor:', data.familiaId);
-      return { success: true, familiaId: data.familiaId, message: data.message || 'Cuenta familiar creada con éxito en Supabase' };
+      console.log('✅ Familia registrada vía API del servidor:', data.familiaId);
+      return { success: true, familiaId: data.familiaId, message: data.message || 'Cuenta familiar creada con éxito' };
     } else if (data.message) {
       console.warn('⚠️ Error al registrar vía API:', data.message);
       return { success: false, message: data.message };
     }
   } catch (apiErr) {
-    console.warn('Endpoint /api/familias/register no disponible, intentando cliente directo Supabase...', apiErr);
+    console.warn('Endpoint /api/familias/register no disponible, intentando cliente directo...', apiErr);
   }
 
   // Intento 2: Directo desde el navegador con cliente Supabase
@@ -58,7 +58,7 @@ export const registerFamilyByCode = async (
   if (!client) {
     return {
       success: false,
-      message: 'No se pudo conectar con Supabase. Revisa la URL y llaves en el archivo .env o en Ajustes.',
+      message: 'No se pudo conectar con el servidor. Revisa tu conexión a internet.',
     };
   }
 
@@ -79,15 +79,15 @@ export const registerFamilyByCode = async (
 
     if (error) {
       if (error.code === '23505') {
-        return { success: false, message: 'Este correo ya tiene una cuenta registrada en essimple.familias.' };
+        return { success: false, message: 'Este correo ya tiene una cuenta registrada.' };
       }
-      return { success: false, message: `Error de Supabase: ${error.message}` };
+      return { success: false, message: `Error: ${error.message}` };
     }
 
-    console.log('✅ Familia registrada directamente en Supabase:', data.id);
-    return { success: true, familiaId: data.id, message: 'Cuenta creada con éxito en Supabase' };
+    console.log('✅ Familia registrada directamente:', data.id);
+    return { success: true, familiaId: data.id, message: 'Cuenta creada con éxito' };
   } catch (err: unknown) {
-    return { success: false, message: err instanceof Error ? err.message : 'Error al registrar en Supabase' };
+    return { success: false, message: err instanceof Error ? err.message : 'Error al registrar' };
   }
 };
 
@@ -120,7 +120,7 @@ export const loginFamilyByCode = async (
   // Intento 2: Directo desde el navegador con cliente Supabase
   const client = getSupabaseClient();
   if (!client) {
-    return { success: false, message: 'No se pudo conectar a la base de datos de Supabase.' };
+    return { success: false, message: 'No se pudo conectar con el servidor.' };
   }
 
   try {
@@ -132,7 +132,7 @@ export const loginFamilyByCode = async (
       .single();
 
     if (error || !data) {
-      return { success: false, message: 'Correo no registrado en Supabase.' };
+      return { success: false, message: 'Correo no registrado.' };
     }
 
     if (data.password_hash !== password_hash) {
@@ -322,19 +322,19 @@ export const syncHomeZoneToSupabase = async (
       return {
         success: true,
         familiaId: data.familiaId,
-        message: data.message || 'Ubicación guardada exitosamente en Supabase',
+        message: data.message || 'Ubicación guardada exitosamente',
       };
     } else if (data && data.message) {
       console.warn('Servidor devolvió error al guardar casa y zona:', data.message);
     }
   } catch (apiErr) {
-    console.warn('API /api/familias/:id/home-zone falló, intentando cliente directo Supabase:', apiErr);
+    console.warn('API /api/familias/:id/home-zone falló, intentando cliente directo...', apiErr);
   }
 
   // Intento 2: Directo con cliente Supabase
   const client = getSupabaseClient();
   if (!client) {
-    return { success: false, message: 'No hay conexión disponible con Supabase.' };
+    return { success: false, message: 'No hay conexión disponible.' };
   }
 
   try {
@@ -351,7 +351,7 @@ export const syncHomeZoneToSupabase = async (
       if (famData?.id) {
         targetFamiliaId = famData.id;
       } else {
-        return { success: false, message: 'Cuenta familiar no encontrada en Supabase.' };
+        return { success: false, message: 'Cuenta familiar no encontrada.' };
       }
     }
 
@@ -373,20 +373,20 @@ export const syncHomeZoneToSupabase = async (
     );
 
     if (error) {
-      console.warn('Aviso de Supabase al guardar casa_zona:', error.message || error);
+      console.warn('Aviso al guardar casa_zona:', error.message || error);
       return { success: false, message: error.message };
     }
 
     return {
       success: true,
       familiaId: targetFamiliaId,
-      message: 'Ubicación de casa y zona guardadas exitosamente en Supabase',
+      message: 'Ubicación de casa y zona guardadas exitosamente',
     };
   } catch (err: unknown) {
-    console.warn('Aviso al sincronizar casa y zona con Supabase:', err);
+    console.warn('Aviso al sincronizar casa y zona:', err);
     return {
       success: false,
-      message: err instanceof Error ? err.message : 'Error inesperado al guardar en Supabase',
+      message: err instanceof Error ? err.message : 'Error inesperado al guardar',
     };
   }
 };
