@@ -17,6 +17,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.telecom.PhoneAccount;
+import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
 import android.view.WindowManager;
@@ -47,7 +49,7 @@ import java.util.List;
     name = "Simple",
     permissions = {
         @Permission(alias = "sms", strings = { Manifest.permission.SEND_SMS }),
-        @Permission(alias = "calls", strings = { Manifest.permission.CALL_PHONE }),
+        @Permission(alias = "calls", strings = { Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE }),
         @Permission(
             alias = "location",
             strings = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION }
@@ -82,6 +84,7 @@ public class SimplePlugin extends Plugin {
     private static final String[] RUNTIME_PERMISSIONS = new String[] {
         Manifest.permission.SEND_SMS,
         Manifest.permission.CALL_PHONE,
+        Manifest.permission.READ_PHONE_STATE,
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
         Manifest.permission.RECORD_AUDIO
@@ -95,6 +98,10 @@ public class SimplePlugin extends Plugin {
         if ("notifications".equals(alias)) return Build.VERSION.SDK_INT < 33;
         if ("backgroundLocation".equals(alias)) return Build.VERSION.SDK_INT < 29;
         return false;
+    }
+
+    private boolean has(String permission) {
+        return getContext().checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     private boolean isGranted(String alias) {
@@ -265,8 +272,25 @@ public class SimplePlugin extends Plugin {
         }
         String clean = number.replaceAll("[^\\d+*#]", "");
         Intent intent;
-        if (isGranted("calls")) {
+        if (has(Manifest.permission.CALL_PHONE)) {
             intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + Uri.encode(clean)));
+            // Con dos SIM Android muestra un cuadro para elegir la tarjeta. Se elige una por la persona para que la
+            // llamada salga sola: la SIM predeterminada para llamadas o, si no hay, la primera disponible.
+            try {
+                if (has(Manifest.permission.READ_PHONE_STATE)) {
+                    TelecomManager tm = (TelecomManager) getContext().getSystemService(Context.TELECOM_SERVICE);
+                    if (tm != null) {
+                        PhoneAccountHandle handle = tm.getDefaultOutgoingPhoneAccount(PhoneAccount.SCHEME_TEL);
+                        if (handle == null) {
+                            List<PhoneAccountHandle> accounts = tm.getCallCapablePhoneAccounts();
+                            if (accounts != null && !accounts.isEmpty()) handle = accounts.get(0);
+                        }
+                        if (handle != null) intent.putExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+                    }
+                }
+            } catch (SecurityException ignored) {
+                // Sin permiso para leer las SIM: Android mostrará su cuadro de selección.
+            }
         } else {
             // Sin permiso: abre el marcador con el número escrito, que es lo mejor posible.
             intent = new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(clean)));
