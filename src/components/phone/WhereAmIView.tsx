@@ -124,6 +124,18 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
     } catch {
       // Ignorar
     }
+    // Sin servidor propio (APK o sitio estático): consulta directa a OpenStreetMap.
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=es&lat=${lat}&lon=${lng}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.display_name) return data.display_name as string;
+      }
+    } catch {
+      // Ignorar
+    }
     return `Coordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   };
 
@@ -337,15 +349,23 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
 
           {/* Mapa Leaflet interactivo centrado en la posición real */}
           <div className="pt-1 relative">
-            <LeafletMap
-              key={`map-${mapCenterKey}`}
-              center={[coords.lat, coords.lng]}
-              zoom={17}
-              interactive={true}
-              showAccuracyCircle={coords.isRealGps}
-              accuracyRadius={coords.accuracy}
-              className="h-80 w-full rounded-3xl shadow-inner border-2 border-[#7a7461]/40"
-            />
+            {coords.isRealGps || coords.isApproximate ? (
+              <LeafletMap
+                key={`map-${mapCenterKey}`}
+                center={[coords.lat, coords.lng]}
+                zoom={17}
+                interactive={true}
+                showAccuracyCircle={coords.isRealGps}
+                accuracyRadius={coords.accuracy}
+                className="h-80 w-full rounded-3xl shadow-inner border-2 border-[#7a7461]/40"
+              />
+            ) : (
+              <div className="h-80 w-full rounded-3xl border-2 border-[#7a7461]/40 bg-[#ede8dc] flex items-center justify-center p-6 text-center">
+                <p className="text-xl font-bold text-[#3b4863] leading-snug">
+                  {isLocating ? 'Buscando tu ubicación real…' : 'Todavía no hay ubicación. Toca "Actualizar".'}
+                </p>
+              </div>
+            )}
             {/* Botón flotante para recentrar en mi posición */}
             <button
               onClick={() => {
