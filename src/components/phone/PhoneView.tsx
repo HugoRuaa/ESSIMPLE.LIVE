@@ -211,7 +211,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     if (!isNative()) return;
     return onBackButton(() => {
       setShowPinModal(false);
-      setCurrentScreen('home');
+      // Durante el asistente, Atrás no saca de él: se termina con el botón "Abrir essimple.live".
+      setCurrentScreen(prev => (prev === 'wizard' ? prev : 'home'));
     });
   }, []);
 

@@ -401,12 +401,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
             </p>
           </div>
         </div>
-
-        <div className="pb-6 pt-8">
-          <TactileButton variant="card" fontSize="grande" onClick={onCancel}>
-            Atrás
-          </TactileButton>
-        </div>
       </div>
     );
   }
