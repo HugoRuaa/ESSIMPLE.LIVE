@@ -28,9 +28,9 @@
         </activity>
 
         <!--
-          Pantalla de inicio de Simple. Vive en un alias para poder apagarlo desde la app ("volver al estado normal
-          del celular"): sin este componente activo Android deja de ofrecer a Simple como inicio y vuelve al launcher
-          normal. Al reabrir Simple se vuelve a encender. No toca ningún permiso.
+          Pantalla de inicio de essimple.live. Vive en un alias para poder apagarlo desde la app ("volver al estado normal
+          del celular"): sin este componente activo Android deja de ofrecer a essimple.live como inicio y vuelve al launcher
+          normal. Al reabrir essimple.live se vuelve a encender. No toca ningún permiso.
         -->
         <activity-alias
             android:name=".HomeAlias"

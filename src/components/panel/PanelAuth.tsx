@@ -33,7 +33,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
 
           <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-6 shadow-sm space-y-5">
             <h1 className="text-3xl font-extrabold text-[#14213d]">Antes de empezar</h1>
-            <p className="text-xl font-bold text-[#14213d]">Esto es lo que guarda essimple:</p>
+            <p className="text-xl font-bold text-[#14213d]">Esto es lo que guarda essimple.live:</p>
 
             <ul className="list-disc list-inside space-y-3 text-lg font-semibold text-[#14213d] leading-relaxed">
               <li>
@@ -312,7 +312,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                   className="w-5 h-5 rounded text-[#0b4f9e] accent-[#0b4f9e] mt-1 shrink-0"
                 />
                 <span className="text-sm font-bold text-[#14213d] leading-snug">
-                  Acepto los términos de essimple: se guardan los contactos, nivel de batería e historial de alertas familiares para la protección de tu ser querido.
+                  Acepto los términos de essimple.live: se guardan los contactos, nivel de batería e historial de alertas familiares para la protección de tu ser querido.
                 </span>
               </label>
 

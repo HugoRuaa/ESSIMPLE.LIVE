@@ -1,4 +1,4 @@
-package live.essimple.simple;
+package live.essimple;
 
 import android.os.Bundle;
 

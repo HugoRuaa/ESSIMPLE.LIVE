@@ -1,4 +1,4 @@
-package live.essimple.simple;
+package live.essimple;
 
 import android.Manifest;
 import android.app.Activity;
@@ -62,7 +62,7 @@ public class SimplePlugin extends Plugin {
     /** Lo lee MainActivity para reaplicar el modo inmersivo al recuperar el foco. */
     public static volatile boolean kioskEnabled = false;
 
-    private static final String HOME_ALIAS = "live.essimple.simple.HomeAlias";
+    private static final String HOME_ALIAS = "live.essimple.HomeAlias";
     private static final String PREFS = "simple_prefs";
     private static final String KEY_RELEASED = "home_released";
     private static final String KEY_WAS_HOME = "was_default_home";

@@ -15,8 +15,8 @@ export const ExitMenuView: React.FC<ExitMenuViewProps> = ({ onBackToApp, onBackT
       <div className="space-y-6 pt-6">
         <h1 className="text-4xl font-extrabold tracking-tight">¿Qué quieres hacer?</h1>
         <p className="text-lg text-[#3b4863] font-medium leading-relaxed">
-          Volver al estado normal suelta la pantalla de inicio de essimple y deja el celular como estaba. Los permisos se
-          conservan. Cuando abras essimple otra vez, vuelve a ser la pantalla de inicio.
+          Volver al estado normal suelta la pantalla de inicio de essimple.live y deja el celular como estaba. Los permisos se
+          conservan. Cuando abras essimple.live otra vez, vuelve a ser la pantalla de inicio.
         </p>
       </div>
 

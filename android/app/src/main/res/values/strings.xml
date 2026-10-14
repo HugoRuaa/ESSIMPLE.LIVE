@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">essimple</string>
-    <string name="title_activity_main">essimple</string>
-    <string name="package_name">live.essimple.simple</string>
-    <string name="custom_url_scheme">live.essimple.simple</string>
+    <string name="app_name">essimple.live</string>
+    <string name="title_activity_main">essimple.live</string>
+    <string name="package_name">live.essimple</string>
+    <string name="custom_url_scheme">live.essimple</string>
 </resources>

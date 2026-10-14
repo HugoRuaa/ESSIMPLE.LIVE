@@ -24,7 +24,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
         {/* Info card */}
         <div className="bg-[#ede7d8] border border-[#d5cbaf] rounded-2xl p-4 text-[#14213d]">
           <p className="text-base font-semibold">
-            <span className="font-extrabold">Nivel actual:</span> Básico: essimple es la pantalla de inicio, sin bloqueo real.
+            <span className="font-extrabold">Nivel actual:</span> Básico: essimple.live es la pantalla de inicio, sin bloqueo real.
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
           fontSize="grande"
           onClick={onBackToSimple}
         >
-          Volver a essimple
+          Volver a essimple.live
         </TactileButton>
       </div>
     </div>

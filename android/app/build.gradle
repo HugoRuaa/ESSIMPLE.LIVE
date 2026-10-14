@@ -4,10 +4,10 @@ apply plugin: 'com.android.application'
 def appVersionCode = Integer.parseInt((project.findProperty("versionCode") ?: "1").toString())
 
 android {
-    namespace = "live.essimple.simple"
+    namespace = "live.essimple"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "live.essimple.simple"
+        applicationId "live.essimple"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // El workflow pasa -PversionCode=<n° de ejecución> para que cada APK nuevo se instale encima del anterior.

@@ -5,4 +5,4 @@
  */
 export const APK_URL: string =
   (import.meta.env?.VITE_APK_URL as string | undefined) ||
-  'https://github.com/HugoRuaa/essimple.live/releases/download/apk/simple.apk';
+  'https://github.com/HugoRuaa/essimple.live/releases/download/apk/essimple.apk';

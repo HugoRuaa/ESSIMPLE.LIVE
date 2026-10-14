@@ -1,6 +1,6 @@
 {
-  "name": "essimple",
-  "short_name": "essimple",
+  "name": "essimple.live",
+  "short_name": "essimple.live",
   "description": "Teléfono adaptado para personas mayores con botones grandes y asistencia familiar.",
   "start_url": "/?view=phone",
   "display": "standalone",

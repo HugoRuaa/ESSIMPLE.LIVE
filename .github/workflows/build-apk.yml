@@ -86,22 +86,22 @@ jobs:
           echo "::error title=Gradle::${msg}"
 
       - name: Renombrar el APK
-        run: cp android/app/build/outputs/apk/release/app-release.apk simple.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk essimple.apk
 
       - name: Publicar en GitHub Releases (enlace estable)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view apk >/dev/null 2>&1 || gh release create apk --title "Simple (APK)" --notes "Última versión del APK de Simple" --latest=false
-          gh release upload apk simple.apk --clobber
+          gh release view apk >/dev/null 2>&1 || gh release create apk --title "essimple.live (APK)" --notes "Última versión del APK de essimple.live" --latest=false
+          gh release upload apk essimple.apk --clobber
 
       - name: Publicar en Supabase Storage (opcional, enlace público sin necesidad de repo público)
         if: ${{ env.SUPABASE_SERVICE_KEY != '' }}
         run: |
-          curl -sS -f -X POST "$SUPABASE_URL/storage/v1/object/apk/simple.apk" \
+          curl -sS -f -X POST "$SUPABASE_URL/storage/v1/object/apk/essimple.apk" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
             -H "apikey: $SUPABASE_SERVICE_KEY" \
             -H "x-upsert: true" \
             -H "Content-Type: application/vnd.android.package-archive" \
-            --data-binary @simple.apk
-          echo "APK público: $SUPABASE_URL/storage/v1/object/public/apk/simple.apk"
+            --data-binary @essimple.apk
+          echo "APK público: $SUPABASE_URL/storage/v1/object/public/apk/essimple.apk"
