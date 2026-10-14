@@ -48,4 +48,5 @@ jobs:
 
       - name: Aviso si falta la configuración de FTP
         if: ${{ env.FTP_SERVER == '' }}
-        run: echo "::warning::Faltan los secretos FTP_SERVER, FTP_USERNAME y FTP_PASSWORD: el sitio se construyó pero no se subió a Hostinger."
+        run: |
+          echo "::warning::Faltan los secretos FTP_SERVER, FTP_USERNAME y FTP_PASSWORD, así que el sitio se construyó pero no se subió a Hostinger."
