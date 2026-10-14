@@ -391,7 +391,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
                     setPairText(e.target.value);
                     if (parsePairCode(e.target.value)) applyPairCode(e.target.value);
                   }}
-                  placeholder="O pega aquí el código (SIMPLE-...)"
+                  placeholder="O pega aquí el código (ESSIMPLE-...)"
                   className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e]"
                 />
               </>

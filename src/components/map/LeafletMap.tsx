@@ -12,6 +12,8 @@ interface LeafletMapProps {
   safeZoneRadius?: number; // meters
   markerType?: 'user' | 'home';
   markerLabel?: string;
+  destinationCenter?: [number, number];
+  destinationMarkerType?: 'home' | 'user';
   className?: string;
 }
 
@@ -26,11 +28,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   safeZoneRadius = 300,
   markerType = 'user',
   markerLabel,
+  destinationCenter,
+  destinationMarkerType = 'home',
   className = 'h-72 w-full rounded-2xl',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const destinationMarkerRef = useRef<L.Marker | null>(null);
   const accuracyCircleRef = useRef<L.Circle | null>(null);
   const safeZoneCircleRef = useRef<L.Circle | null>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
@@ -143,9 +148,49 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       markerRef.current = marker;
     }
 
-    // Clean up any tooltip so the icon is completely unblocked and clearly visible
-    if (markerRef.current) {
-      markerRef.current.unbindTooltip();
+    // Destination marker (e.g. Home on route view)
+    if (destinationCenter) {
+      const destIcon =
+        destinationMarkerType === 'home'
+          ? L.divIcon({
+              className: 'custom-home-pin',
+              html: `
+                <div style="transform: translate(-20px, -44px); width: 40px; height: 48px; display: flex; flex-direction: column; align-items: center;">
+                  <div style="background: linear-gradient(135deg, #0b6b3a, #08542d); width: 40px; height: 40px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(11, 107, 58, 0.55); border: 1px solid rgba(255,255,255,0.4);">
+                    <svg style="transform: rotate(45deg); width: 22px; height: 22px; fill: white;" viewBox="0 0 24 24">
+                      <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    </svg>
+                  </div>
+                  <div style="width: 10px; height: 4px; background: rgba(0,0,0,0.4); border-radius: 50%; filter: blur(1px); margin-top: 3px;"></div>
+                </div>
+              `,
+              iconSize: [40, 48],
+              iconAnchor: [20, 46],
+            })
+          : L.divIcon({
+              className: 'custom-dest-dot',
+              html: `
+                <div style="width: 20px; height: 20px; border-radius: 50%; background-color: #0b6b3a; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.35);"></div>
+              `,
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+            });
+
+      if (destinationMarkerRef.current) {
+        destinationMarkerRef.current.setLatLng(destinationCenter);
+        destinationMarkerRef.current.setIcon(destIcon);
+      } else {
+        destinationMarkerRef.current = L.marker(destinationCenter, { icon: destIcon }).addTo(map);
+      }
+
+      try {
+        map.fitBounds([center, destinationCenter], { padding: [45, 45], maxZoom: 16 });
+      } catch {
+        map.setView(center, zoom);
+      }
+    } else if (destinationMarkerRef.current) {
+      destinationMarkerRef.current.remove();
+      destinationMarkerRef.current = null;
     }
 
     // Accuracy circle (blue shade)
@@ -197,7 +242,20 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     return () => {
       clearTimeout(timer);
     };
-  }, [center, zoom, interactive, markerType, markerLabel, showAccuracyCircle, accuracyRadius, showSafeZoneCircle, safeZoneRadius, onLocationSelect]);
+  }, [
+    center,
+    zoom,
+    interactive,
+    markerType,
+    markerLabel,
+    destinationCenter,
+    destinationMarkerType,
+    showAccuracyCircle,
+    accuracyRadius,
+    showSafeZoneCircle,
+    safeZoneRadius,
+    onLocationSelect,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {

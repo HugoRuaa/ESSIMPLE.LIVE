@@ -813,6 +813,43 @@ app.get('/api/reverse-geocode', async (req, res) => {
   }
 });
 
+// Endpoint para estimación de ubicación por IP como fallback inmediato
+app.get('/api/client-location', async (req, res) => {
+  try {
+    const rawForwarded = req.headers['x-forwarded-for'];
+    const forwardedStr = Array.isArray(rawForwarded) ? rawForwarded[0] : rawForwarded;
+    const clientIp = (forwardedStr ? forwardedStr.split(',')[0].trim() : '') || req.socket.remoteAddress || '';
+
+    const isPrivate =
+      !clientIp ||
+      clientIp === '::1' ||
+      clientIp === '127.0.0.1' ||
+      clientIp.startsWith('10.') ||
+      clientIp.startsWith('192.168.') ||
+      clientIp.startsWith('172.16.') ||
+      clientIp.startsWith('fe80:');
+
+    const queryUrl = isPrivate ? 'http://ip-api.com/json/' : `http://ip-api.com/json/${clientIp}`;
+    const response = await fetch(queryUrl, { signal: AbortSignal.timeout(3500) });
+    if (response.ok) {
+      const data: any = await response.json();
+      if (data && data.status === 'success' && typeof data.lat === 'number') {
+        const cityRegion = [data.city, data.regionName, data.country].filter(Boolean).join(', ');
+        return res.json({
+          success: true,
+          lat: data.lat,
+          lng: data.lon,
+          city: data.city,
+          country: data.country,
+          address: cityRegion || 'Ubicación aproximada de red',
+          isIpFallback: true,
+        });
+      }
+    }
+  } catch {}
+  res.json({ success: false });
+});
+
 // Shared location APIs
 app.get('/api/share/location/:token', (req, res) => {
   const token = req.params.token;

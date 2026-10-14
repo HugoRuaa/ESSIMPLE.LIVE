@@ -48,6 +48,7 @@ interface AppContextType {
   locationShare: LocationShareState;
   startLocationShare: (contactName: string, hours: number) => string; // returns token
   stopLocationShare: () => void;
+  updateCurrentCoords: (coords: { lat: number; lng: number; address: string; accuracy?: number }) => void;
 
   // Events & Activity
   events: EventItem[];
@@ -349,18 +350,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // Location share state
-  const [locationShare, setLocationShare] = useState<LocationShareState>({
-    isSharing: false,
-    contactName: 'Laura',
-    durationHours: 1,
-    startTime: 0,
-    expiresAt: 0,
-    currentCoords: {
-      lat: 6.2088,
-      lng: -75.5684,
-      address: 'Calle 10 # 43A-25, El Poblado, Medellín',
+  const [locationShare, setLocationShare] = useState<LocationShareState>(() => {
+    let initialCoords = {
+      lat: 4.6533,
+      lng: -74.0836,
+      address: 'Buscando ubicación actual...',
       accuracy: 25,
-    },
+    };
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('essimple_real_location');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+            initialCoords = {
+              lat: parsed.lat,
+              lng: parsed.lng,
+              address: parsed.address || 'Ubicación actual',
+              accuracy: parsed.accuracy || 25,
+            };
+          }
+        }
+      } catch {}
+    }
+    return {
+      isSharing: false,
+      contactName: 'Laura',
+      durationHours: 1,
+      startTime: 0,
+      expiresAt: 0,
+      currentCoords: initialCoords,
+    };
   });
 
   // Events & Changes: vacíos por defecto para nuevas cuentas
@@ -720,23 +740,107 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Location share
+  const updateCurrentCoords = (coords: { lat: number; lng: number; address: string; accuracy?: number }) => {
+    setLocationShare(prev => ({
+      ...prev,
+      currentCoords: {
+        lat: coords.lat,
+        lng: coords.lng,
+        address: coords.address,
+        accuracy: coords.accuracy ?? prev.currentCoords.accuracy ?? 25,
+      },
+    }));
+    try {
+      localStorage.setItem(
+        'essimple_real_location',
+        JSON.stringify({
+          lat: coords.lat,
+          lng: coords.lng,
+          address: coords.address,
+          accuracy: coords.accuracy ?? 25,
+          updatedAt: Date.now(),
+        })
+      );
+    } catch {}
+  };
+
+  // Autodetección de ubicación real al inicio
+  useEffect(() => {
+    let isMounted = true;
+    const initLocation = async () => {
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          async pos => {
+            if (!isMounted) return;
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const accuracy = Math.round(pos.coords.accuracy || 15);
+            try {
+              const res = await fetch(`/api/reverse-geocode?lat=${lat}&lng=${lng}`);
+              let address = `Coordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+              if (res.ok) {
+                const data = await res.json();
+                if (data?.address) address = data.address;
+              }
+              if (isMounted) updateCurrentCoords({ lat, lng, address, accuracy });
+            } catch {
+              if (isMounted) updateCurrentCoords({ lat, lng, address: `Coordenadas: ${lat.toFixed(5)}, ${lng.toFixed(5)}`, accuracy });
+            }
+          },
+          async () => {
+            try {
+              const res = await fetch('/api/client-location');
+              if (res.ok) {
+                const data = await res.json();
+                if (data?.success && typeof data.lat === 'number' && isMounted) {
+                  updateCurrentCoords({
+                    lat: data.lat,
+                    lng: data.lng,
+                    address: data.address || `${data.city}, ${data.country}`,
+                    accuracy: 1000,
+                  });
+                }
+              }
+            } catch {}
+          },
+          { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+        );
+      } else {
+        try {
+          const res = await fetch('/api/client-location');
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.success && typeof data.lat === 'number' && isMounted) {
+              updateCurrentCoords({
+                lat: data.lat,
+                lng: data.lng,
+                address: data.address || `${data.city}, ${data.country}`,
+                accuracy: 1000,
+              });
+            }
+          }
+        } catch {}
+      }
+    };
+
+    void initLocation();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const startLocationShare = (contactName: string, hours: number) => {
-    const token = 'demo-laura';
+    const token = `share-${Date.now()}`;
     const now = Date.now();
     const expiresAt = now + hours * 3600 * 1000;
-    setLocationShare({
+    setLocationShare(prev => ({
+      ...prev,
       isSharing: true,
       contactName,
       durationHours: hours,
       startTime: now,
       expiresAt,
-      currentCoords: {
-        lat: 6.2088,
-        lng: -75.5684,
-        address: 'Calle 10 # 43A-25, El Poblado, Medellín',
-        accuracy: 20,
-      },
-    });
+    }));
 
     addEvent({
       type: 'ubicacion_inicio',
@@ -1070,6 +1174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         locationShare,
         startLocationShare,
         stopLocationShare,
+        updateCurrentCoords,
 
         events,
         changes,

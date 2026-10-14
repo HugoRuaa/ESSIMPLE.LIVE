@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
-import { Eye, EyeOff, QrCode, Copy, Share2, MessageCircle, Check } from 'lucide-react';
+import { Eye, EyeOff, QrCode, Copy, Share2, MessageCircle, Check, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { FontSize } from '../../types';
 import { APK_URL } from '../../lib/config';
@@ -78,6 +78,17 @@ export const PanelSettings: React.FC = () => {
       cancelled = true;
     };
   }, [installUrl]);
+
+  useEffect(() => {
+    if (!showInstallModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowInstallModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showInstallModal]);
 
   const handleSavePerson = () => {
     saveSettings({
@@ -418,94 +429,139 @@ export const PanelSettings: React.FC = () => {
 
       {/* Modal Enlace de Instalación [33] */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
-            <h2 className="text-3xl font-extrabold text-[#14213d] text-center">
-              Instalar essimple.live en el teléfono de {settings.personName}
-            </h2>
-            <p className="text-lg font-semibold text-[#3b4863] text-center leading-snug">
-              Envía este enlace por WhatsApp o muéstrale el QR: al tocarlo descarga el APK directamente.
-            </p>
-
-            {/* QR real del enlace de descarga */}
-            <div className="flex justify-center py-2">
-              <div className="p-3 bg-white border-2 border-[#14213d] rounded-2xl shadow-md">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="Código QR para descargar essimple.live" className="w-48 h-48" />
-                ) : (
-                  <div className="w-48 h-48" />
-                )}
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowInstallModal(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 select-none animate-in fade-in duration-150"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="relative bg-white w-full max-w-lg max-h-[90vh] flex flex-col rounded-3xl shadow-2xl border-2 border-[#14213d]/15 animate-in zoom-in-95 overflow-hidden"
+          >
+            {/* Header fijo con botón de cerrar visible de inmediato */}
+            <div className="flex items-start justify-between gap-3 p-5 sm:p-6 pb-4 border-b border-[#eee8db] bg-[#faf8f4] shrink-0">
+              <div className="flex-1 pr-2">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#14213d] leading-tight">
+                  Instalar essimple.live
+                </h2>
+                <p className="text-sm font-semibold text-[#5c6b8a] mt-0.5">
+                  Teléfono de {settings.personName}
+                </p>
               </div>
-            </div>
-
-            {/* URL Display */}
-            <div className="bg-[#f8f7f4] border border-[#ddd5c3] p-3 rounded-2xl text-center text-sm font-mono truncate text-[#14213d]">
-              {installUrl}
-            </div>
-
-            {/* Action buttons [33] */}
-            <div className="space-y-3">
               <button
-                onClick={() => {
-                  window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
-                }}
-                className="w-full bg-[#0b6b3a] hover:bg-[#08542d] text-white py-3.5 rounded-2xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-md cursor-pointer transition active:scale-95"
-              >
-                <MessageCircle className="w-6 h-6" />
-                <span>WhatsApp</span>
-              </button>
-
-              <button
-                onClick={handleCopyLink}
-                className="w-full bg-white border-2 border-[#7a7461] text-[#14213d] py-3.5 rounded-2xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition active:scale-95"
-              >
-                {copiedLink ? <Check className="w-6 h-6 text-[#0b6b3a]" /> : <Copy className="w-6 h-6" />}
-                <span>{copiedLink ? 'Copiado al portapapeles' : 'Copiar'}</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({ title: 'Instalar essimple.live', text: shareText });
-                  } else {
-                    handleCopyLink();
-                  }
-                }}
-                className="w-full bg-white border-2 border-[#7a7461] text-[#14213d] py-3.5 rounded-2xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition active:scale-95"
-              >
-                <Share2 className="w-6 h-6" />
-                <span>Compartir</span>
-              </button>
-            </div>
-
-            <div className="bg-[#eff6ff] border border-[#0b4f9e]/20 p-4 rounded-2xl text-xs sm:text-sm text-[#14213d] space-y-2.5">
-              <p className="font-bold text-[#0b4f9e] flex items-center gap-1.5 text-base">
-                <span>📱</span>
-                <span>¿Cómo funciona en el celular del acompañado?</span>
-              </p>
-              <p className="text-neutral-700 leading-relaxed">
-                <strong>1. Descarga directa:</strong> el enlace baja el APK de essimple. Android pide una sola vez permitir instalar desde esa fuente (descargas del navegador o de WhatsApp).
-              </p>
-              <p className="text-neutral-700 leading-relaxed">
-                <strong>2. Una sola configuración:</strong> al abrir essimple.live por primera vez, el asistente pide todos los permisos reales (SMS, llamadas, ubicación, micrófono) y se vincula con el código del mensaje. Después ya no vuelve a preguntar: las llamadas y los SMS salen directos.
-              </p>
-              <p className="text-neutral-700 leading-relaxed">
-                <strong>3. Difícil de cerrar:</strong> pantalla completa sin barras, el botón Atrás no cierra la app y essimple.live se elige como pantalla de inicio. Salir requiere tu PIN de 4 dígitos.
-              </p>
-            </div>
-
-            <p className="text-xs font-semibold text-[#7a7461] text-center">
-              Si actualizas essimple.live, comparte de nuevo este mismo enlace: instala encima de la versión anterior.
-            </p>
-
-            <div className="flex justify-between items-center pt-2">
-              <span />
-
-              <button
+                type="button"
                 onClick={() => setShowInstallModal(false)}
-                className="text-base font-extrabold text-[#14213d] px-4 py-2 bg-neutral-100 rounded-xl cursor-pointer"
+                title="Cerrar ventana"
+                aria-label="Cerrar ventana"
+                className="w-10 h-10 shrink-0 rounded-full bg-neutral-200 hover:bg-[#14213d] hover:text-white text-[#14213d] flex items-center justify-center transition active:scale-95 cursor-pointer shadow-xs"
               >
-                Cerrar
+                <X className="w-6 h-6 stroke-[2.5]" />
+              </button>
+            </div>
+
+            {/* Contenido con scroll vertical suave */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 text-[#14213d]">
+              <p className="text-base sm:text-lg font-semibold text-[#3b4863] text-center leading-snug">
+                Envía este enlace por WhatsApp o muéstrale el QR: al tocarlo descarga el APK directamente.
+              </p>
+
+              {/* QR real del enlace de descarga */}
+              <div className="flex justify-center py-1">
+                <div className="p-3 bg-white border-2 border-[#14213d] rounded-2xl shadow-md">
+                  {qrDataUrl ? (
+                    <img src={qrDataUrl} alt="Código QR para descargar essimple.live" className="w-44 h-44 sm:w-48 sm:h-48" />
+                  ) : (
+                    <div className="w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center text-neutral-400">
+                      Cargando QR...
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* URL Display */}
+              <div className="bg-[#f8f7f4] border border-[#ddd5c3] p-3 rounded-2xl text-center text-sm font-mono truncate text-[#14213d]">
+                {installUrl}
+              </div>
+
+              {pairCode && (
+                <div className="bg-[#fff9eb] border-2 border-[#d6a543] p-3 rounded-2xl text-center space-y-1">
+                  <span className="text-xs uppercase font-extrabold text-[#8a5d00] tracking-wider block">
+                    Código de vinculación
+                  </span>
+                  <span className="text-base sm:text-lg font-mono font-extrabold text-[#14213d] break-all select-all">
+                    {pairCode}
+                  </span>
+                </div>
+              )}
+
+              {/* Action buttons [33] */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`, '_blank');
+                  }}
+                  className="w-full bg-[#0b6b3a] hover:bg-[#08542d] text-white py-3.5 rounded-2xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-md cursor-pointer transition active:scale-95"
+                >
+                  <MessageCircle className="w-6 h-6" />
+                  <span>WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="w-full bg-white border-2 border-[#7a7461] text-[#14213d] py-3.5 rounded-2xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition active:scale-95"
+                >
+                  {copiedLink ? <Check className="w-6 h-6 text-[#0b6b3a]" /> : <Copy className="w-6 h-6" />}
+                  <span>{copiedLink ? 'Copiado al portapapeles' : 'Copiar'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: 'Instalar essimple.live', text: shareText });
+                    } else {
+                      handleCopyLink();
+                    }
+                  }}
+                  className="w-full bg-white border-2 border-[#7a7461] text-[#14213d] py-3.5 rounded-2xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer transition active:scale-95"
+                >
+                  <Share2 className="w-6 h-6" />
+                  <span>Compartir</span>
+                </button>
+              </div>
+
+              <div className="bg-[#eff6ff] border border-[#0b4f9e]/20 p-4 rounded-2xl text-xs sm:text-sm text-[#14213d] space-y-2.5">
+                <p className="font-bold text-[#0b4f9e] flex items-center gap-1.5 text-base">
+                  <span>📱</span>
+                  <span>¿Cómo funciona en el celular del acompañado?</span>
+                </p>
+                <p className="text-neutral-700 leading-relaxed">
+                  <strong>1. Descarga directa:</strong> el enlace baja el APK de essimple. Android pide una sola vez permitir instalar desde esa fuente (descargas del navegador o de WhatsApp).
+                </p>
+                <p className="text-neutral-700 leading-relaxed">
+                  <strong>2. Una sola configuración:</strong> al abrir essimple.live por primera vez, el asistente pide todos los permisos reales (SMS, llamadas, ubicación, micrófono) y se vincula con el código del mensaje. Después ya no vuelve a preguntar: las llamadas y los SMS salen directos.
+                </p>
+                <p className="text-neutral-700 leading-relaxed">
+                  <strong>3. Difícil de cerrar:</strong> pantalla completa sin barras, el botón Atrás no cierra la app y essimple.live se elige como pantalla de inicio. Salir requiere tu PIN de 4 dígitos.
+                </p>
+              </div>
+
+              <p className="text-xs font-semibold text-[#7a7461] text-center">
+                Si actualizas essimple.live, comparte de nuevo este mismo enlace: instala encima de la versión anterior.
+              </p>
+            </div>
+
+            {/* Footer fijo con botón grande de cerrar */}
+            <div className="p-4 bg-[#faf8f4] border-t border-[#eee8db] flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowInstallModal(false)}
+                className="w-full sm:w-auto px-6 py-3 bg-[#14213d] hover:bg-[#0d1629] text-white text-base font-extrabold rounded-2xl cursor-pointer transition active:scale-95 shadow-sm"
+              >
+                Cerrar ventana
               </button>
             </div>
           </div>

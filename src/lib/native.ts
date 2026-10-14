@@ -194,10 +194,10 @@ export const readClipboardText = async (): Promise<string> => {
 };
 
 // ---------------------------------------------------------------------------
-// Vinculación: código "SIMPLE-<base64url(email)>" que viaja junto al link del APK
+// Vinculación: código "ESSIMPLE-<base64url(email)>" que viaja junto al link del APK
 // ---------------------------------------------------------------------------
 
-const PAIR_PREFIX = 'SIMPLE-';
+const PAIR_PREFIX = 'ESSIMPLE-';
 export const PAIR_STORAGE_KEY = 'essimple_pair_family';
 
 const toBase64Url = (value: string): string => {
@@ -218,7 +218,7 @@ export const buildPairCode = (familyEmail: string): string => PAIR_PREFIX + toBa
 
 /** Busca un código de vinculación dentro de un texto (por ejemplo, el mensaje de WhatsApp copiado). */
 export const parsePairCode = (text: string): string | null => {
-  const match = text.match(/SIMPLE-([A-Za-z0-9_-]{6,})/);
+  const match = text.match(/(?:ESSIMPLE|SIMPLE)-([A-Za-z0-9_-]{6,})/i);
   if (!match) return null;
   try {
     const email = fromBase64Url(match[1]);
