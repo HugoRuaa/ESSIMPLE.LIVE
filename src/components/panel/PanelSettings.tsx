@@ -14,15 +14,46 @@ export const PanelSettings: React.FC = () => {
   const [countryCode, setCountryCode] = useState(settings.countryCode);
 
   // PIN change
-  const [newPin, setNewPin] = useState('');
+  const [pin, setPin] = useState(settings.exitPin || '1234');
   const [showPin, setShowPin] = useState(false);
   const [pinSuccess, setPinSuccess] = useState('');
 
+  useEffect(() => {
+    if (settings.exitPin) {
+      setPin(settings.exitPin);
+    }
+  }, [settings.exitPin]);
+
   // Password change
-  const [currPass, setCurrPass] = useState('');
-  const [newPass, setNewPass] = useState('');
+  const [password, setPassword] = useState(() => {
+    if (typeof localStorage !== 'undefined') {
+      const stored = localStorage.getItem('essimple_password');
+      if (stored) return stored;
+    }
+    return '123456';
+  });
   const [showPass, setShowPass] = useState(false);
   const [passSuccess, setPassSuccess] = useState('');
+
+  useEffect(() => {
+    const identifier =
+      account?.familiaId ||
+      account?.email ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('essimple_family_id') : null) ||
+      'hugofrua@gmail.com';
+
+    fetch(`/api/familias/${encodeURIComponent(identifier)}/password`)
+      .then(r => r.json())
+      .then(data => {
+        if (data?.success && data?.password) {
+          setPassword(data.password);
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('essimple_password', data.password);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [account?.familiaId, account?.email]);
 
   // Install Link Modal [33]
   const [showInstallModal, setShowInstallModal] = useState(false);
@@ -57,26 +88,65 @@ export const PanelSettings: React.FC = () => {
     alert('Ajustes de la persona guardados.');
   };
 
-  const handleUpdatePin = () => {
-    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
+  const handleUpdatePin = async () => {
+    const clean = pin.trim().replace(/\D/g, '');
+    if (clean.length !== 4) {
       alert('El PIN debe tener exactamente 4 números.');
       return;
     }
-    updateSettings({ exitPin: newPin });
-    setNewPin('');
+    updateSettings({ exitPin: clean });
+    void saveSettings({ exitPin: clean });
+
+    const identifier =
+      account?.familiaId ||
+      account?.email ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('essimple_family_id') : null) ||
+      'hugofrua@gmail.com';
+
+    try {
+      await fetch(`/api/familias/${encodeURIComponent(identifier)}/pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exitPin: clean }),
+      });
+    } catch {
+      // ignore
+    }
+
+    setPin(clean);
     setPinSuccess('PIN actualizado correctamente.');
-    setTimeout(() => setPinSuccess(''), 3000);
+    setTimeout(() => setPinSuccess(''), 3500);
   };
 
-  const handleChangePass = () => {
-    if (newPass.length < 6) {
-      alert('La contraseña nueva debe tener al menos 6 caracteres.');
+  const handleChangePass = async () => {
+    const cleanPass = password.trim();
+    if (cleanPass.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres.');
       return;
     }
-    setCurrPass('');
-    setNewPass('');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('essimple_password', cleanPass);
+    }
+
+    const identifier =
+      account?.familiaId ||
+      account?.email ||
+      (typeof localStorage !== 'undefined' ? localStorage.getItem('essimple_family_id') : null) ||
+      'hugofrua@gmail.com';
+
+    try {
+      await fetch(`/api/familias/${encodeURIComponent(identifier)}/password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: cleanPass }),
+      });
+    } catch {
+      // ignore
+    }
+
+    setPassword(cleanPass);
     setPassSuccess('Contraseña actualizada con éxito.');
-    setTimeout(() => setPassSuccess(''), 3000);
+    setTimeout(() => setPassSuccess(''), 3500);
   };
 
   const handleCopyLink = () => {
@@ -195,36 +265,45 @@ export const PanelSettings: React.FC = () => {
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
           Es el PIN de 4 números que se escribe en el teléfono de la persona acompañada para salir de la app o entrar al modo de mantenimiento.
         </p>
-        <p className="text-sm font-bold text-[#7a7461]">
-          Por seguridad el PIN no se puede consultar. Si lo olvidas, escribe uno nuevo aquí.
+        <p className="text-sm font-semibold text-[#7a7461] leading-relaxed">
+          El PIN actual se encuentra precargado y oculto por privacidad. Toca el ojo para verlo si lo necesitas; si deseas modificarlo, sobrescribe directamente los 4 números y presiona &quot;Cambiar PIN&quot;.
         </p>
 
         <div className="space-y-2 pt-1">
-          <label className="text-lg font-bold text-[#14213d]">
-            Cambiar por un PIN nuevo (4 números)
+          <label className="text-lg font-bold text-[#14213d] flex items-center justify-between">
+            <span>PIN de seguridad (4 números)</span>
+            <span className="text-xs sm:text-sm font-bold text-[#0b4f9e] bg-[#f0f6ff] border border-[#0b4f9e]/25 px-2.5 py-0.5 rounded-full">
+              Actualmente en uso
+            </span>
           </label>
           <div className="relative">
             <input
               type={showPin ? 'text' : 'password'}
               maxLength={4}
-              value={newPin}
-              onChange={e => setNewPin(e.target.value.replace(/\D/g, ''))}
-              placeholder="••••"
-              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-28 text-2xl font-bold tracking-widest text-[#14213d] focus:outline-none"
+              value={pin}
+              onChange={e => {
+                setPin(e.target.value.replace(/\D/g, ''));
+                if (pinSuccess) setPinSuccess('');
+              }}
+              placeholder="1234"
+              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-32 text-2xl font-bold tracking-widest text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
             />
             <button
               type="button"
               onClick={() => setShowPin(!showPin)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer select-none bg-white/80 rounded-xl"
             >
-              {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              <span>{showPin ? 'Ocultar' : 'Mostrar'}</span>
+              {showPin ? <EyeOff className="w-5 h-5 text-[#0b4f9e]" /> : <Eye className="w-5 h-5 text-[#7a7461]" />}
+              <span>{showPin ? 'Ocultar' : 'Ver PIN'}</span>
             </button>
           </div>
         </div>
 
         {pinSuccess && (
-          <p className="text-base font-bold text-[#0b6b3a]">{pinSuccess}</p>
+          <div className="bg-[#eef7ee] border border-[#0b6b3a]/30 p-3 rounded-2xl flex items-center gap-2 text-base font-bold text-[#0b6b3a] animate-in fade-in">
+            <Check className="w-5 h-5 stroke-[3] shrink-0" />
+            <span>{pinSuccess}</span>
+          </div>
         )}
 
         <button
@@ -256,46 +335,55 @@ export const PanelSettings: React.FC = () => {
       {/* 4. Cuenta y seguridad [32] */}
       <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
         <h2 className="text-2xl font-extrabold text-[#14213d]">Cuenta y seguridad</h2>
+        <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
+          Es la contraseña que utilizas para ingresar a este panel de administración familiar desde cualquier dispositivo o navegador.
+        </p>
+        <p className="text-sm font-semibold text-[#7a7461] leading-relaxed">
+          La contraseña actual se encuentra precargada y oculta por privacidad. Toca el ojo para verla si lo necesitas; si deseas modificarla, sobrescribe directamente en el cuadro y presiona &quot;Cambiar contraseña&quot;.
+        </p>
 
-        <div className="space-y-3">
-          <label className="text-lg font-bold text-[#14213d]">Cambiar contraseña</label>
-          <input
-            type="password"
-            placeholder="Contraseña actual"
-            value={currPass}
-            onChange={e => setCurrPass(e.target.value)}
-            className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold focus:outline-none"
-          />
-
+        <div className="space-y-2 pt-1">
+          <label className="text-lg font-bold text-[#14213d] flex items-center justify-between">
+            <span>Contraseña de acceso</span>
+            <span className="text-xs sm:text-sm font-bold text-[#0b4f9e] bg-[#f0f6ff] border border-[#0b4f9e]/25 px-2.5 py-0.5 rounded-full">
+              Actualmente en uso
+            </span>
+          </label>
           <div className="relative">
             <input
               type={showPass ? 'text' : 'password'}
-              placeholder="Contraseña nueva (mínimo 6 caracteres)"
-              value={newPass}
-              onChange={e => setNewPass(e.target.value)}
-              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-28 text-lg font-bold focus:outline-none"
+              value={password}
+              onChange={e => {
+                setPassword(e.target.value);
+                if (passSuccess) setPassSuccess('');
+              }}
+              placeholder="Escribe tu contraseña"
+              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-48 text-xl font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
             />
             <button
               type="button"
               onClick={() => setShowPass(!showPass)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-[#3b4863] cursor-pointer"
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer select-none bg-white/80 rounded-xl"
             >
-              {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              <span>Mostrar</span>
+              {showPass ? <EyeOff className="w-5 h-5 text-[#0b4f9e]" /> : <Eye className="w-5 h-5 text-[#7a7461]" />}
+              <span>{showPass ? 'Ocultar' : 'Ver contraseña'}</span>
             </button>
           </div>
-
-          {passSuccess && (
-            <p className="text-base font-bold text-[#0b6b3a]">{passSuccess}</p>
-          )}
-
-          <button
-            onClick={handleChangePass}
-            className="w-full bg-[#0b4f9e] hover:bg-[#093f7e] text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md cursor-pointer transition active:scale-95"
-          >
-            Cambiar contraseña
-          </button>
         </div>
+
+        {passSuccess && (
+          <div className="bg-[#eef7ee] border border-[#0b6b3a]/30 p-3 rounded-2xl flex items-center gap-2 text-base font-bold text-[#0b6b3a] animate-in fade-in">
+            <Check className="w-5 h-5 stroke-[3] shrink-0" />
+            <span>{passSuccess}</span>
+          </div>
+        )}
+
+        <button
+          onClick={handleChangePass}
+          className="w-full bg-[#0b4f9e] hover:bg-[#093f7e] text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md cursor-pointer transition active:scale-95"
+        >
+          Cambiar contraseña
+        </button>
       </div>
 
       {/* 5. Privacidad [32] */}

@@ -848,6 +848,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         termsAccepted: true,
         familiaId: res.familiaId,
       });
+      if (password) {
+        localStorage.setItem('essimple_password', password);
+      }
       return { success: true };
     } catch (err: unknown) {
       return { success: false, message: err instanceof Error ? err.message : 'Error al iniciar sesión' };
@@ -908,6 +911,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         familiaId: res.familiaId,
       };
       localStorage.setItem('essimple_account', JSON.stringify(newAccount));
+      if (password) {
+        localStorage.setItem('essimple_password', password);
+      }
       setAccount(newAccount);
 
       return { success: true, message: res.message };
