@@ -71,11 +71,14 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
   // Vinculación automática: busca la descarga reciente hecha desde esta misma red y pide un toque para confirmar.
   const [autoEmail, setAutoEmail] = useState<string | null>(null);
+  const [autoSearching, setAutoSearching] = useState(native && !pairedFamily);
   useEffect(() => {
     if (!native || pairedFamily) return;
     let cancelled = false;
     findPendingLink().then(r => {
-      if (!cancelled && r.count === 1 && r.email) setAutoEmail(r.email);
+      if (cancelled) return;
+      if (r.count === 1 && r.email) setAutoEmail(r.email);
+      setAutoSearching(false);
     });
     return () => {
       cancelled = true;
@@ -265,6 +268,36 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     applyPairCode(`/d/${buildPairCodeRaw(autoEmail)}`);
   };
 
+  const renderAutoLinkCard = () => {
+    if (isLinked) return null;
+    if (autoEmail) {
+      return (
+        <div className="border-2 border-[#0b4f9e] bg-white rounded-2xl p-5 space-y-4">
+          <p className="text-xl font-bold leading-snug">
+            Encontramos el enlace que te enviaron ({maskEmail(autoEmail)}). ¿Vincular este teléfono con esa familia?
+          </p>
+          <TactileButton variant="green" fontSize="grande" onClick={confirmAutoLink}>
+            Sí, vincular
+          </TactileButton>
+          <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={() => setAutoEmail(null)} className="!py-3 !text-lg">
+            No
+          </TactileButton>
+        </div>
+      );
+    }
+    if (autoSearching) {
+      return <p className="text-lg font-semibold text-[#3b4863]">Buscando el enlace de tu familia…</p>;
+    }
+    if (mode === 'choose') {
+      return (
+        <p className="text-base font-semibold text-[#5c3a00] bg-[#fff1c9] border-2 border-[#b7791f] rounded-2xl p-3 leading-snug">
+          No encontramos el enlace de la familia automáticamente. Entra en "Paso a paso" para vincular a mano.
+        </p>
+      );
+    }
+    return null;
+  };
+
   const handleFindLink = async () => {
     if (!native) {
       setPairMessage('En el navegador no hace falta vincular.');
@@ -295,6 +328,8 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
             Android va a mostrar varios cuadros pidiendo permisos. En cada uno toca <strong>Permitir</strong>.
           </p>
+
+          {renderAutoLinkCard()}
 
           <div className="space-y-3 pt-2">
             <TactileButton variant="green" fontSize="grande" minHeight={false} onClick={runAll} className="!py-5">
@@ -394,21 +429,9 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               </div>
             )}
 
-            {!isLinked && autoEmail && (
-              <div className="border-2 border-[#0b4f9e] bg-white rounded-2xl p-5 space-y-4">
-                <p className="text-xl font-bold leading-snug">
-                  Encontramos el enlace que te enviaron ({maskEmail(autoEmail)}). ¿Vincular este teléfono con esa familia?
-                </p>
-                <TactileButton variant="green" fontSize="grande" onClick={confirmAutoLink}>
-                  Sí, vincular
-                </TactileButton>
-                <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={() => setAutoEmail(null)} className="!py-3 !text-lg">
-                  No
-                </TactileButton>
-              </div>
-            )}
+            {renderAutoLinkCard()}
 
-            {!isLinked && !autoEmail && (
+            {!isLinked && !autoEmail && !autoSearching && (
               <>
                 <TactileButton
                   variant="card"
