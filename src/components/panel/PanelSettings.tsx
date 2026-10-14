@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { FontSize } from '../../types';
 import { APK_URL } from '../../lib/config';
 import { buildPairCode } from '../../lib/native';
+import { buildInstallLink } from '../../lib/autoLink';
 
 export const PanelSettings: React.FC = () => {
   const { settings, updateSettings, saveSettings, account } = useApp();
@@ -59,12 +60,10 @@ export const PanelSettings: React.FC = () => {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // El enlace es la descarga directa del APK; el código de vinculación viaja en el mismo mensaje.
-  const installUrl = APK_URL;
+  // El enlace abre essimple.live/d/<código>: anota quién lo envió e inicia la descarga del APK.
   const pairCode = account?.email ? buildPairCode(account.email) : '';
-  const shareText =
-    `Instala essimple.live en tu teléfono: ${installUrl}` +
-    (pairCode ? `\n\nCódigo de vinculación (copia este mensaje antes de abrir la app): ${pairCode}` : '');
+  const installUrl = pairCode ? buildInstallLink(pairCode) : APK_URL;
+  const shareText = `Instala essimple.live en tu teléfono: ${installUrl}`;
 
   const [qrDataUrl, setQrDataUrl] = useState('');
   useEffect(() => {
@@ -486,16 +485,9 @@ export const PanelSettings: React.FC = () => {
                 {installUrl}
               </div>
 
-              {pairCode && (
-                <div className="bg-[#fff9eb] border-2 border-[#d6a543] p-3 rounded-2xl text-center space-y-1">
-                  <span className="text-xs uppercase font-extrabold text-[#8a5d00] tracking-wider block">
-                    Código de vinculación
-                  </span>
-                  <span className="text-base sm:text-lg font-mono font-extrabold text-[#14213d] break-all select-all">
-                    {pairCode}
-                  </span>
-                </div>
-              )}
+              <p className="text-sm text-[#3b4863] text-center leading-snug">
+                Este enlace ya lleva tu vínculo: al abrir la app por primera vez, el teléfono te reconoce y solo pide un toque para confirmar.
+              </p>
 
               {/* Action buttons [33] */}
               <div className="space-y-3">

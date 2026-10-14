@@ -218,7 +218,7 @@ export const buildPairCode = (familyEmail: string): string => PAIR_PREFIX + toBa
 
 /** Busca un código de vinculación dentro de un texto (por ejemplo, el mensaje de WhatsApp copiado). */
 export const parsePairCode = (text: string): string | null => {
-  const match = text.match(/(?:ESSIMPLE|SIMPLE)-([A-Za-z0-9_-]{6,})/i);
+  const match = text.match(/(?:ESSIMPLE|SIMPLE)-([A-Za-z0-9_-]{6,})/i) || text.match(/\/d\/([A-Za-z0-9_-]{6,})/);
   if (!match) return null;
   try {
     const email = fromBase64Url(match[1]);

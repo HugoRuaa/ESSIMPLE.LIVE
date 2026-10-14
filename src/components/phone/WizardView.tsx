@@ -16,6 +16,8 @@ import {
   savePairedFamily,
   PermissionName,
 } from '../../lib/native';
+import { buildPairCode as buildPairCodeRaw } from '../../lib/native';
+import { findPendingLink, markLinkUsed, maskEmail } from '../../lib/autoLink';
 
 interface WizardViewProps {
   onFinish: () => void;
@@ -66,6 +68,19 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   const [pairMessage, setPairMessage] = useState('');
   const pairedFamily = getPairedFamily();
   const isLinked = !native || !!pairedFamily;
+
+  // Vinculación automática: busca la descarga reciente hecha desde esta misma red y pide un toque para confirmar.
+  const [autoEmail, setAutoEmail] = useState<string | null>(null);
+  useEffect(() => {
+    if (!native || pairedFamily) return;
+    let cancelled = false;
+    findPendingLink().then(r => {
+      if (!cancelled && r.count === 1 && r.email) setAutoEmail(r.email);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [native, pairedFamily]);
 
   // Al abrir el asistente se elige: todo de una vez o paso a paso (si ya iba por un paso, se retoma paso a paso).
   const [mode, setMode] = useState<'choose' | 'steps' | 'all'>(() => (currentStep === 1 ? 'choose' : 'steps'));
@@ -244,6 +259,12 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     return true;
   };
 
+  const confirmAutoLink = async () => {
+    if (!autoEmail) return;
+    await markLinkUsed(autoEmail);
+    applyPairCode(`/d/${buildPairCodeRaw(autoEmail)}`);
+  };
+
   const handleFindLink = async () => {
     if (!native) {
       setPairMessage('En el navegador no hace falta vincular.');
@@ -373,7 +394,21 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               </div>
             )}
 
-            {!isLinked && (
+            {!isLinked && autoEmail && (
+              <div className="border-2 border-[#0b4f9e] bg-white rounded-2xl p-5 space-y-4">
+                <p className="text-xl font-bold leading-snug">
+                  Encontramos el enlace que te enviaron ({maskEmail(autoEmail)}). ¿Vincular este teléfono con esa familia?
+                </p>
+                <TactileButton variant="green" fontSize="grande" onClick={confirmAutoLink}>
+                  Sí, vincular
+                </TactileButton>
+                <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={() => setAutoEmail(null)} className="!py-3 !text-lg">
+                  No
+                </TactileButton>
+              </div>
+            )}
+
+            {!isLinked && !autoEmail && (
               <>
                 <TactileButton
                   variant="card"

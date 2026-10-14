@@ -15,6 +15,7 @@ import { PhoneView } from './components/phone/PhoneView';
 import { FamilyPanel } from './components/panel/FamilyPanel';
 import { PanelAuth } from './components/panel/PanelAuth';
 import { isNative } from './lib/native';
+import { DownloadPage } from './components/DownloadPage';
 import { LandingPage } from './components/landing/LandingPage';
 
 type AppMode = 'phone' | 'panel';
@@ -410,6 +411,9 @@ const MainAppContent: React.FC = () => {
 };
 
 export default function App() {
+  if (typeof window !== 'undefined' && /^\/d\/[A-Za-z0-9_-]{6,}\/?$/.test(window.location.pathname)) {
+    return <DownloadPage />;
+  }
   return (
     <AppProvider>
       <MainAppContent />

@@ -1,0 +1,9 @@
+# Hostinger (Apache/LiteSpeed): cualquier ruta que no sea un archivo carga la app (por ejemplo /d/<código>).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
