@@ -1,5 +1,5 @@
 /**
- * Enlace de descarga directa del APK de Simple.
+ * Enlace de descarga directa del APK de essimple.
  * Por defecto apunta al APK que publica el workflow de GitHub Actions (.github/workflows/build-apk.yml).
  * Se puede cambiar con VITE_APK_URL (por ejemplo, un bucket público de Supabase Storage).
  */

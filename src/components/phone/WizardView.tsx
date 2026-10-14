@@ -149,7 +149,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     { key: 'notifications', label: 'Notificaciones' },
     { key: 'batteryUnrestricted', label: 'Sin ahorro de batería' },
     { key: 'fullScreenAlerts', label: 'Alertas en pantalla completa' },
-    { key: 'homeLauncher', label: 'Simple como pantalla de inicio' },
+    { key: 'homeLauncher', label: 'essimple como pantalla de inicio' },
     { key: 'protectedMode', label: 'Modo protegido' },
     { key: 'backgroundLocation', label: 'Ubicación todo el tiempo' },
     { key: 'testSms', label: 'Mensaje de prueba' },
@@ -170,7 +170,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
         setItem(item.key, 'running');
         let ok = false;
         if (item.key === 'testSms') {
-          const sent = await testSendSms('Laura', 'Prueba de Simple: la app está lista.');
+          const sent = await testSendSms('Laura', 'Prueba de essimple: la app está lista.');
           ok = native ? sent : true;
           markGranted('testSms', ok);
         } else if (item.key === 'linked') {
@@ -270,7 +270,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-6 pt-4">
           <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez</p>
-          <h1 className="text-4xl font-extrabold tracking-tight leading-tight">Configurar Simple</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight leading-tight">Configurar essimple</h1>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
             Android va a mostrar varios cuadros pidiendo permisos. En cada uno toca <strong>Permitir</strong>.
           </p>
@@ -280,7 +280,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               Configurar todo de una vez
             </TactileButton>
             <p className="text-base text-[#3b4863] font-medium leading-snug">
-              Pide todos los permisos seguidos, deja Simple como pantalla de inicio y envía un SMS de prueba al contacto de emergencia.
+              Pide todos los permisos seguidos, deja essimple como pantalla de inicio y envía un SMS de prueba al contacto de emergencia.
             </p>
           </div>
 
@@ -359,7 +359,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 1 de 14</p>
           <h1 className="text-4xl font-extrabold tracking-tight">Vincular con el panel</h1>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
-            Si instalaste Simple desde el enlace que te envió tu familia, se vincula sola: no tienes que escribir nada. Si no pasa, toca el botón de abajo.
+            Si instalaste essimple desde el enlace que te envió tu familia, se vincula sola: no tienes que escribir nada. Si no pasa, toca el botón de abajo.
           </p>
 
           <div className="space-y-4 pt-4">
@@ -421,7 +421,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
             Permiso para enviar mensajes (SMS)
           </h1>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
-            Simple necesita permiso para enviar mensajes de auxilio a la familia.
+            essimple necesita permiso para enviar mensajes de auxilio a la familia.
           </p>
 
           <div className="space-y-4 pt-2">
@@ -456,7 +456,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
                 onClick={() => (native ? openAppSettings() : alert('Solo disponible en el APK de Android.'))}
                 className="w-full bg-white text-[#14213d] border-2 border-[#7a7461] rounded-2xl py-3 text-lg font-bold shadow-sm cursor-pointer"
               >
-                Abrir ajustes de Simple
+                Abrir ajustes de essimple
               </button>
             </div>
           </div>
@@ -503,13 +503,13 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       },
       7: {
         title: 'Notificaciones activadas',
-        desc: 'Permite mostrar avisos importantes en la barra de estado y confirmar que Simple sigue cuidando.',
+        desc: 'Permite mostrar avisos importantes en la barra de estado y confirmar que essimple sigue cuidando.',
         permKey: 'notifications',
         buttonText: 'Activar notificaciones',
       },
       8: {
         title: 'Sin ahorro de batería',
-        desc: 'Evita que el sistema operativo congele o apague Simple para ahorrar energía.',
+        desc: 'Evita que el sistema operativo congele o apague essimple para ahorrar energía.',
         permKey: 'batteryUnrestricted',
         buttonText: 'Quitar ahorro de batería',
       },
@@ -521,7 +521,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       },
       10: {
         title: 'Pantalla de inicio predeterminada',
-        desc: 'Elige Simple como la aplicación de inicio principal (Siempre), para que no se salga al tocar el botón central.',
+        desc: 'Elige essimple como la aplicación de inicio principal (Siempre), para que no se salga al tocar el botón central.',
         permKey: 'homeLauncher',
         buttonText: 'Elegir como pantalla de inicio',
       },
@@ -539,7 +539,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       },
       13: {
         title: 'Mensaje de prueba',
-        desc: 'Enviaremos un SMS de prueba con el texto "Prueba de Simple" al contacto de emergencia principal para verificar la señal.',
+        desc: 'Enviaremos un SMS de prueba con el texto "Prueba de essimple" al contacto de emergencia principal para verificar la señal.',
         permKey: 'testSms',
         buttonText: 'Enviar mensaje de prueba',
       },
@@ -570,7 +570,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               minHeight={false}
               onClick={async () => {
                 if (currentStep === 13) {
-                  const sent = await testSendSms('Laura', 'Prueba de Simple: la app está lista.');
+                  const sent = await testSendSms('Laura', 'Prueba de essimple: la app está lista.');
                   markGranted('testSms', native ? sent : true);
                   return;
                 }
@@ -610,7 +610,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
             { key: 'location', ok: !!grantedPermissions.location, good: 'Permiso de ubicación concedido', bad: 'Permiso de ubicación pendiente' },
             { key: 'microphone', ok: !!grantedPermissions.microphone, good: 'Micrófono concedido', bad: 'Permiso de micrófono pendiente' },
             { key: 'notifications', ok: !!grantedPermissions.notifications, good: 'Notificaciones activadas', bad: 'Notificaciones pendientes' },
-            { key: 'homeLauncher', ok: !!grantedPermissions.homeLauncher, good: 'Simple configurada como pantalla de inicio', bad: 'Simple aún no es la pantalla de inicio' },
+            { key: 'homeLauncher', ok: !!grantedPermissions.homeLauncher, good: 'essimple configurada como pantalla de inicio', bad: 'essimple aún no es la pantalla de inicio' },
             { key: 'testSms', ok: !!grantedPermissions.testSms, good: 'Prueba de mensaje completada con éxito', bad: 'Prueba de mensaje pendiente' },
           ];
           const missing = checks.filter(c => !c.ok);

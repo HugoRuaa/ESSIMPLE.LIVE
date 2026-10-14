@@ -32,7 +32,7 @@ export const PanelSettings: React.FC = () => {
   const installUrl = APK_URL;
   const pairCode = account?.email ? buildPairCode(account.email) : '';
   const shareText =
-    `Instala Simple en tu teléfono: ${installUrl}` +
+    `Instala essimple en tu teléfono: ${installUrl}` +
     (pairCode ? `\n\nCódigo de vinculación (copia este mensaje antes de abrir la app): ${pairCode}` : '');
 
   const [qrDataUrl, setQrDataUrl] = useState('');
@@ -235,13 +235,13 @@ export const PanelSettings: React.FC = () => {
         </button>
       </div>
 
-      {/* 3. Instalar Simple en el teléfono [32] */}
+      {/* 3. Instalar essimple en el teléfono [32] */}
       <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
         <h2 className="text-2xl font-extrabold text-[#14213d]">
-          Instalar Simple en el teléfono de {settings.personName}
+          Instalar essimple en el teléfono de {settings.personName}
         </h2>
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
-          Comparte el enlace: descarga Simple directamente en el teléfono y el asistente lo deja configurado en un solo recorrido.
+          Comparte el enlace: descarga essimple directamente en el teléfono y el asistente lo deja configurado en un solo recorrido.
         </p>
 
         <button
@@ -333,7 +333,7 @@ export const PanelSettings: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
           <div className="bg-white w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
             <h2 className="text-3xl font-extrabold text-[#14213d] text-center">
-              Instalar Simple en el teléfono de {settings.personName}
+              Instalar essimple en el teléfono de {settings.personName}
             </h2>
             <p className="text-lg font-semibold text-[#3b4863] text-center leading-snug">
               Envía este enlace por WhatsApp o muéstrale el QR: al tocarlo descarga el APK directamente.
@@ -343,7 +343,7 @@ export const PanelSettings: React.FC = () => {
             <div className="flex justify-center py-2">
               <div className="p-3 bg-white border-2 border-[#14213d] rounded-2xl shadow-md">
                 {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="Código QR para descargar Simple" className="w-48 h-48" />
+                  <img src={qrDataUrl} alt="Código QR para descargar essimple" className="w-48 h-48" />
                 ) : (
                   <div className="w-48 h-48" />
                 )}
@@ -378,7 +378,7 @@ export const PanelSettings: React.FC = () => {
               <button
                 onClick={() => {
                   if (navigator.share) {
-                    navigator.share({ title: 'Instalar Simple', text: shareText });
+                    navigator.share({ title: 'Instalar essimple', text: shareText });
                   } else {
                     handleCopyLink();
                   }
@@ -396,18 +396,18 @@ export const PanelSettings: React.FC = () => {
                 <span>¿Cómo funciona en el celular del acompañado?</span>
               </p>
               <p className="text-neutral-700 leading-relaxed">
-                <strong>1. Descarga directa:</strong> el enlace baja el APK de Simple. Android pide una sola vez permitir instalar desde esa fuente (descargas del navegador o de WhatsApp).
+                <strong>1. Descarga directa:</strong> el enlace baja el APK de essimple. Android pide una sola vez permitir instalar desde esa fuente (descargas del navegador o de WhatsApp).
               </p>
               <p className="text-neutral-700 leading-relaxed">
-                <strong>2. Una sola configuración:</strong> al abrir Simple por primera vez, el asistente pide todos los permisos reales (SMS, llamadas, ubicación, micrófono) y se vincula con el código del mensaje. Después ya no vuelve a preguntar: las llamadas y los SMS salen directos.
+                <strong>2. Una sola configuración:</strong> al abrir essimple por primera vez, el asistente pide todos los permisos reales (SMS, llamadas, ubicación, micrófono) y se vincula con el código del mensaje. Después ya no vuelve a preguntar: las llamadas y los SMS salen directos.
               </p>
               <p className="text-neutral-700 leading-relaxed">
-                <strong>3. Difícil de cerrar:</strong> pantalla completa sin barras, el botón Atrás no cierra la app y Simple se elige como pantalla de inicio. Salir requiere tu PIN de 4 dígitos.
+                <strong>3. Difícil de cerrar:</strong> pantalla completa sin barras, el botón Atrás no cierra la app y essimple se elige como pantalla de inicio. Salir requiere tu PIN de 4 dígitos.
               </p>
             </div>
 
             <p className="text-xs font-semibold text-[#7a7461] text-center">
-              Si actualizas Simple, comparte de nuevo este mismo enlace: instala encima de la versión anterior.
+              Si actualizas essimple, comparte de nuevo este mismo enlace: instala encima de la versión anterior.
             </p>
 
             <div className="flex justify-between items-center pt-2">

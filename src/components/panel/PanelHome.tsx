@@ -142,7 +142,7 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
         <div className="space-y-3 font-bold text-lg text-[#14213d]">
           <div className="flex items-center gap-3 text-[#0b6b3a]">
             <CheckCircle className="w-6 h-6 shrink-0" />
-            <span>Instalar Simple en el teléfono familiar</span>
+            <span>Instalar essimple en el teléfono familiar</span>
           </div>
 
           {/* Contactos */}

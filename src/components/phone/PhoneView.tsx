@@ -171,7 +171,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
   }, []);
 
   // APK de Android: modo kiosco (barras ocultas, pantalla encendida) salvo en la pantalla de mantenimiento,
-  // y el botón Atrás nunca cierra la app: solo vuelve al inicio de Simple.
+  // y el botón Atrás nunca cierra la app: solo vuelve al inicio de essimple.
   useEffect(() => {
     if (!isNative()) return;
     if (currentScreen === 'maintenance') {
@@ -181,7 +181,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     }
   }, [currentScreen]);
 
-  // Si la familia soltó la pantalla de inicio ("volver al estado normal"), al abrir Simple de nuevo se recupera:
+  // Si la familia soltó la pantalla de inicio ("volver al estado normal"), al abrir essimple de nuevo se recupera:
   // se reactiva como pantalla de inicio y vuelve el modo kiosco. Los permisos nunca se tocan.
   const restoringRef = useRef(false);
   const restoreIfReleased = async () => {
@@ -194,7 +194,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
       setShowPinModal(false);
       setCurrentScreen(prev => (prev === 'wizard' ? prev : 'home'));
       if (wasHome) {
-        // Android pide confirmar con un toque que Simple vuelva a ser la pantalla de inicio.
+        // Android pide confirmar con un toque que essimple vuelva a ser la pantalla de inicio.
         await new Promise(resolve => setTimeout(resolve, 400));
         await requestHomeLauncher();
       }

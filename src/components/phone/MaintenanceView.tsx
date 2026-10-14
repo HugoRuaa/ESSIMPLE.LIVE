@@ -17,14 +17,14 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight">Mantenimiento</h1>
           <p className="text-lg text-[#3b4863] font-medium mt-3 leading-relaxed">
-            Esta pantalla es para la familia. El modo protegido está suelto hasta que vuelvas a Simple.
+            Esta pantalla es para la familia. El modo protegido está suelto hasta que vuelvas a essimple.
           </p>
         </div>
 
         {/* Info card */}
         <div className="bg-[#ede7d8] border border-[#d5cbaf] rounded-2xl p-4 text-[#14213d]">
           <p className="text-base font-semibold">
-            <span className="font-extrabold">Nivel actual:</span> Básico: Simple es la pantalla de inicio, sin bloqueo real.
+            <span className="font-extrabold">Nivel actual:</span> Básico: essimple es la pantalla de inicio, sin bloqueo real.
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export const MaintenanceView: React.FC<MaintenanceViewProps> = ({
           fontSize="grande"
           onClick={onBackToSimple}
         >
-          Volver a Simple
+          Volver a essimple
         </TactileButton>
       </div>
     </div>

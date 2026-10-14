@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'live.essimple.simple',
-  appName: 'Simple',
+  appName: 'essimple',
   webDir: 'dist',
   android: {
     allowMixedContent: false,
