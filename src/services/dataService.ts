@@ -104,7 +104,7 @@ export const loginFamilyByCode = async (
     const apiRes = await fetch('/api/familias/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, password_hash }),
+      body: JSON.stringify({ email: cleanEmail, password_hash, password: password.trim() }),
     });
 
     const data = await apiRes.json();
@@ -135,7 +135,13 @@ export const loginFamilyByCode = async (
       return { success: false, message: 'Correo no registrado.' };
     }
 
-    if (data.password_hash !== password_hash) {
+    const stored = (data.password_hash || '').trim();
+    const cleanInput = password.trim();
+    const isMatch =
+      stored === password_hash ||
+      stored === cleanInput;
+
+    if (!isMatch) {
       return { success: false, message: 'Contraseña incorrecta.' };
     }
 

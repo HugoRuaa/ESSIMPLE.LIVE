@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -223,12 +224,14 @@ app.post('/api/familias/register', async (req, res) => {
 });
 
 app.post('/api/familias/login', async (req, res) => {
-  const { email, password_hash } = req.body;
-  if (!email || !password_hash) {
+  const { email, password_hash, password } = req.body;
+  if (!email || (!password_hash && !password)) {
     return res.status(400).json({ success: false, message: 'Correo y contraseña requeridos' });
   }
 
   const cleanEmail = email.trim().toLowerCase();
+  const inputHash = (password_hash || '').trim();
+  const inputPlain = (password || '').trim();
 
   if (supabaseServerClient) {
     try {
@@ -240,7 +243,17 @@ app.post('/api/familias/login', async (req, res) => {
         .maybeSingle();
 
       if (!error && data) {
-        if (data.password_hash !== password_hash) {
+        const dbStored = (data.password_hash || '').trim();
+        const plainToHash = inputPlain ? crypto.createHash('sha256').update(inputPlain).digest('hex') : '';
+        const dbToHash = crypto.createHash('sha256').update(dbStored).digest('hex');
+
+        const isMatch =
+          dbStored === inputHash ||
+          dbStored === inputPlain ||
+          (plainToHash && dbStored === plainToHash) ||
+          (inputHash && dbToHash === inputHash);
+
+        if (!isMatch) {
           return res.status(401).json({ success: false, message: 'Contraseña incorrecta.' });
         }
         familiesStore.set(cleanEmail, data);
