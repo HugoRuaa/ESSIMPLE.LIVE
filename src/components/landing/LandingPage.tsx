@@ -4,7 +4,7 @@ import {
   Smartphone, MessageSquareText, Footprints, ChevronDown, Users, Eye,
 } from 'lucide-react';
 import { PhoneMockup } from './PhoneMockup';
-import { ApoyoNosUnimos } from './ApoyoNosUnimos';
+import { ApoyoNosUnimos, APOYO_URL } from './ApoyoNosUnimos';
 import { APK_URL } from '../../lib/config';
 
 interface Props {
@@ -40,7 +40,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             <a href="#como" className="hidden md:inline px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Cómo empezar</a>
             <a href="#seguridad" className="hidden md:inline px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Seguridad</a>
             <a href="#preguntas" className="hidden md:inline px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Preguntas</a>
-            <a href="https://nosunimos.live/carefor" target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Apoyar</a>
+            <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Apoyar</a>
             <button onClick={onLogin} className="px-3 py-2 rounded-lg hover:bg-[#e5ecf7] cursor-pointer">Entrar</button>
           </nav>
         </div>
@@ -224,7 +224,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
           <div className="mt-6 flex justify-center">
             <ApoyoNosUnimos />
           </div>
-          <a href="https://nosunimos.live/carefor" target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-base font-bold text-[#0b4f9e] underline underline-offset-4">
+          <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-base font-bold text-[#0b4f9e] underline underline-offset-4">
             Apoyar este proyecto
           </a>
         </div>
@@ -262,7 +262,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
         <div className="max-w-6xl mx-auto px-5 py-8 flex flex-wrap items-center justify-between gap-4 text-sm">
           <span className="font-extrabold text-lg text-white">essimple<span className="text-[#38bdf8]">.live</span></span>
           <span>Acompañamiento y protección para adultos mayores.</span>
-          <a href="https://nosunimos.live/carefor" target="_blank" rel="noopener noreferrer" className="font-bold text-white underline underline-offset-4">Apoyar</a>
+          <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-white underline underline-offset-4">Apoyar</a>
         </div>
       </footer>
     </div>

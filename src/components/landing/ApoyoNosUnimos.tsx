@@ -5,6 +5,13 @@ interface Props {
   className?: string;
 }
 
+/**
+ * Página de essimple.live dentro de nosunimos.live (para dónde voy).
+ * `from` le dice al hub de qué sitio viene la persona (de dónde vengo); el botón del widget lo agrega solo.
+ * El hub devuelve a la persona a https://essimple.live con «Volver a Essimple.live».
+ */
+export const APOYO_URL = 'https://nosunimos.live/essimple?from=essimple.live';
+
 /** Widget oficial de aportes voluntarios de nosunimos.live (la app no procesa pagos: delega en ese sitio). */
 export const ApoyoNosUnimos: React.FC<Props> = ({ mostrar = 'button,sponsors', className = '' }) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -16,7 +23,7 @@ export const ApoyoNosUnimos: React.FC<Props> = ({ mostrar = 'button,sponsors', c
     const script = document.createElement('script');
     script.src = 'https://nosunimos.live/embed.js';
     script.async = true;
-    script.setAttribute('data-app', 'carefor.live');
+    script.setAttribute('data-app', 'essimple.live');
     script.setAttribute('data-show', mostrar);
     script.setAttribute('data-theme', 'light');
     container.appendChild(script);
@@ -25,7 +32,7 @@ export const ApoyoNosUnimos: React.FC<Props> = ({ mostrar = 'button,sponsors', c
   return (
     <div ref={ref} className={className}>
       <noscript>
-        <a href="https://nosunimos.live/carefor" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
+        <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="underline font-semibold">
           Apoyar este proyecto
         </a>
       </noscript>
