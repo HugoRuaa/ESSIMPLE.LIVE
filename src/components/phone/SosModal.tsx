@@ -153,9 +153,8 @@ export const SosModal: React.FC<SosModalProps> = ({ isOpen, onClose }) => {
       <div className="space-y-4 pb-8">
         {emergencyContacts[0]?.phone && (
           <a
-            href={`tel:${emergencyContacts[0].phone.replace(/[^\d+]/g, '')}`}
-            onClick={e => {
-              e.preventDefault();
+            href={`tel:${emergencyContacts[0].phone.replace(/[^\d+*#]/g, '')}`}
+            onClick={() => {
               void callNumber(emergencyContacts[0].phone);
             }}
             className="w-full bg-[#a61b1b] hover:bg-[#8a1616] text-white text-3xl font-extrabold py-6 rounded-3xl shadow-xl flex items-center justify-center gap-3 active:scale-95 transition text-center cursor-pointer"

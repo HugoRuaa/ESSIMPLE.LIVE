@@ -8,6 +8,9 @@ interface TactileButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   fontSize?: 'normal' | 'grande' | 'muy_grande';
   icon?: React.ReactNode;
   children: React.ReactNode;
+  href?: string;
+  target?: string;
+  rel?: string;
 }
 
 export const TactileButton: React.FC<TactileButtonProps> = ({
@@ -16,6 +19,9 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
   fontSize = 'grande',
   icon,
   children,
+  href,
+  target,
+  rel,
   onClick,
   className = '',
   disabled,
@@ -58,14 +64,44 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
     muy_grande: 'text-3xl font-extrabold',
   }[fontSize];
 
+    const combinedClasses = `btn-tactile w-full rounded-3xl flex items-center justify-center gap-3 px-6 py-4 transition-all duration-75 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+    minHeight ? 'min-h-[80px]' : 'min-h-[56px]'
+  } ${getVariantStyles()} ${fontClasses} ${className}`;
+
+  if (href) {
+    return (
+      <a
+        href={href}
+        target={target}
+        rel={rel}
+        onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+          if (disabled) {
+            e.preventDefault();
+            return;
+          }
+          try {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate(40);
+            }
+          } catch {
+            // Ignore
+          }
+          onClick?.(e as any);
+        }}
+        className={combinedClasses}
+      >
+        {icon && <span className="shrink-0 flex items-center justify-center">{icon}</span>}
+        <span className="text-center leading-tight">{children}</span>
+      </a>
+    );
+  }
+
   return (
     <button
       {...rest}
       disabled={disabled}
       onClick={handleClick}
-      className={`btn-tactile w-full rounded-3xl flex items-center justify-center gap-3 px-6 py-4 transition-all duration-75 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-        minHeight ? 'min-h-[80px]' : 'min-h-[56px]'
-      } ${getVariantStyles()} ${fontClasses} ${className}`}
+      className={combinedClasses}
     >
       {icon && <span className="shrink-0 flex items-center justify-center">{icon}</span>}
       <span className="text-center leading-tight">{children}</span>

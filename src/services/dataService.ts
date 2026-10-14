@@ -373,7 +373,7 @@ export const syncHomeZoneToSupabase = async (
     );
 
     if (error) {
-      console.error('Error de Supabase al guardar casa_zona:', error);
+      console.warn('Aviso de Supabase al guardar casa_zona:', error.message || error);
       return { success: false, message: error.message };
     }
 
@@ -383,7 +383,7 @@ export const syncHomeZoneToSupabase = async (
       message: 'Ubicación de casa y zona guardadas exitosamente en Supabase',
     };
   } catch (err: unknown) {
-    console.error('Error al sincronizar casa y zona con Supabase:', err);
+    console.warn('Aviso al sincronizar casa y zona con Supabase:', err);
     return {
       success: false,
       message: err instanceof Error ? err.message : 'Error inesperado al guardar en Supabase',

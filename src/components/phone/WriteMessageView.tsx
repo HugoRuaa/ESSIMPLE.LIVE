@@ -82,30 +82,34 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
     ? `https://api.whatsapp.com/send?phone=${fullWhatsAppPhone}&text=${encodedMsg}`
     : `https://api.whatsapp.com/send?text=${encodedMsg}`;
 
-  const handleSendSms = async () => {
+  const handleSendSms = () => {
     if (!message.trim()) return;
     setSentMethod('sms');
     setIsSent(true);
 
-    // En el APK el SMS sale directo, sin abrir otra app. En el navegador abre la app de mensajes.
-    const sentDirectly = await testSendSms(contactName, message);
-    if (!sentDirectly) {
-      setTimeout(() => {
-        window.location.href = smsUrl;
-      }, 150);
+    // Registro asíncrono para el historial de eventos
+    void testSendSms(contactName, message);
+
+    // Disparar inmediatamente navegación a la app de SMS
+    try {
+      window.location.href = smsUrl;
+    } catch {
+      // Ignore
     }
   };
 
   const handleSendWhatsApp = () => {
     if (!message.trim()) return;
-    void testSendSms(contactName, `[WhatsApp] ${message}`, false);
     setSentMethod('whatsapp');
     setIsSent(true);
+    void testSendSms(contactName, `[WhatsApp] ${message}`, false);
 
-    // Abrir de inmediato WhatsApp con el mensaje precargado
-    setTimeout(() => {
+    // Disparar inmediatamente WhatsApp
+    try {
       window.location.href = waUrl;
-    }, 150);
+    } catch {
+      // Ignore
+    }
   };
 
   // Screen [8]: Sent confirmation
@@ -144,9 +148,8 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
           {cleanPhone && (
             <a
               href={`tel:${cleanPhone}`}
-              onClick={e => {
-                e.preventDefault();
-                void callNumber(cleanPhone);
+              onClick={() => {
+                callNumber(cleanPhone);
               }}
               className="w-full bg-[#0b6b3a] hover:bg-[#08542d] text-white py-4 rounded-3xl text-xl font-extrabold flex items-center justify-center gap-2 shadow-md active:scale-95 transition text-center"
             >
@@ -222,6 +225,7 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
           fontSize="grande"
           minHeight={false}
           icon={<MessageSquare className="w-8 h-8 text-white" />}
+          href={message.trim() ? smsUrl : undefined}
           onClick={handleSendSms}
           className="!py-4"
         >
@@ -233,6 +237,7 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
           fontSize="grande"
           minHeight={false}
           icon={<MessageSquare className="w-8 h-8 text-[#0b6b3a]" />}
+          href={message.trim() ? waUrl : undefined}
           onClick={handleSendWhatsApp}
           className="!py-4 !border-[#0b6b3a] !text-[#0b6b3a]"
         >

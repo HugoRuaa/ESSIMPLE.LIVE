@@ -501,23 +501,52 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
               </p>
             </div>
           ) : (
-            visibleContacts.map(contact => (
-            <div
-              key={contact.id}
-              onClick={() => handleSelectContact(contact)}
-              className="btn-tactile bg-white border-2 border-[#ddd5c3] rounded-3xl p-4 shadow-[0_4px_0_#cfc6b2] active:shadow-[0_1px_0_#cfc6b2] flex items-center gap-5 cursor-pointer min-h-[82px] transition"
-            >
-              <div
-                style={{ backgroundColor: contact.avatarColor }}
-                className="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl font-extrabold shadow-sm shrink-0"
-              >
-                {contact.name.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-3xl font-extrabold text-[#14213d] truncate">
-                {contact.name}
-              </span>
-            </div>
-          ))
+            visibleContacts.map(contact => {
+              const clean = (contact.phone || '').replace(/[^\d+*#]/g, '');
+              return (
+                <div
+                  key={contact.id}
+                  className="btn-tactile bg-white border-2 border-[#ddd5c3] rounded-3xl p-3.5 sm:p-4 shadow-[0_4px_0_#cfc6b2] active:shadow-[0_1px_0_#cfc6b2] flex items-center justify-between gap-3 min-h-[84px] transition"
+                >
+                  <div
+                    onClick={() => handleSelectContact(contact)}
+                    className="flex items-center gap-4 cursor-pointer flex-1 min-w-0"
+                    title={`Abrir opciones para ${contact.name}`}
+                  >
+                    <div
+                      style={{ backgroundColor: contact.avatarColor }}
+                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-extrabold shadow-sm shrink-0"
+                    >
+                      {contact.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="truncate">
+                      <span className="text-2xl sm:text-3xl font-extrabold text-[#14213d] block truncate">
+                        {contact.name}
+                      </span>
+                      {contact.isEmergency && (
+                        <span className="text-xs font-bold text-[#a61b1b] uppercase tracking-wider block">
+                          Emergencia
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {clean && (
+                    <a
+                      href={`tel:${clean}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCallContact(contact);
+                      }}
+                      title={`Llamar directamente a ${contact.name}`}
+                      className="w-14 h-14 rounded-2xl bg-[#0b6b3a] border-2 border-[#08542d] text-white flex items-center justify-center shadow-[0_3px_0_#063e21] active:translate-y-0.5 active:shadow-none shrink-0 transition"
+                    >
+                      <Phone className="w-7 h-7 text-white stroke-[2.5]" />
+                    </a>
+                  )}
+                </div>
+              );
+            })
           )}
 
           {/* Más contactos button */}

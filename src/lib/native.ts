@@ -87,18 +87,31 @@ export const openSystemSettings = async (): Promise<void> => {
 };
 
 /** Llamada directa (sin pasar por el marcador) en Android; en web cae a tel:. */
-export const callNumber = async (number: string): Promise<void> => {
+export const callNumber = (number: string): void => {
   const clean = number.replace(/[^\d+*#]/g, '');
   if (!clean) return;
   if (isNative()) {
-    try {
-      await Simple.callDirect({ number: clean });
-      return;
-    } catch {
-      // cae al enlace tel:
-    }
+    Simple.callDirect({ number: clean }).catch(() => {
+      window.location.href = `tel:${clean}`;
+    });
+    return;
   }
-  window.location.href = `tel:${clean}`;
+  try {
+    const a = document.createElement('a');
+    a.href = `tel:${clean}`;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      try {
+        document.body.removeChild(a);
+      } catch {
+        // Ignore
+      }
+    }, 500);
+  } catch {
+    window.location.href = `tel:${clean}`;
+  }
 };
 
 /** SMS directo en Android. Devuelve false si no se pudo enviar (web o sin permiso). */
