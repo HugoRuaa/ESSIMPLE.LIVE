@@ -22,6 +22,7 @@ export interface NativeStatus {
   homeLauncher: boolean;
   deviceOwner: boolean;
   kiosk: boolean;
+  homeReleased: boolean;
 }
 
 interface SimplePlugin {
@@ -37,6 +38,8 @@ interface SimplePlugin {
   enterKiosk(): Promise<{ level: 'basic' | 'launcher' | 'owner' }>;
   exitKiosk(): Promise<void>;
   minimize(): Promise<void>;
+  releaseHome(): Promise<{ released: boolean }>;
+  restoreHome(): Promise<{ wasDefaultHome: boolean }>;
 }
 
 const Simple = registerPlugin<SimplePlugin>('Simple');
@@ -119,6 +122,37 @@ export const enterKiosk = async (): Promise<'basic' | 'launcher' | 'owner' | nul
 
 export const exitKiosk = async (): Promise<void> => {
   if (isNative()) await Simple.exitKiosk().catch(() => {});
+};
+
+/** Suelta la pantalla de inicio y el kiosco: el celular vuelve a su estado normal. Los permisos no se tocan. */
+export const releaseHome = async (): Promise<boolean> => {
+  if (!isNative()) return true;
+  try {
+    return (await Simple.releaseHome()).released;
+  } catch {
+    return false;
+  }
+};
+
+/** Vuelve a activar Simple como pantalla de inicio. Devuelve si lo era antes de soltarla. */
+export const restoreHome = async (): Promise<boolean> => {
+  if (!isNative()) return false;
+  try {
+    return (await Simple.restoreHome()).wasDefaultHome;
+  } catch {
+    return false;
+  }
+};
+
+/** Se llama cada vez que la app vuelve a primer plano. Devuelve la función para quitar el listener. */
+export const onAppResume = (handler: () => void): (() => void) => {
+  if (!isNative()) return () => {};
+  const handle = CapApp.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) handler();
+  });
+  return () => {
+    handle.then(h => h.remove()).catch(() => {});
+  };
 };
 
 export const minimizeApp = async (): Promise<void> => {

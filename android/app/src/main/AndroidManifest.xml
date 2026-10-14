@@ -25,14 +25,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Permite elegir Simple como pantalla de inicio: el botón Inicio vuelve siempre a Simple. -->
+        </activity>
+
+        <!--
+          Pantalla de inicio de Simple. Vive en un alias para poder apagarlo desde la app ("volver al estado normal
+          del celular"): sin este componente activo Android deja de ofrecer a Simple como inicio y vuelve al launcher
+          normal. Al reabrir Simple se vuelve a encender. No toca ningún permiso.
+        -->
+        <activity-alias
+            android:name=".HomeAlias"
+            android:targetActivity=".MainActivity"
+            android:enabled="true"
+            android:exported="true"
+            android:label="@string/title_activity_main">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-
-        </activity>
+        </activity-alias>
 
         <receiver
             android:name=".SimpleAdminReceiver"

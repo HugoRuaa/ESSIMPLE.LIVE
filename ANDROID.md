@@ -25,6 +25,7 @@ habla directo con Supabase y el APK se compila en GitHub Actions.
 ## Niveles de "difícil de salir"
 - **Básico (siempre):** pantalla completa sin barras, pantalla siempre encendida, el botón Atrás no cierra la app, salir pide el PIN.
 - **Pantalla de inicio:** el asistente pide elegir Simple como launcher; el botón Inicio vuelve siempre a Simple.
+- **Salir con PIN:** después del PIN solo hay dos botones: *Volver a la app* o *Volver al estado normal del celular*. El segundo suelta la pantalla de inicio y el kiosco (los permisos se conservan). Al abrir Simple otra vez vuelve a ser la pantalla de inicio; Android pide un toque de confirmación para ello (salvo con propietario del dispositivo). El menú de mantenimiento completo sigue disponible con una pulsación larga sobre el título de la pantalla del PIN.
 - **Propietario del dispositivo (máximo):** con el teléfono recién reiniciado de fábrica y sin cuentas:
   `adb shell dpm set-device-owner live.essimple.simple/.SimpleAdminReceiver`
   Concede los permisos sin diálogos y fija la tarea (con el marcador permitido para llamar).

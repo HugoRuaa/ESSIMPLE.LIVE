@@ -6,6 +6,7 @@ import { SosModal } from './SosModal';
 import { FallModal } from './FallModal';
 import { PinModal } from './PinModal';
 import { MaintenanceView } from './MaintenanceView';
+import { ExitMenuView } from './ExitMenuView';
 import { WizardView } from './WizardView';
 import { WriteMessageView } from './WriteMessageView';
 import { VoiceNoteView } from './VoiceNoteView';
@@ -13,7 +14,18 @@ import { ShareLocationView } from './ShareLocationView';
 import { WhereAmIView } from './WhereAmIView';
 import { ContactAlertsView } from './ContactAlertsView';
 import { useApp } from '../../context/AppContext';
-import { callNumber, isNative, enterKiosk, exitKiosk, onBackButton } from '../../lib/native';
+import {
+  callNumber,
+  isNative,
+  enterKiosk,
+  exitKiosk,
+  onBackButton,
+  onAppResume,
+  getNativeStatus,
+  releaseHome,
+  restoreHome,
+  requestHomeLauncher,
+} from '../../lib/native';
 import { Contact } from '../../types';
 
 interface PhoneViewProps {
@@ -68,6 +80,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     | 'where_am_i'
     | 'contact_alerts'
     | 'maintenance'
+    | 'exit_menu'
     | 'wizard';
 
   const WIZARD_DONE_KEY = 'essimple_wizard_done';
@@ -167,6 +180,38 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
       void enterKiosk();
     }
   }, [currentScreen]);
+
+  // Si la familia soltó la pantalla de inicio ("volver al estado normal"), al abrir Simple de nuevo se recupera:
+  // se reactiva como pantalla de inicio y vuelve el modo kiosco. Los permisos nunca se tocan.
+  const restoringRef = useRef(false);
+  const restoreIfReleased = async () => {
+    if (restoringRef.current) return;
+    restoringRef.current = true;
+    try {
+      const status = await getNativeStatus();
+      if (!status?.homeReleased) return;
+      const wasHome = await restoreHome();
+      setShowPinModal(false);
+      setCurrentScreen(prev => (prev === 'wizard' ? prev : 'home'));
+      if (wasHome) {
+        // Android pide confirmar con un toque que Simple vuelva a ser la pantalla de inicio.
+        await new Promise(resolve => setTimeout(resolve, 400));
+        await requestHomeLauncher();
+      }
+      await enterKiosk();
+    } finally {
+      restoringRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!isNative()) return;
+    void restoreIfReleased();
+    return onAppResume(() => {
+      void restoreIfReleased();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!isNative()) return;
@@ -351,6 +396,17 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
 
   if (currentScreen === 'where_am_i') {
     return <WhereAmIView onBack={() => setCurrentScreen('home')} />;
+  }
+
+  if (currentScreen === 'exit_menu') {
+    return (
+      <ExitMenuView
+        onBackToApp={() => setCurrentScreen('home')}
+        onBackToNormalPhone={async () => {
+          await releaseHome();
+        }}
+      />
+    );
   }
 
   if (currentScreen === 'maintenance') {
@@ -540,8 +596,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
         onSuccess={() => {
           setShowPinModal(false);
           if (isNative()) {
-            // En el APK, "salir" lleva al menú de mantenimiento de la familia (ajustes, permisos, desactivar protección).
-            setCurrentScreen('maintenance');
+            // En el APK, después del PIN solo aparecen dos opciones: volver a la app o volver al estado normal.
+            setCurrentScreen('exit_menu');
           } else if (onExitToPanel) {
             onExitToPanel();
           }

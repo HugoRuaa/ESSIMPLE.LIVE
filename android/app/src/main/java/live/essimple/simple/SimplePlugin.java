@@ -10,8 +10,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.telecom.TelecomManager;
@@ -58,6 +61,23 @@ public class SimplePlugin extends Plugin {
 
     /** Lo lee MainActivity para reaplicar el modo inmersivo al recuperar el foco. */
     public static volatile boolean kioskEnabled = false;
+
+    private static final String HOME_ALIAS = "live.essimple.simple.HomeAlias";
+    private static final String PREFS = "simple_prefs";
+    private static final String KEY_RELEASED = "home_released";
+    private static final String KEY_WAS_HOME = "was_default_home";
+
+    private SharedPreferences prefs() {
+        return getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    private void setHomeAliasEnabled(boolean enabled) {
+        getContext().getPackageManager().setComponentEnabledSetting(
+            new ComponentName(getContext().getPackageName(), HOME_ALIAS),
+            enabled ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP
+        );
+    }
 
     private static final String[] RUNTIME_PERMISSIONS = new String[] {
         Manifest.permission.SEND_SMS,
@@ -120,6 +140,7 @@ public class SimplePlugin extends Plugin {
         out.put("homeLauncher", isDefaultHome());
         out.put("deviceOwner", isDeviceOwner());
         out.put("kiosk", kioskEnabled);
+        out.put("homeReleased", prefs().getBoolean(KEY_RELEASED, false));
         call.resolve(out);
     }
 
@@ -394,6 +415,63 @@ public class SimplePlugin extends Plugin {
             activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             call.resolve();
         });
+    }
+
+    /**
+     * "Volver al estado normal del celular": suelta el modo kiosco y la pantalla de inicio de Simple.
+     * No revoca ningún permiso. La marca persistente permite recuperar el estado al reabrir la app.
+     */
+    @PluginMethod
+    public void releaseHome(PluginCall call) {
+        final Activity activity = getActivity();
+        activity.runOnUiThread(() -> {
+            boolean wasHome = isDefaultHome();
+            kioskEnabled = false;
+            try {
+                activity.stopLockTask();
+            } catch (Exception ignored) {
+                // No estaba fijada.
+            }
+            WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(activity.getWindow(), activity.getWindow().getDecorView());
+            controller.show(WindowInsetsCompat.Type.systemBars());
+            activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (Build.VERSION.SDK_INT >= 27) {
+                activity.setShowWhenLocked(false);
+                activity.setTurnScreenOn(false);
+            }
+
+            prefs().edit().putBoolean(KEY_RELEASED, true).putBoolean(KEY_WAS_HOME, wasHome).apply();
+            setHomeAliasEnabled(false);
+
+            // Da un instante a Android para recalcular quién es la pantalla de inicio y luego abre el inicio normal.
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                boolean stillDefault = isDefaultHome();
+                try {
+                    Intent next = stillDefault
+                        ? new Intent(Settings.ACTION_HOME_SETTINGS)
+                        : new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+                    next.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(next);
+                } catch (Exception ignored) {
+                    // Sin pantalla de inicio alternativa disponible.
+                }
+                JSObject out = new JSObject();
+                out.put("released", !stillDefault);
+                call.resolve(out);
+            }, 600);
+        });
+    }
+
+    /** Vuelve a encender la pantalla de inicio de Simple. Devuelve si lo era antes de soltarla. */
+    @PluginMethod
+    public void restoreHome(PluginCall call) {
+        boolean wasHome = prefs().getBoolean(KEY_WAS_HOME, false);
+        setHomeAliasEnabled(true);
+        prefs().edit().putBoolean(KEY_RELEASED, false).apply();
+        JSObject out = new JSObject();
+        out.put("wasDefaultHome", wasHome);
+        call.resolve(out);
     }
 
     @PluginMethod
