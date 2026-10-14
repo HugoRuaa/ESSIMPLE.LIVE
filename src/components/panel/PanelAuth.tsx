@@ -24,7 +24,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
   // Screen [25]: Antes de empezar (Privacy Terms if terms not accepted)
   if (account.isAuthenticated && !account.termsAccepted) {
     return (
-      <div className="min-h-screen bg-[#f6f3ec] p-6 flex flex-col justify-between max-w-lg mx-auto select-none animate-in fade-in duration-200">
+      <div className="min-h-dvh bg-[#f6f3ec] p-6 flex flex-col justify-between max-w-lg mx-auto select-none animate-in fade-in duration-200">
         <div className="pt-8 space-y-6">
           <div className="flex flex-col items-center gap-2">
             <Logo size="lg" />
@@ -249,14 +249,14 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Mín. 6 caracteres"
                   disabled={isSubmitting}
-                  className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-28 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] disabled:opacity-60 bg-white"
+                  className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-32 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] disabled:opacity-60 bg-white"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-[#3b4863] cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 min-h-11 text-base font-bold text-[#3b4863] cursor-pointer"
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   <span>{showPass ? 'Ocultar' : 'Mostrar'}</span>
@@ -319,13 +319,13 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
               <button
                 type="button"
                 onClick={() => setShowPrivacyDetails(!showPrivacyDetails)}
-                className="text-xs font-bold text-[#0b4f9e] underline ml-8 cursor-pointer"
+                className="text-sm font-bold text-[#0b4f9e] underline ml-8 min-h-11 cursor-pointer"
               >
                 {showPrivacyDetails ? 'Ocultar detalles' : 'Ver qué datos se guardan'}
               </button>
 
               {showPrivacyDetails && (
-                <div className="ml-8 p-3 bg-[#f6f3ec] rounded-xl text-xs font-medium text-[#374151] space-y-1">
+                <div className="ml-8 p-3 bg-[#f6f3ec] rounded-xl text-sm font-medium text-[#374151] space-y-1">
                   <p>• Contactos familiares autorizados (nombre, teléfono y color).</p>
                   <p>• Nivel de batería para avisar si el teléfono se apaga.</p>
                   <p>• Alertas de SOS y caídas.</p>
@@ -400,7 +400,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold text-[#3b4863] cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 min-h-11 text-base font-bold text-[#3b4863] cursor-pointer"
                 >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   <span>{showPass ? 'Ocultar' : 'Mostrar'}</span>

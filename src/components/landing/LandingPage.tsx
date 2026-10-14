@@ -33,15 +33,15 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
       {/* NAV */}
       <header className="sticky top-0 z-40 bg-[#f2f5fa]/90 backdrop-blur border-b border-[#dbe3f0]">
         <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
-          <a href="/" className="font-extrabold text-2xl tracking-tight text-[#0b4f9e]" aria-label="essimple.live, inicio">
+          <a href="/" className="font-extrabold text-2xl tracking-tight text-[#0b4f9e] inline-flex items-center min-h-11" aria-label="essimple.live, inicio">
             essimple<span className="text-[#0b6b3a]">.live</span>
           </a>
           <nav className="flex items-center gap-1 sm:gap-2 text-sm font-bold" aria-label="Principal">
-            <a href="#como" className="hidden md:inline px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Cómo empezar</a>
-            <a href="#seguridad" className="hidden md:inline px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Seguridad</a>
-            <a href="#preguntas" className="hidden md:inline px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Preguntas</a>
-            <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-lg hover:bg-[#e5ecf7]">Apoyar</a>
-            <button onClick={onLogin} className="px-3 py-2 rounded-lg hover:bg-[#e5ecf7] cursor-pointer">Entrar</button>
+            <a href="#como" className="hidden md:inline-flex px-3 min-h-11 items-center rounded-lg hover:bg-[#e5ecf7]">Cómo empezar</a>
+            <a href="#seguridad" className="hidden md:inline-flex px-3 min-h-11 items-center rounded-lg hover:bg-[#e5ecf7]">Seguridad</a>
+            <a href="#preguntas" className="hidden md:inline-flex px-3 min-h-11 items-center rounded-lg hover:bg-[#e5ecf7]">Preguntas</a>
+            <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="px-3 min-h-11 inline-flex items-center rounded-lg hover:bg-[#e5ecf7]">Apoyar</a>
+            <button onClick={onLogin} className="px-3 min-h-11 inline-flex items-center rounded-lg hover:bg-[#e5ecf7] cursor-pointer">Entrar</button>
           </nav>
         </div>
       </header>
@@ -224,7 +224,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
           <div className="mt-6 flex justify-center">
             <ApoyoNosUnimos />
           </div>
-          <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-base font-bold text-[#0b4f9e] underline underline-offset-4">
+          <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center min-h-11 text-base font-bold text-[#0b4f9e] underline underline-offset-4">
             Apoyar este proyecto
           </a>
         </div>
@@ -236,7 +236,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
         <div className="mt-8 divide-y divide-[#c9d5e8] border-y border-[#c9d5e8]">
           {FAQ.map(([q, a]) => (
             <details key={q} className="group py-4">
-              <summary className="flex items-center justify-between gap-4 cursor-pointer list-none text-lg font-bold focus-visible:outline-4 focus-visible:outline-[#38bdf8] rounded">
+              <summary className="flex items-center justify-between gap-4 min-h-12 cursor-pointer list-none text-lg font-bold focus-visible:outline-4 focus-visible:outline-[#38bdf8] rounded">
                 {q}
                 <ChevronDown className="w-5 h-5 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
               </summary>

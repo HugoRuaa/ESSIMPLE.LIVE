@@ -187,7 +187,7 @@ export const PanelHomeZone: React.FC = () => {
       if (res && res.success !== false) {
         setSaveFeedback({
           success: true,
-          message: res.message || 'Ubicación guardada en Supabase y asociada a la cuenta familiar.',
+          message: res.message || 'Ubicación guardada y asociada a la cuenta familiar.',
         });
         setIsSavedMessage(true);
         setTimeout(() => {
@@ -196,7 +196,7 @@ export const PanelHomeZone: React.FC = () => {
       } else {
         setSaveFeedback({
           success: false,
-          message: res?.message || 'Error al guardar en Supabase.',
+          message: res?.message || 'Error al guardar.',
         });
       }
     } catch (err: unknown) {
@@ -233,12 +233,12 @@ export const PanelHomeZone: React.FC = () => {
               </span>
             </p>
             <p className="text-xs font-semibold text-[#3b4863]">
-              Los cambios en la dirección de la casa y el perímetro de la zona segura se guardan en la nube (tabla essimple.casa_zona).
+              Los cambios en la dirección de la casa y el perímetro de la zona segura se guardan en la nube.
             </p>
           </div>
         </div>
         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0b6b3a] bg-[#e6f4ea] px-3 py-1.5 rounded-full border border-[#0b6b3a]/30 shrink-0 self-start sm:self-auto">
-          ☁️ Conectado a Supabase
+          ☁️ Guardado en la nube
         </span>
       </div>
 
@@ -247,7 +247,7 @@ export const PanelHomeZone: React.FC = () => {
         <div className="bg-[#fef2f2] border-2 border-[#ef4444] rounded-2xl p-4 text-[#991b1b] flex items-start gap-3 shadow-sm animate-in fade-in">
           <AlertCircle className="w-6 h-6 shrink-0 mt-0.5 text-[#ef4444]" />
           <div className="flex-1">
-            <h4 className="font-extrabold text-base">No se pudo guardar en Supabase</h4>
+            <h4 className="font-extrabold text-base">No se pudo guardar</h4>
             <p className="text-sm font-semibold mt-0.5">{saveFeedback.message}</p>
           </div>
         </div>
@@ -260,7 +260,7 @@ export const PanelHomeZone: React.FC = () => {
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="bg-[#0b4f9e] hover:bg-[#093f7e] disabled:opacity-70 text-white px-4 py-2 rounded-2xl text-base font-extrabold flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
+            className="bg-[#0b4f9e] hover:bg-[#093f7e] disabled:opacity-70 text-white px-4 min-h-11 rounded-2xl text-base font-extrabold flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer"
           >
             {isSaving ? (
               <>
@@ -288,19 +288,19 @@ export const PanelHomeZone: React.FC = () => {
           <label className="text-lg font-bold text-[#14213d]">
             Buscar dirección de casa
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col min-[480px]:flex-row min-[480px]:items-center gap-2">
             <input
               type="text"
               value={homeSearchQuery}
               onChange={e => setHomeSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearchHome()}
               placeholder="Ej: Carrera 7 32-16 Bogotá, Calle 100, El Poblado"
-              className="flex-1 border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e]"
+              className="flex-1 min-w-0 border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e]"
             />
             <button
               onClick={handleSearchHome}
               disabled={isSearchingHome}
-              className="bg-[#0b4f9e] hover:bg-[#093f7e] disabled:opacity-60 text-white px-5 py-3.5 rounded-2xl text-lg font-extrabold flex items-center gap-2 shadow-sm cursor-pointer active:scale-95 transition shrink-0"
+              className="bg-[#0b4f9e] hover:bg-[#093f7e] disabled:opacity-60 text-white px-5 min-h-12 rounded-2xl text-lg font-extrabold flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-95 transition shrink-0"
             >
               {isSearchingHome ? (
                 <>
@@ -322,7 +322,7 @@ export const PanelHomeZone: React.FC = () => {
               type="button"
               onClick={handleUseGPS}
               disabled={isSearchingHome}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-[#0b4f9e] text-[#0b4f9e] bg-[#f0f6ff] hover:bg-[#e0edff] text-sm font-extrabold transition cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 px-3 min-h-11 rounded-xl border-2 border-[#0b4f9e] text-[#0b4f9e] bg-[#f0f6ff] hover:bg-[#e0edff] text-sm font-extrabold transition cursor-pointer active:scale-95"
             >
               <Navigation className="w-4 h-4 shrink-0 fill-[#0b4f9e]/20" />
               <span>Usar mi ubicación actual (GPS)</span>
@@ -436,7 +436,7 @@ export const PanelHomeZone: React.FC = () => {
           <label className="text-lg font-bold text-[#14213d]">
             Buscar el centro de la zona
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col min-[480px]:flex-row min-[480px]:items-center gap-2">
             <input
               type="text"
               value={safeZoneQuery}
@@ -534,28 +534,28 @@ export const PanelHomeZone: React.FC = () => {
       </div>
 
       {/* Sticky Bottom Save / Discard Bar [29] - Elevated above 5-tab menu */}
-      <div className="fixed bottom-20 left-4 right-4 z-50 bg-[#14213d] text-white border-2 border-[#ddd5c3] p-3.5 rounded-3xl flex items-center justify-between gap-3 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom duration-200">
+      <div className="fixed bottom-[calc(var(--nav-h)+0.5rem)] left-4 right-4 z-50 bg-[#14213d] text-white border-2 border-[#ddd5c3] p-3.5 rounded-3xl flex items-center justify-between gap-3 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom duration-200">
         <button
           onClick={handleDiscard}
           disabled={isSaving}
-          className="w-1/2 bg-white/10 hover:bg-white/20 disabled:opacity-50 border border-white/20 text-white py-3 rounded-2xl text-lg font-extrabold shadow-sm active:scale-95 transition cursor-pointer"
+          className="w-1/2 bg-white/10 hover:bg-white/20 disabled:opacity-50 border border-white/20 text-white min-h-12 px-2 rounded-2xl text-base min-[400px]:text-lg font-extrabold whitespace-nowrap shadow-sm active:scale-95 transition cursor-pointer"
         >
           Descartar
         </button>
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="w-1/2 bg-[#0b6b3a] hover:bg-[#09572f] disabled:opacity-70 text-white py-3 rounded-2xl text-lg font-extrabold shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2"
+          className="w-1/2 bg-[#0b6b3a] hover:bg-[#09572f] disabled:opacity-70 text-white min-h-12 px-2 rounded-2xl text-base min-[400px]:text-lg font-extrabold whitespace-nowrap shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2"
         >
           {isSaving ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Guardando en Supabase...</span>
+              <span>Guardando...</span>
             </>
           ) : (
             <>
               <Check className="w-5 h-5 stroke-[3]" />
-              <span>Guardar en Supabase</span>
+              <span>Guardar<span className="max-[399px]:hidden"> cambios</span></span>
             </>
           )}
         </button>
@@ -564,7 +564,7 @@ export const PanelHomeZone: React.FC = () => {
       {isSavedMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#0b6b3a] text-white px-6 py-3 rounded-full text-base sm:text-lg font-bold shadow-2xl animate-in fade-in flex items-center gap-2 text-center max-w-[90vw]">
           <CheckCircle2 className="w-6 h-6 shrink-0" />
-          <span>¡Guardado en Supabase para la cuenta familiar!</span>
+          <span>¡Guardado para la cuenta familiar!</span>
         </div>
       )}
     </div>

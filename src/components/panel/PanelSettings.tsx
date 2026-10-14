@@ -192,7 +192,7 @@ export const PanelSettings: React.FC = () => {
 
           <label
             onClick={() => setFontSize('normal')}
-            className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition select-none ${
+            className={`flex items-center gap-3 p-3.5 min-h-14 rounded-2xl border-2 cursor-pointer transition select-none ${
               fontSize === 'normal' ? 'border-[#0b4f9e] bg-[#f0f6ff]' : 'border-[#ddd5c3] bg-white'
             }`}
           >
@@ -201,7 +201,7 @@ export const PanelSettings: React.FC = () => {
               name="fontSize"
               checked={fontSize === 'normal'}
               onChange={() => setFontSize('normal')}
-              className="w-5 h-5 text-[#0b4f9e] accent-[#0b4f9e]"
+              className="w-5 h-5 shrink-0 text-[#0b4f9e] accent-[#0b4f9e]"
             />
             <div>
               <span className="text-lg font-bold text-[#3b4863] block">Normal</span>
@@ -211,7 +211,7 @@ export const PanelSettings: React.FC = () => {
 
           <label
             onClick={() => setFontSize('grande')}
-            className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition select-none ${
+            className={`flex items-center gap-3 p-3.5 min-h-14 rounded-2xl border-2 cursor-pointer transition select-none ${
               fontSize === 'grande' ? 'border-[#0b4f9e] bg-[#f0f6ff]' : 'border-[#ddd5c3] bg-white'
             }`}
           >
@@ -220,7 +220,7 @@ export const PanelSettings: React.FC = () => {
               name="fontSize"
               checked={fontSize === 'grande'}
               onChange={() => setFontSize('grande')}
-              className="w-5 h-5 text-[#0b4f9e] accent-[#0b4f9e]"
+              className="w-5 h-5 shrink-0 text-[#0b4f9e] accent-[#0b4f9e]"
             />
             <div>
               <span className="text-lg font-bold text-[#3b4863] block">Grande</span>
@@ -230,7 +230,7 @@ export const PanelSettings: React.FC = () => {
 
           <label
             onClick={() => setFontSize('muy_grande')}
-            className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 cursor-pointer transition select-none ${
+            className={`flex items-center gap-3 p-3.5 min-h-14 rounded-2xl border-2 cursor-pointer transition select-none ${
               fontSize === 'muy_grande' ? 'border-[#0b4f9e] bg-[#f0f6ff]' : 'border-[#ddd5c3] bg-white'
             }`}
           >
@@ -239,7 +239,7 @@ export const PanelSettings: React.FC = () => {
               name="fontSize"
               checked={fontSize === 'muy_grande'}
               onChange={() => setFontSize('muy_grande')}
-              className="w-5 h-5 text-[#0b4f9e] accent-[#0b4f9e]"
+              className="w-5 h-5 shrink-0 text-[#0b4f9e] accent-[#0b4f9e]"
             />
             <div>
               <span className="text-lg font-bold text-[#3b4863] block">Muy grande</span>
@@ -297,12 +297,12 @@ export const PanelSettings: React.FC = () => {
                 if (pinSuccess) setPinSuccess('');
               }}
               placeholder="1234"
-              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-32 text-2xl font-bold tracking-widest text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
+              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-28 text-2xl font-bold tracking-widest text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
             />
             <button
               type="button"
               onClick={() => setShowPin(!showPin)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer select-none bg-white/80 rounded-xl"
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 min-h-11 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer select-none bg-white/80 rounded-xl"
             >
               {showPin ? <EyeOff className="w-5 h-5 text-[#0b4f9e]" /> : <Eye className="w-5 h-5 text-[#7a7461]" />}
               <span>{showPin ? 'Ocultar' : 'Ver PIN'}</span>
@@ -369,15 +369,15 @@ export const PanelSettings: React.FC = () => {
                 if (passSuccess) setPassSuccess('');
               }}
               placeholder="Escribe tu contraseña"
-              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-48 text-xl font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
+              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-28 min-[420px]:pr-44 text-xl font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
             />
             <button
               type="button"
               onClick={() => setShowPass(!showPass)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1.5 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer select-none bg-white/80 rounded-xl"
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 min-h-11 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer select-none bg-white/80 rounded-xl"
             >
               {showPass ? <EyeOff className="w-5 h-5 text-[#0b4f9e]" /> : <Eye className="w-5 h-5 text-[#7a7461]" />}
-              <span>{showPass ? 'Ocultar' : 'Ver contraseña'}</span>
+              <span>{showPass ? 'Ocultar' : 'Ver'}</span>
             </button>
           </div>
         </div>
@@ -437,7 +437,7 @@ export const PanelSettings: React.FC = () => {
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="relative bg-white w-full max-w-lg max-h-[90vh] flex flex-col rounded-3xl shadow-2xl border-2 border-[#14213d]/15 animate-in zoom-in-95 overflow-hidden"
+            className="relative bg-white w-full max-w-lg max-h-[90dvh] flex flex-col rounded-3xl shadow-2xl border-2 border-[#14213d]/15 animate-in zoom-in-95 overflow-hidden"
           >
             {/* Header fijo con botón de cerrar visible de inmediato */}
             <div className="flex items-start justify-between gap-3 p-5 sm:p-6 pb-4 border-b border-[#eee8db] bg-[#faf8f4] shrink-0">

@@ -437,17 +437,17 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
 
   // --- Screen [1] & [2]: Home Screen ---
   return (
-    <div className="relative h-full flex flex-col justify-between bg-[#f6f3ec] p-4 select-none animate-in fade-in duration-100 overflow-y-auto">
-      {/* Top Header matching [1]: Logo & Salir */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between pt-1">
-          <Logo size="md" />
-          <div className="flex items-center gap-2">
+    <div className="relative h-full min-h-0 flex flex-col bg-[#f6f3ec] select-none animate-in fade-in duration-100">
+      {/* Arriba (fijo): logo y Salir */}
+      <div className="shrink-0 px-4 pt-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <Logo size="sm" compact className="min-w-0" />
+          <div className="flex items-center gap-2 shrink-0">
             {/* Modo Kiosco / Pantalla Completa para que no se cierre ni muestre barras del navegador */}
             <button
               onClick={toggleFullscreen}
               title={isFullscreen ? 'Salir de pantalla completa' : 'Poner en pantalla completa (Modo Kiosco)'}
-              className="p-2.5 bg-white border-2 border-[#7a7461] rounded-2xl text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center justify-center"
+              className="min-w-11 min-h-11 p-2 bg-white border-2 border-[#7a7461] rounded-2xl text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center justify-center"
             >
               {isFullscreen ? (
                 <Minimize2 className="w-6 h-6 stroke-[2.5]" />
@@ -460,7 +460,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
             <button
               onClick={() => setShowPinModal(true)}
               title="Salir (Protegido por PIN de seguridad)"
-              className="px-4 py-2 bg-white border-2 border-[#7a7461] rounded-2xl text-lg font-extrabold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center gap-1.5"
+              className="px-3 min-[360px]:px-4 min-h-11 bg-white border-2 border-[#7a7461] rounded-2xl text-lg font-extrabold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center gap-1.5"
             >
               <Lock className="w-4 h-4 text-[#7a7461]" />
               <span>Salir</span>
@@ -470,8 +470,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
 
         {/* Screen [2]: Top green banner while sharing location */}
         {locationShare.isSharing && (
-          <div className="bg-[#0b6b3a] text-white rounded-3xl p-3 flex items-center justify-between gap-3 shadow-md animate-in slide-in-from-top duration-200">
-            <span className="text-2xl font-extrabold pl-2 leading-tight">
+          <div className="bg-[#0b6b3a] text-white rounded-3xl p-3 flex flex-col min-[400px]:flex-row min-[400px]:items-center justify-between gap-3 shadow-md animate-in slide-in-from-top duration-200">
+            <span className="text-xl min-[400px]:text-2xl font-extrabold pl-2 leading-tight">
               {locationShare.contactName} te está viendo
             </span>
             <button
@@ -479,15 +479,18 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
                 stopLocationShare();
                 alert('Dejaste de compartir tu ubicación');
               }}
-              className="bg-[#a61b1b] border-2 border-[#8a1616] text-white px-4 py-2.5 rounded-2xl text-lg font-extrabold shrink-0 shadow-[0_2px_0_#681010] active:translate-y-0.5 active:shadow-none cursor-pointer"
+              className="bg-[#a61b1b] border-2 border-[#8a1616] text-white px-4 min-h-12 rounded-2xl text-lg font-extrabold shrink-0 shadow-[0_2px_0_#681010] active:translate-y-0.5 active:shadow-none cursor-pointer"
             >
               Dejar de compartir
             </button>
           </div>
         )}
 
-        {/* Contacts List matching [1] & [2] */}
-        <div className="space-y-3 pt-1">
+      </div>
+
+      {/* Contactos: la lista se desplaza por dentro, el SOS nunca sale de la pantalla */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
+        <div className="space-y-3">
           {visibleContacts.length === 0 ? (
             <div className="bg-white border-2 border-dashed border-[#ddd5c3] rounded-3xl p-8 text-center space-y-3 shadow-sm">
               <div className="w-16 h-16 mx-auto bg-[#eef4fb] rounded-full flex items-center justify-center text-[#0b4f9e]">
@@ -506,21 +509,21 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
               return (
                 <div
                   key={contact.id}
-                  className="btn-tactile bg-white border-2 border-[#ddd5c3] rounded-3xl p-3.5 sm:p-4 shadow-[0_4px_0_#cfc6b2] active:shadow-[0_1px_0_#cfc6b2] flex items-center justify-between gap-3 min-h-[84px] transition"
+                  className="btn-tactile bg-white border-2 border-[#ddd5c3] rounded-3xl p-3 min-[360px]:p-3.5 sm:p-4 shadow-[0_4px_0_#cfc6b2] active:shadow-[0_1px_0_#cfc6b2] flex items-center justify-between gap-3 min-h-[76px] min-[360px]:min-h-[84px] transition"
                 >
                   <div
                     onClick={() => handleSelectContact(contact)}
-                    className="flex items-center gap-4 cursor-pointer flex-1 min-w-0"
+                    className="flex items-center gap-3 min-[360px]:gap-4 cursor-pointer flex-1 min-w-0"
                     title={`Abrir opciones para ${contact.name}`}
                   >
                     <div
                       style={{ backgroundColor: contact.avatarColor }}
-                      className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl font-extrabold shadow-sm shrink-0"
+                      className="w-12 h-12 min-[360px]:w-14 min-[360px]:h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-xl min-[360px]:text-2xl sm:text-3xl font-extrabold shadow-sm shrink-0"
                     >
                       {contact.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="truncate">
-                      <span className="text-2xl sm:text-3xl font-extrabold text-[#14213d] block truncate">
+                    <div className="min-w-0">
+                      <span className="text-xl min-[360px]:text-2xl sm:text-3xl font-extrabold text-[#14213d] block leading-tight break-words line-clamp-2">
                         {contact.name}
                       </span>
                       {contact.isEmergency && (
@@ -539,7 +542,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
                         handleCallContact(contact);
                       }}
                       title={`Llamar directamente a ${contact.name}`}
-                      className="w-14 h-14 rounded-2xl bg-[#0b6b3a] border-2 border-[#08542d] text-white flex items-center justify-center shadow-[0_3px_0_#063e21] active:translate-y-0.5 active:shadow-none shrink-0 transition"
+                      className="w-12 h-12 min-[360px]:w-14 min-[360px]:h-14 rounded-2xl bg-[#0b6b3a] border-2 border-[#08542d] text-white flex items-center justify-center shadow-[0_3px_0_#063e21] active:translate-y-0.5 active:shadow-none shrink-0 transition"
                     >
                       <Phone className="w-7 h-7 text-white stroke-[2.5]" />
                     </a>
@@ -563,7 +566,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
           {showAllContacts && contacts.length > 5 && (
             <button
               onClick={() => setShowAllContacts(false)}
-              className="w-full text-center text-lg font-bold text-[#3b4863] py-2 underline cursor-pointer"
+              className="w-full text-center text-lg font-bold text-[#3b4863] min-h-12 underline cursor-pointer"
             >
               Ver menos contactos
             </button>
@@ -579,7 +582,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
       )}
 
       {/* Bottom Sticky Action Buttons: SOS & Dónde estoy */}
-      <div className="grid grid-cols-2 gap-3 pt-4 pb-2">
+      <div className="shrink-0 grid grid-cols-2 gap-3 px-4 pt-3 pb-[max(0.75rem,var(--safe-bottom))] bg-[#f6f3ec] border-t-2 border-[#ddd5c3]">
         {/* SOS Button: Red with circular hold progress */}
         <div
           onMouseDown={handleSosTouchStart}
@@ -596,8 +599,8 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
           />
 
           <div className="relative flex items-center justify-center">
-            <div className="w-16 h-16 rounded-full border-4 border-white/60 flex items-center justify-center">
-              <span className="text-3xl font-black text-white tracking-wider">
+            <div className="w-[4.5rem] h-[4.5rem] min-[420px]:w-20 min-[420px]:h-20 rounded-full border-4 border-white/60 flex items-center justify-center">
+              <span className="text-2xl min-[420px]:text-3xl font-black text-white tracking-wide">
                 SOS
               </span>
             </div>
@@ -607,10 +610,10 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
         {/* Dónde estoy Button */}
         <button
           onClick={() => setCurrentScreen('where_am_i')}
-          className="h-[92px] bg-[#0b4f9e] border-2 border-[#093f7e] rounded-3xl shadow-[0_4px_0_#062a54] active:translate-y-1 active:shadow-[0_1px_0_#062a54] flex flex-col items-center justify-center gap-1 cursor-pointer transition select-none text-white px-2"
+          className="h-[92px] bg-[#0b4f9e] border-2 border-[#093f7e] rounded-3xl shadow-[0_4px_0_#062a54] active:translate-y-1 active:shadow-[0_1px_0_#062a54] flex flex-col items-center justify-center gap-0.5 cursor-pointer transition select-none text-white px-2"
         >
-          <MapPin className="w-8 h-8 text-white stroke-[2.5]" />
-          <span className="text-2xl font-extrabold tracking-tight">
+          <MapPin className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 text-white stroke-[2.5]" />
+          <span className="text-xl min-[360px]:text-2xl font-extrabold tracking-tight leading-tight">
             Dónde estoy
           </span>
         </button>

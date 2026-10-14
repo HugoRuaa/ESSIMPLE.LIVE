@@ -110,7 +110,7 @@ export const PanelContacts: React.FC = () => {
         isSafeZone: formSafeZone,
         isLowBattery: formLowBattery,
       });
-      showSaveSuccess('¡Contacto guardado en Supabase!');
+      showSaveSuccess('¡Contacto guardado!');
     } else if (editingContact) {
       await editContact(editingContact.id, {
         name: formName.trim().slice(0, 40),
@@ -120,7 +120,7 @@ export const PanelContacts: React.FC = () => {
         isSafeZone: formSafeZone,
         isLowBattery: formLowBattery,
       });
-      showSaveSuccess('¡Contacto actualizado en Supabase!');
+      showSaveSuccess('¡Contacto actualizado!');
     }
 
     handleCloseModal();
@@ -168,7 +168,7 @@ export const PanelContacts: React.FC = () => {
           {isSavingContacts ? (
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#0b4f9e] bg-[#eef4fb] border border-[#0b4f9e]/30 px-3 py-1 rounded-full shadow-xs">
               <Loader2 className="w-4 h-4 animate-spin text-[#0b4f9e]" />
-              <span>Guardando en Supabase...</span>
+              <span>Guardando...</span>
             </span>
           ) : saveFeedback ? (
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-[#0b6b3a] bg-[#eaf5ed] border border-[#0b6b3a]/30 px-3 py-1 rounded-full shadow-xs animate-in fade-in">
@@ -183,7 +183,7 @@ export const PanelContacts: React.FC = () => {
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#0b6b3a] bg-[#eaf5ed] border border-[#0b6b3a]/20 px-3 py-1 rounded-full shadow-xs">
               <Cloud className="w-4 h-4 text-[#0b6b3a]" />
-              <span>Sincronizado con Supabase</span>
+              <span>Sincronizado</span>
             </span>
           )}
         </div>
@@ -196,7 +196,7 @@ export const PanelContacts: React.FC = () => {
               <div>
                 <p className="font-extrabold text-base text-[#713f12]">Tienes cambios pendientes</p>
                 <p className="text-sm font-semibold text-[#854d0e]">
-                  Presiona &quot;Guardar cambios&quot; para registrar en la tabla contactos de Supabase.
+                  Presiona &quot;Guardar cambios&quot; para guardar los cambios.
                 </p>
               </div>
             </div>
@@ -210,13 +210,13 @@ export const PanelContacts: React.FC = () => {
               <button
                 onClick={async () => {
                   const ok = await saveContactChanges();
-                  if (ok) showSaveSuccess('¡Guardado en Supabase!');
+                  if (ok) showSaveSuccess('¡Guardado!');
                 }}
                 disabled={isSavingContacts}
                 className="bg-[#0b4f9e] hover:bg-[#093f7e] text-white px-4 py-2 rounded-xl text-sm font-extrabold shadow-md flex items-center gap-1.5 active:scale-95 transition cursor-pointer disabled:opacity-50"
               >
                 {isSavingContacts ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 stroke-[3]" />}
-                <span>Guardar cambios</span>
+                <span className="whitespace-nowrap">Guardar<span className="max-[399px]:hidden"> cambios</span></span>
               </button>
             </div>
           </div>
@@ -288,7 +288,7 @@ export const PanelContacts: React.FC = () => {
 
             {/* Checkboxes matching [27] */}
             <div className="space-y-2.5 pt-1 text-lg font-bold text-[#14213d]">
-              <label className="flex items-center gap-3 cursor-pointer select-none">
+              <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={contact.isEmergency}
@@ -298,7 +298,7 @@ export const PanelContacts: React.FC = () => {
                 <span>Emergencia (SOS y caídas)</span>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer select-none">
+              <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={contact.isSafeZone}
@@ -308,7 +308,7 @@ export const PanelContacts: React.FC = () => {
                 <span>Zona segura</span>
               </label>
 
-              <label className="flex items-center gap-3 cursor-pointer select-none">
+              <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={contact.isLowBattery}
@@ -366,10 +366,10 @@ export const PanelContacts: React.FC = () => {
 
       {/* Sticky Bottom Save / Discard Bar [27] - Positioned above 5-tab nav bar */}
       {hasContactChanges && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 bg-[#14213d] text-white border-2 border-[#ddd5c3] p-3.5 rounded-3xl flex items-center justify-between gap-3 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom">
+        <div className="fixed bottom-[calc(var(--nav-h)+0.5rem)] left-4 right-4 z-50 bg-[#14213d] text-white border-2 border-[#ddd5c3] p-3.5 rounded-3xl flex items-center justify-between gap-3 max-w-lg mx-auto shadow-2xl animate-in slide-in-from-bottom">
           <div className="hidden sm:flex flex-col pl-2">
             <span className="text-sm font-extrabold text-[#f6f3ec]">Cambios sin guardar</span>
-            <span className="text-xs text-[#ddd5c3]/80">Se enviarán a Supabase</span>
+            <span className="text-xs text-[#ddd5c3]/80">Se guardarán en la nube</span>
           </div>
           <div className="flex items-center gap-2.5 w-full sm:w-auto">
             <button
@@ -381,7 +381,7 @@ export const PanelContacts: React.FC = () => {
             <button
               onClick={async () => {
                 const ok = await saveContactChanges();
-                if (ok) showSaveSuccess('¡Guardado en Supabase!');
+                if (ok) showSaveSuccess('¡Guardado!');
               }}
               disabled={isSavingContacts}
               className="flex-1 sm:flex-initial bg-[#0b6b3a] hover:bg-[#09572f] text-white py-3 px-5 rounded-2xl text-lg font-extrabold shadow-md active:scale-95 transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
@@ -391,7 +391,7 @@ export const PanelContacts: React.FC = () => {
               ) : (
                 <Check className="w-5 h-5 stroke-[3]" />
               )}
-              <span>Guardar cambios</span>
+              <span className="whitespace-nowrap">Guardar<span className="max-[399px]:hidden"> cambios</span></span>
             </button>
           </div>
         </div>
@@ -400,7 +400,7 @@ export const PanelContacts: React.FC = () => {
       {/* Modal Agregar / Editar contacto [28] */}
       {(editingContact || isAddingNew) && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 select-none animate-in fade-in duration-150">
-          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl max-h-[92vh] overflow-y-auto space-y-5 animate-in slide-in-from-bottom duration-200">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 pb-[max(1.25rem,var(--safe-bottom))] shadow-2xl max-h-[92dvh] overflow-y-auto space-y-5 animate-in slide-in-from-bottom duration-200">
             <h2 className="text-3xl font-extrabold text-[#14213d]">
               {isAddingNew ? 'Agregar contacto' : 'Editar contacto'}
             </h2>
@@ -501,7 +501,7 @@ export const PanelContacts: React.FC = () => {
             <div className="bg-[#eaf5ed] border border-[#0b6b3a]/30 rounded-2xl p-3 flex items-center gap-2 text-[#0b6b3a]">
               <Cloud className="w-5 h-5 shrink-0" />
               <p className="text-sm font-semibold">
-                Al presionar &quot;Guardar contacto&quot;, se grabará directamente en la base de datos de Supabase.
+                Al presionar &quot;Guardar contacto&quot;, el contacto se guardará en la cuenta familiar.
               </p>
             </div>
 

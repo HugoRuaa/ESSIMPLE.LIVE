@@ -3,9 +3,11 @@ import React from 'react';
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  /** Oculta el texto y deja solo el emblema en pantallas de menos de 360 px. */
+  compact?: boolean;
 }
 
-export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
+export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '', compact = false }) => {
   const iconSizes = {
     sm: 'w-6 h-6',
     md: 'w-8 h-8',
@@ -36,7 +38,7 @@ export const Logo: React.FC<LogoProps> = ({ size = 'md', className = '' }) => {
       </div>
 
       {/* Brand text */}
-      <div className={`font-bold tracking-tight text-[#14213d] flex items-baseline ${textSizes[size]}`}>
+      <div className={`font-bold tracking-tight text-[#14213d] flex items-baseline ${textSizes[size]} ${compact ? 'max-[359px]:hidden' : ''}`}>
         <span>essimple</span>
         <span className="text-[#0b4f9e]">.live</span>
       </div>
