@@ -71,12 +71,14 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   // Vinculación automática: busca la descarga reciente hecha desde esta misma red y pide un toque para confirmar.
   const [autoEmail, setAutoEmail] = useState<string | null>(null);
   const [autoSearching, setAutoSearching] = useState(native && !pairedFamily);
+  const [autoError, setAutoError] = useState<'missing_function' | 'other' | null>(null);
   useEffect(() => {
     if (!native || pairedFamily) return;
     let cancelled = false;
     findPendingLink().then(r => {
       if (cancelled) return;
       if (r.count === 1 && r.email) setAutoEmail(r.email);
+      setAutoError(r.error);
       setAutoSearching(false);
     });
     return () => {
@@ -159,6 +161,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
   // Modo "todo de una vez": recorre todos los permisos en cadena; la persona solo toca "Permitir" en cada cuadro de Android.
   const ALL_ITEMS: { key: string; label: string }[] = [
+    { key: 'linked', label: 'Vincular con la familia' },
     { key: 'sms', label: 'Enviar mensajes (SMS)' },
     { key: 'calls', label: 'Hacer llamadas' },
     { key: 'location', label: 'Ubicación' },
@@ -169,7 +172,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     { key: 'homeLauncher', label: 'essimple.live como pantalla de inicio' },
     { key: 'protectedMode', label: 'Modo protegido' },
     { key: 'backgroundLocation', label: 'Ubicación todo el tiempo' },
-    { key: 'linked', label: 'Vincular con la familia' },
   ];
 
   const runAll = async () => {
@@ -189,8 +191,15 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           if (isLinked) {
             ok = true;
           } else {
-            const email = parsePairCode(await readClipboardText());
+            // 1) enlace o código copiado, 2) la descarga reciente detectada desde esta misma red.
+            let email: string | null = parsePairCode(await readClipboardText());
+            if (!email) email = autoEmail;
+            if (!email) {
+              const found = await findPendingLink();
+              if (found.count === 1 && found.email) email = found.email;
+            }
             if (email) {
+              await markLinkUsed(email);
               savePairedFamily(email);
               pairedNow = true;
               ok = true;
@@ -247,7 +256,8 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     savePairedFamily(email);
     setPairMessage('Vinculado. Cargando datos de la familia...');
     try {
-      sessionStorage.setItem(STEP_KEY, '2');
+      // Desde la primera pantalla se vuelve a ella (para tocar "Configurar todo"); desde el paso 1 se sigue con el 2.
+      sessionStorage.setItem(STEP_KEY, mode === 'choose' ? '1' : '2');
     } catch {
       // ignorar
     }
@@ -268,7 +278,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       return (
         <div className="border-2 border-[#0b4f9e] bg-white rounded-2xl p-5 space-y-4">
           <p className="text-xl font-bold leading-snug">
-            Encontramos el enlace que te enviaron ({maskEmail(autoEmail)}). ¿Vincular este teléfono con esa familia?
+            Encontramos el enlace que te enviaron ({maskEmail(autoEmail)}). Este teléfono se vinculará con esa familia.
           </p>
           <TactileButton variant="green" fontSize="grande" onClick={confirmAutoLink}>
             Sí, vincular
@@ -282,14 +292,13 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     if (autoSearching) {
       return <p className="text-lg font-semibold text-[#3b4863]">Buscando el enlace de tu familia…</p>;
     }
-    if (mode === 'choose') {
-      return (
-        <p className="text-base font-semibold text-[#5c3a00] bg-[#fff1c9] border-2 border-[#b7791f] rounded-2xl p-3 leading-snug">
-          No encontramos el enlace de la familia automáticamente. Entra en "Paso a paso" para vincular a mano.
-        </p>
-      );
-    }
-    return null;
+    return (
+      <p className="text-base font-semibold text-[#5c3a00] bg-[#fff1c9] border-2 border-[#b7791f] rounded-2xl p-3 leading-snug">
+        {autoError === 'missing_function'
+          ? 'Falta activar la vinculación automática en Supabase (ejecutar el SQL). Mientras tanto, pega el enlace o código aquí abajo.'
+          : 'No encontramos el enlace de la familia automáticamente. Pega aquí abajo el enlace o el código que te enviaron.'}
+      </p>
+    );
   };
 
   // Lo que Android va a pedir aprobar (cada uno es un cuadro o una pantalla de ajustes con un toque).
@@ -299,6 +308,33 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     const st = allStatus[i.key] || 'pending';
     return st === 'pending' || st === 'running';
   }).length;
+
+  const renderManualLink = () => {
+    if (isLinked) return null;
+    return (
+      <div className="space-y-3">
+        <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={handleFindLink} className="!py-4 !text-xl">
+          Pegar el enlace copiado
+        </TactileButton>
+        <input
+          type="text"
+          inputMode="text"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          value={pairText}
+          onChange={e => {
+            setPairText(e.target.value);
+            if (parsePairCode(e.target.value)) applyPairCode(e.target.value);
+          }}
+          style={{ userSelect: 'text', WebkitUserSelect: 'text' }}
+          placeholder="O escribe aquí el código o el enlace"
+          className="w-full select-text border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e]"
+        />
+        {pairMessage && <p className="text-lg font-semibold text-[#3b4863]">{pairMessage}</p>}
+      </div>
+    );
+  };
 
   const handleFindLink = async () => {
     if (!native) {
@@ -332,6 +368,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           </p>
 
           {renderAutoLinkCard()}
+          {!autoEmail && !autoSearching && renderManualLink()}
 
           <div className="rounded-2xl bg-white border-2 border-[#ddd5c3] p-4 space-y-2">
             <p className="text-lg font-extrabold">Vas a aprobar {approvalItems.length} cosas:</p>
@@ -447,31 +484,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
             {renderAutoLinkCard()}
 
-            {!isLinked && !autoEmail && !autoSearching && (
-              <>
-                <TactileButton
-                  variant="card"
-                  fontSize="normal"
-                  minHeight={false}
-                  onClick={handleFindLink}
-                  className="!py-4 !text-xl"
-                >
-                  Buscar el enlace
-                </TactileButton>
-                <input
-                  type="text"
-                  value={pairText}
-                  onChange={e => {
-                    setPairText(e.target.value);
-                    if (parsePairCode(e.target.value)) applyPairCode(e.target.value);
-                  }}
-                  placeholder="O pega aquí el código (ESSIMPLE-...)"
-                  className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e]"
-                />
-              </>
-            )}
-
-            {pairMessage && <p className="text-lg font-semibold text-[#3b4863]">{pairMessage}</p>}
+            {renderManualLink()}
           </div>
         </div>
 

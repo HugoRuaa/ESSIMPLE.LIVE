@@ -21,18 +21,26 @@ export const registerDownload = async (email: string): Promise<boolean> => {
   }
 };
 
-export type PendingLink = { count: number; email: string | null };
+export type PendingLink = { count: number; email: string | null; error: 'missing_function' | 'other' | null };
 
-/** Busca si hay una descarga reciente hecha desde la misma red que esta app. */
+/** Busca si hay una descarga reciente hecha desde la misma red que esta app (máximo 6 s de espera). */
 export const findPendingLink = async (): Promise<PendingLink> => {
   const sb = getSupabaseClient();
-  if (!sb) return { count: 0, email: null };
+  if (!sb) return { count: 0, email: null, error: 'other' };
   try {
-    const { data, error } = await sb.rpc('buscar_vinculo');
-    if (error || !data) return { count: 0, email: null };
-    return { count: Number(data.count) || 0, email: data.email || null };
+    const result = await Promise.race([
+      sb.rpc('buscar_vinculo'),
+      new Promise<{ data: null; error: { code: string } }>(resolve => setTimeout(() => resolve({ data: null, error: { code: 'timeout' } }), 6000)),
+    ]);
+    const { data, error } = result as { data: any; error: any };
+    if (error) {
+      const missing = error.code === 'PGRST202' || error.code === '42883' || /could not find the function|does not exist/i.test(error.message || '');
+      return { count: 0, email: null, error: missing ? 'missing_function' : 'other' };
+    }
+    if (!data) return { count: 0, email: null, error: null };
+    return { count: Number(data.count) || 0, email: data.email || null, error: null };
   } catch {
-    return { count: 0, email: null };
+    return { count: 0, email: null, error: 'other' };
   }
 };
 
