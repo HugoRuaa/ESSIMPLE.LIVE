@@ -10,6 +10,7 @@ import {
   requestHomeLauncher,
   enterKiosk,
   openAppSettings,
+  onAppResume,
   readClipboardText,
   parsePairCode,
   getPairedFamily,
@@ -91,9 +92,9 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   const [allStatus, setAllStatus] = useState<Record<string, 'pending' | 'running' | 'ok' | 'fail'>>({});
   const [allDone, setAllDone] = useState(false);
 
-  // Lee el estado real de Android al abrir el asistente.
-  useEffect(() => {
-    if (!native) return;
+  // Lee el estado real de Android al abrir el asistente y cada vez que se vuelve a él
+  // (por ejemplo, después de activar o quitar un permiso en los ajustes del teléfono).
+  const syncStatus = () =>
     getNativeStatus().then(status => {
       if (!status) return;
       setGrantedPermissions(prev => ({
@@ -110,8 +111,17 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       }));
       if (status.calls) updatePhoneStatus({ missingPermissions: [] });
     });
+
+  useEffect(() => {
+    if (!native) return;
+    void syncStatus();
+    return onAppResume(() => {
+      void syncStatus();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const [permHint, setPermHint] = useState('');
 
   const togglePermission = (key: string) => {
     setGrantedPermissions(prev => {
@@ -147,11 +157,20 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     }
     if (busy) return;
     setBusy(true);
+    setPermHint('');
     try {
+      const started = Date.now();
       const ok = await requestByKey(key);
-      if (!ok && key === 'backgroundLocation') {
-        // Android 11+ exige elegir "Permitir todo el tiempo" en los ajustes de la app.
-        await openAppSettings();
+      if (!ok) {
+        // Si Android respondió al instante, ya no muestra su cuadro (permiso rechazado dos veces): se abren los ajustes.
+        const instant = Date.now() - started < 500;
+        const needsSettings = key === 'backgroundLocation' || instant;
+        if (needsSettings) {
+          setPermHint('Android ya no muestra el cuadro. Activa el permiso en los ajustes que se abrieron y vuelve aquí.');
+          await openAppSettings();
+        } else {
+          setPermHint('No se activó. Toca el botón de nuevo para intentarlo otra vez.');
+        }
       }
       markGranted(key, ok);
     } finally {
@@ -519,6 +538,8 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               {isGranted ? '✓ Permiso de SMS concedido' : 'Dar permiso de SMS'}
             </TactileButton>
 
+            {permHint && <p className="text-lg font-semibold text-[#5c3a00]">{permHint}</p>}
+
             <TactileButton
               variant="card"
               fontSize="normal"
@@ -653,6 +674,15 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
             >
               {isDone ? '✓ Configurado correctamente' : stepData.buttonText}
             </TactileButton>
+            {permHint && <p className="mt-3 text-lg font-semibold text-[#5c3a00]">{permHint}</p>}
+            {native && (
+              <button
+                onClick={() => openAppSettings()}
+                className="mt-4 w-full bg-white text-[#14213d] border-2 border-[#7a7461] rounded-2xl py-3 text-lg font-bold shadow-sm cursor-pointer"
+              >
+                Cambiar en los ajustes de Android
+              </button>
+            )}
           </div>
         </div>
 
