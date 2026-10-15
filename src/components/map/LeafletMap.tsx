@@ -41,6 +41,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const onLocationSelectRef = useRef(onLocationSelect);
   const isDraggingRef = useRef(false);
   const lastInternalPosRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+  // El encuadre con destino se hace una sola vez (y de nuevo solo si el destino cambia); la persona puede mover el mapa sin que se revierta.
+  const fittedKeyRef = useRef<string | null>(null);
+  const userInteractedRef = useRef(false);
 
   useEffect(() => {
     onLocationSelectRef.current = onLocationSelect;
@@ -69,6 +72,13 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }).addTo(map);
 
       mapInstanceRef.current = map;
+
+      const markInteracted = () => {
+        userInteractedRef.current = true;
+      };
+      const el = mapContainerRef.current;
+      el.addEventListener('pointerdown', markInteracted, { passive: true });
+      el.addEventListener('wheel', markInteracted, { passive: true });
 
       if (interactive) {
         map.on('click', (e: L.LeafletMouseEvent) => {
@@ -102,19 +112,18 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       Math.abs(lastInternalPosRef.current.lat - center[0]) < 0.0001 &&
       Math.abs(lastInternalPosRef.current.lng - center[1]) < 0.0001;
 
-    // If change is external (e.g. search bar, GPS button, initial load), smooth pan without violent flyTo bouncing
-    if (!isInternalUserMove) {
-      const curCenter = map.getCenter();
-      const distLat = Math.abs(curCenter.lat - center[0]);
-      const distLng = Math.abs(curCenter.lng - center[1]);
+    // Cambio externo (GPS, buscador): el mapa solo se mueve si hace falta. Con un destino el encuadre lo maneja fitBounds más abajo.
+    if (!isInternalUserMove && !destinationCenter) {
       const curZoom = map.getZoom();
-
-      if (distLat > 0.00005 || distLng > 0.00005 || curZoom !== zoom) {
-        if (curZoom !== zoom || distLat > 1.5 || distLng > 1.5) {
-          map.setView(center, zoom);
-        } else {
-          map.panTo(center, { animate: true, duration: 0.35 });
-        }
+      const curCenter = map.getCenter();
+      const far = Math.abs(curCenter.lat - center[0]) > 1.5 || Math.abs(curCenter.lng - center[1]) > 1.5;
+      if (curZoom !== zoom && !userInteractedRef.current) {
+        map.setView(center, zoom);
+      } else if (far) {
+        map.setView(center, zoom);
+      } else if (!map.getBounds().pad(-0.3).contains(center)) {
+        // Solo se acompaña la posición cuando se acerca al borde de la vista (evita el temblor del GPS).
+        map.panTo(center, { animate: true, duration: 0.5 });
       }
     }
 
@@ -237,14 +246,22 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         destinationMarkerRef.current = L.marker(destinationCenter, { icon: destIcon }).addTo(map);
       }
 
-      try {
-        map.fitBounds([center, destinationCenter], { padding: [45, 45], maxZoom: 16 });
-      } catch {
-        map.setView(center, zoom);
+      const destKey = `${destinationCenter[0].toFixed(5)},${destinationCenter[1].toFixed(5)}`;
+      const needsFit =
+        fittedKeyRef.current !== destKey ||
+        (!userInteractedRef.current && !map.getBounds().pad(-0.1).contains(center));
+      if (needsFit) {
+        fittedKeyRef.current = destKey;
+        try {
+          map.fitBounds([center, destinationCenter], { padding: [45, 45], maxZoom: 16, animate: false });
+        } catch {
+          map.setView(center, zoom);
+        }
       }
     } else if (destinationMarkerRef.current) {
       destinationMarkerRef.current.remove();
       destinationMarkerRef.current = null;
+      fittedKeyRef.current = null;
     }
 
     // Accuracy circle (blue shade)
@@ -296,13 +313,16 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     return () => {
       clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    center,
+    center[0],
+    center[1],
     zoom,
     interactive,
     markerType,
     markerLabel,
-    destinationCenter,
+    destinationCenter?.[0],
+    destinationCenter?.[1],
     destinationMarkerType,
     showAccuracyCircle,
     accuracyRadius,

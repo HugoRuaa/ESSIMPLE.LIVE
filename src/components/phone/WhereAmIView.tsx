@@ -112,6 +112,13 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [mapCenterKey, setMapCenterKey] = useState(0);
   const watchIdRef = useRef<number | null>(null);
+  // La función del contexto cambia en cada render; se guarda en una ref para que la búsqueda de ubicación no se reinicie en bucle.
+  const updateCoordsRef = useRef(updateCurrentCoords);
+  updateCoordsRef.current = updateCurrentCoords;
+  const coordsRef = useRef(coords);
+  coordsRef.current = coords;
+  const lastWatchRef = useRef(0);
+  const lastAddressPosRef = useRef<{ lat: number; lng: number } | null>(null);
 
   // Consulta inversa de dirección (Reverse Geocoding)
   const resolveAddress = async (lat: number, lng: number): Promise<string> => {
@@ -198,6 +205,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
 
       const address = await resolveAddress(lat, lng);
 
+      lastAddressPosRef.current = { lat, lng };
       setCoords({
         lat,
         lng,
@@ -210,7 +218,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
       setLastUpdated(new Date());
 
       // Sincronizar en el contexto y almacenamiento local
-      updateCurrentCoords({ lat, lng, address, accuracy });
+      updateCoordsRef.current({ lat, lng, address, accuracy });
     };
 
     const onPositionError = (err: GeolocationPositionError) => {
@@ -241,7 +249,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
       onPositionError,
       { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 }
     );
-  }, [updateCurrentCoords]);
+  }, []);
 
   // Al abrir la vista, iniciar búsqueda de GPS y seguimiento continuo
   useEffect(() => {
@@ -250,22 +258,34 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
     if (typeof navigator !== 'undefined' && navigator.geolocation) {
       try {
         const id = navigator.geolocation.watchPosition(
-          async pos => {
+          pos => {
+            const now = Date.now();
+            if (now - lastWatchRef.current < 1500) return;
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
             const accuracy = Math.round(pos.coords.accuracy || 15);
-            setCoords(prev => ({
-              ...prev,
-              lat,
-              lng,
-              accuracy,
-              isRealGps: true,
-              isApproximate: false,
-            }));
+            const prev = coordsRef.current;
+
+            if (prev.isRealGps) {
+              // Se descartan lecturas mucho peores que la actual y los micro-movimientos del GPS con el celular quieto.
+              if (accuracy > 50 && accuracy > prev.accuracy * 2) return;
+              const moved = calculateDistanceMeters(prev.lat, prev.lng, lat, lng);
+              if (moved < Math.max(6, Math.min(prev.accuracy, accuracy) * 0.4)) return;
+            }
+
+            lastWatchRef.current = now;
+            setCoords(c => ({ ...c, lat, lng, accuracy, isRealGps: true, isApproximate: false }));
             setLastUpdated(new Date());
+
+            // La dirección en texto se actualiza solo si la persona se movió de verdad.
+            const ref = lastAddressPosRef.current;
+            if (!ref || calculateDistanceMeters(ref.lat, ref.lng, lat, lng) > 60) {
+              lastAddressPosRef.current = { lat, lng };
+              void resolveAddress(lat, lng).then(address => setCoords(c => ({ ...c, address })));
+            }
           },
           () => {},
-          { enableHighAccuracy: true, maximumAge: 15000 }
+          { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
         );
         watchIdRef.current = id;
       } catch {}
