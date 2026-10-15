@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Phone, MessageSquare, Mic, Share2, ChevronDown, Bell, Lock, Maximize2, Minimize2 } from 'lucide-react';
+import { MapPin, Phone, MessageSquare, Mic, Share2, ChevronDown, Bell, Lock } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { TactileButton } from '../common/TactileButton';
 import { SosModal } from './SosModal';
@@ -150,23 +150,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     };
   }, []);
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
-    } else {
-      document.exitFullscreen?.().then(() => setIsFullscreen(false)).catch(() => {});
-    }
-  };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
 
   // APK de Android: modo kiosco (barras ocultas, pantalla encendida),
   // y el botón Atrás nunca cierra la app: solo vuelve al inicio de essimple.
@@ -364,6 +347,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     return (
       <VoiceNoteView
         contactName={selectedContact.name}
+        contactPhone={selectedContact.phone}
         onBack={() => setCurrentScreen('contact_detail')}
       />
     );
@@ -429,18 +413,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
         <div className="flex items-center justify-between gap-2 pt-1">
           <Logo size="sm" compact className="min-w-0" />
           <div className="flex items-center gap-2 shrink-0">
-            {/* Modo Kiosco / Pantalla Completa para que no se cierre ni muestre barras del navegador */}
-            <button
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Salir de pantalla completa' : 'Poner en pantalla completa (Modo Kiosco)'}
-              className="min-w-11 min-h-11 p-2 bg-white border-2 border-[#7a7461] rounded-2xl text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center justify-center"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="w-6 h-6 stroke-[2.5]" />
-              ) : (
-                <Maximize2 className="w-6 h-6 stroke-[2.5]" />
-              )}
-            </button>
 
             {/* Salir protegido por PIN para evitar salidas accidentales */}
             <button

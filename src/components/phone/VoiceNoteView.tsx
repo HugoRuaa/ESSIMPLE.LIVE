@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, Square, Play, Pause, RotateCcw, Send } from 'lucide-react';
+import { Mic, Square, Play, Pause, RotateCcw, MessageCircle } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
 import { useApp } from '../../context/AppContext';
 
 interface VoiceNoteViewProps {
   contactName: string;
+  contactPhone?: string;
   onBack: () => void;
 }
 
-export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, onBack }) => {
-  const { sendVoiceMessage } = useApp();
+export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, contactPhone, onBack }) => {
+  const { sendVoiceMessage, settings } = useApp();
   const [stage, setStage] = useState<'idle' | 'recording' | 'review' | 'sent'>('idle');
   const [seconds, setSeconds] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -117,9 +118,26 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, onBac
     }
   };
 
-  const handleSend = () => {
+  const handleSendWhatsApp = () => {
     sendVoiceMessage(contactName, Math.max(seconds, 1));
     setStage('sent');
+
+    const cleanCountryCode = (settings?.countryCode || '+57').replace(/\D/g, '') || '57';
+    const digitsOnly = (contactPhone || '').replace(/\D/g, '');
+    const fullWhatsAppPhone = (digitsOnly.length === 10 && !digitsOnly.startsWith(cleanCountryCode))
+      ? `${cleanCountryCode}${digitsOnly}`
+      : digitsOnly;
+
+    const messageText = `Hola ${contactName}, te envío un mensaje de voz (${seconds} segundos).`;
+    const waUrl = fullWhatsAppPhone
+      ? `https://api.whatsapp.com/send?phone=${fullWhatsAppPhone}&text=${encodeURIComponent(messageText)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
+
+    try {
+      window.location.href = waUrl;
+    } catch {
+      window.open(waUrl, '_blank');
+    }
   };
 
   const handleReset = () => {
@@ -213,10 +231,10 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, onBac
             <TactileButton
               variant="green"
               fontSize="grande"
-              icon={<Send className="w-8 h-8" />}
-              onClick={handleSend}
+              icon={<MessageCircle className="w-8 h-8 text-white" />}
+              onClick={handleSendWhatsApp}
             >
-              Enviar
+              Enviar por WhatsApp
             </TactileButton>
 
             <TactileButton
@@ -226,14 +244,6 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, onBac
               onClick={handleReset}
             >
               Grabar de nuevo
-            </TactileButton>
-
-            <TactileButton
-              variant="card"
-              fontSize="grande"
-              onClick={handleSend}
-            >
-              Enviar por WhatsApp
             </TactileButton>
           </div>
         </div>
