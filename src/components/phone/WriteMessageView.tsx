@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, Check, Phone } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
-import { callNumber } from '../../lib/native';
+import { callNumber, shareTextWhatsApp } from '../../lib/native';
 import { useApp } from '../../context/AppContext';
 
 interface WriteMessageViewProps {
@@ -54,13 +54,15 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
     }
   };
 
-  const handleSendWhatsApp = () => {
+  const handleSendWhatsApp = async () => {
     if (!message.trim()) return;
     setSentMethod('whatsapp');
     setIsSent(true);
     void testSendSms(contactName, `[WhatsApp] ${message}`, false);
 
-    // Disparar inmediatamente WhatsApp
+    // APK: abre el chat del contacto por el mismo camino que el audio. Si no se puede, cae al enlace de WhatsApp.
+    if (await shareTextWhatsApp(fullWhatsAppPhone, message)) return;
+
     try {
       window.location.href = waUrl;
     } catch {

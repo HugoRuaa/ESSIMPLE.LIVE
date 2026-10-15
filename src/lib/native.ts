@@ -44,6 +44,7 @@ interface SimplePlugin {
   stopRecording(): Promise<{ base64: string; mime: string; seconds: number }>;
   cancelRecording(): Promise<void>;
   shareVoiceWhatsApp(opts: { phone: string }): Promise<{ granted: boolean; whatsapp: boolean }>;
+  shareTextWhatsApp(opts: { phone: string; text: string }): Promise<{ granted: boolean }>;
 }
 
 const Simple = registerPlugin<SimplePlugin>('Simple');
@@ -280,6 +281,16 @@ export const cancelNativeRecording = async (): Promise<void> => {
 export const shareVoiceWhatsApp = async (phone: string): Promise<boolean> => {
   try {
     return (await Simple.shareVoiceWhatsApp({ phone })).granted;
+  } catch {
+    return false;
+  }
+};
+
+/** Abre el chat de WhatsApp del contacto con el texto escrito. Devuelve false si no se pudo (usar el enlace como respaldo). */
+export const shareTextWhatsApp = async (phone: string, text: string): Promise<boolean> => {
+  if (!isNative()) return false;
+  try {
+    return (await Simple.shareTextWhatsApp({ phone, text })).granted;
   } catch {
     return false;
   }

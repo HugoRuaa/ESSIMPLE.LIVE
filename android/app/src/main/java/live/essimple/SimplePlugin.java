@@ -658,6 +658,31 @@ public class SimplePlugin extends Plugin {
         }
     }
 
+    /** Abre el chat de WhatsApp del contacto con el texto ya escrito (mismo camino que el audio). */
+    @PluginMethod
+    public void shareTextWhatsApp(PluginCall call) {
+        String text = call.getString("text", "");
+        String phone = call.getString("phone", "");
+        String digits = phone == null ? "" : phone.replaceAll("\\D", "");
+        String[] packages = new String[] { "com.whatsapp", "com.whatsapp.w4b" };
+        for (String pkg : packages) {
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.putExtra(Intent.EXTRA_TEXT, text);
+            intent.setPackage(pkg);
+            if (!digits.isEmpty()) intent.putExtra("jid", digits + "@s.whatsapp.net");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                getActivity().startActivity(intent);
+                call.resolve(granted(true));
+                return;
+            } catch (Exception notInstalled) {
+                // Probar con WhatsApp Business.
+            }
+        }
+        call.resolve(granted(false));
+    }
+
     private static JSObject granted(boolean value) {
         JSObject out = new JSObject();
         out.put("granted", value);
