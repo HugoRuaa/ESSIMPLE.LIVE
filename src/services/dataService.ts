@@ -847,3 +847,34 @@ export const fetchLiveLocation = async (familiaId: string) => {
   }
   return null;
 };
+
+// 11. Sincronizar Estado del Teléfono
+export const syncPhoneStatus = async (familiaId: string, status: PhoneStatus) => {
+  if (!familiaId || familiaId === 'local-family-id') return;
+  try {
+    await fetch(`/api/familias/${encodeURIComponent(familiaId)}/phone-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(status),
+    });
+  } catch {
+    // ignore
+  }
+  void reportPhoneStatusToSupabase(familiaId, status);
+};
+
+export const fetchPhoneStatus = async (familiaId: string): Promise<PhoneStatus | null> => {
+  if (!familiaId || familiaId === 'local-family-id') return null;
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/phone-status`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        return json.data;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+};

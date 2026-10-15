@@ -45,6 +45,7 @@ interface SimplePlugin {
   cancelRecording(): Promise<void>;
   shareVoiceWhatsApp(opts: { phone: string }): Promise<{ granted: boolean; whatsapp: boolean }>;
   shareTextWhatsApp(opts: { phone: string; text: string }): Promise<{ granted: boolean }>;
+  getBatteryStatus(): Promise<{ batteryLevel: number; isCharging: boolean }>;
 }
 
 const Simple = registerPlugin<SimplePlugin>('Simple');
@@ -294,4 +295,28 @@ export const shareTextWhatsApp = async (phone: string, text: string): Promise<bo
   } catch {
     return false;
   }
+};
+
+/** Consulta la batería real (%) y si se está cargando (tanto en Android nativo como en navegador). */
+export const getBatteryStatus = async (): Promise<{ batteryLevel: number; isCharging: boolean }> => {
+  if (isNative()) {
+    try {
+      const res = await Simple.getBatteryStatus();
+      if (typeof res?.batteryLevel === 'number') {
+        return { batteryLevel: res.batteryLevel, isCharging: Boolean(res.isCharging) };
+      }
+    } catch {}
+  }
+
+  if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
+    try {
+      const battery: any = await (navigator as any).getBattery();
+      return {
+        batteryLevel: Math.round((battery.level || 0.8) * 100),
+        isCharging: Boolean(battery.charging),
+      };
+    } catch {}
+  }
+
+  return { batteryLevel: 80, isCharging: false };
 };

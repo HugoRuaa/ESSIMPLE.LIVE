@@ -108,6 +108,7 @@ quickMessagesStore.set(DEFAULT_FAMILIA_ID, ['Ya llegué', 'Llámame por favor', 
 quickMessagesStore.set('hugofrua@gmail.com', ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
 
 const liveLocationStore = new Map<string, any>();
+const phoneStatusStore = new Map<string, any>();
 
 // Supabase API endpoints
 app.get('/api/supabase/config', (req, res) => {
@@ -890,6 +891,48 @@ app.post('/api/familias/:familiaId/live-location', async (req, res) => {
   if (rawId && rawId !== familiaId) liveLocationStore.set(rawId.toLowerCase(), locationData);
 
   return res.json({ success: true, familiaId, data: locationData });
+});
+
+// Endpoints para Estado del Teléfono
+app.get('/api/familias/:familiaId/phone-status', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const familiaId = await resolveFamiliaId(rawId);
+
+  const defaultStatus = {
+    isOnline: true,
+    batteryLevel: 80,
+    isCharging: false,
+    appVersion: '0.1.0-alpha',
+    missingPermissions: [],
+    isHomeScreen: true,
+    isSynced: true,
+    lastReportTime: Date.now(),
+  };
+
+  const data = phoneStatusStore.get(familiaId) || phoneStatusStore.get(rawId?.toLowerCase()) || defaultStatus;
+  return res.json({ success: true, familiaId, data });
+});
+
+app.post('/api/familias/:familiaId/phone-status', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const body = req.body || {};
+  const familiaId = await resolveFamiliaId(rawId);
+
+  const statusData = {
+    isOnline: body.isOnline !== undefined ? Boolean(body.isOnline) : true,
+    batteryLevel: typeof body.batteryLevel === 'number' ? body.batteryLevel : 80,
+    isCharging: Boolean(body.isCharging),
+    appVersion: body.appVersion || '0.1.0-alpha',
+    missingPermissions: Array.isArray(body.missingPermissions) ? body.missingPermissions : [],
+    isHomeScreen: body.isHomeScreen !== undefined ? Boolean(body.isHomeScreen) : true,
+    isSynced: true,
+    lastReportTime: Date.now(),
+  };
+
+  phoneStatusStore.set(familiaId, statusData);
+  if (rawId && rawId !== familiaId) phoneStatusStore.set(rawId.toLowerCase(), statusData);
+
+  return res.json({ success: true, familiaId, data: statusData });
 });
 
 // In-memory data store for live link sharing between screens

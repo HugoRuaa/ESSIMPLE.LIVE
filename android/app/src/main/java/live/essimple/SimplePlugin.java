@@ -13,6 +13,8 @@ import android.content.pm.ResolveInfo;
 import android.content.SharedPreferences;
 import android.media.MediaRecorder;
 import android.net.Uri;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -681,6 +683,35 @@ public class SimplePlugin extends Plugin {
             }
         }
         call.resolve(granted(false));
+    }
+
+    /** Consulta el nivel real de batería (%) y si el teléfono se está cargando. */
+    @PluginMethod
+    public void getBatteryStatus(PluginCall call) {
+        try {
+            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            Intent batteryStatus = getContext().registerReceiver(null, ifilter);
+            if (batteryStatus != null) {
+                int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                                     status == BatteryManager.BATTERY_STATUS_FULL;
+                int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                int batteryPct = scale > 0 ? (int) ((level / (float) scale) * 100) : 80;
+
+                JSObject ret = new JSObject();
+                ret.put("batteryLevel", batteryPct);
+                ret.put("isCharging", isCharging);
+                call.resolve(ret);
+                return;
+            }
+        } catch (Exception e) {
+            // fallback
+        }
+        JSObject ret = new JSObject();
+        ret.put("batteryLevel", 80);
+        ret.put("isCharging", false);
+        call.resolve(ret);
     }
 
     private static JSObject granted(boolean value) {

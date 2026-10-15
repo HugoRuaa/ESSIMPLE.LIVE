@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { sendSmsNative, getPairedFamily } from '../lib/native';
+import { sendSmsNative, getPairedFamily, getBatteryStatus } from '../lib/native';
 import {
   Contact,
   EventItem,
@@ -25,6 +25,8 @@ import {
   fetchFamilyQuickMessages,
   syncLiveLocation,
   fetchLiveLocation,
+  syncPhoneStatus,
+  fetchPhoneStatus,
 } from '../services/dataService';
 
 interface AppContextType {
@@ -351,8 +353,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Phone status state
   const [phoneStatus, setPhoneStatus] = useState<PhoneStatus>({
     isOnline: true,
-    batteryLevel: 78,
-    isCharging: true,
+    batteryLevel: 80,
+    isCharging: false,
     appVersion: '0.1.0-alpha',
     missingPermissions: ['Falta permiso para realizar llamadas.'],
     isHomeScreen: true,
@@ -876,6 +878,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     void pollLiveLocation();
     timer = setInterval(pollLiveLocation, 5000);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
+  // Medición real de la batería del dispositivo (Android y Navegador) y reporte al servidor
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    const updateRealBattery = async () => {
+      const bat = await getBatteryStatus();
+      setPhoneStatus(prev => {
+        const next = {
+          ...prev,
+          batteryLevel: bat.batteryLevel,
+          isCharging: bat.isCharging,
+          lastReportTime: Date.now(),
+        };
+
+        const fid = resolveCurrentFamilyId();
+        if (fid && fid !== 'local-family-id') {
+          void syncPhoneStatus(fid, next);
+        }
+        return next;
+      });
+    };
+
+    void updateRealBattery();
+    timer = setInterval(updateRealBattery, 10000);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
+  // Polling del estado del teléfono (batería, conexión, etc.) para el panel familiar
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+
+    const pollPhoneStatus = async () => {
+      const fid = resolveCurrentFamilyId();
+      if (fid && fid !== 'local-family-id') {
+        const cloudStatus = await fetchPhoneStatus(fid);
+        if (cloudStatus && typeof cloudStatus.batteryLevel === 'number') {
+          setPhoneStatus(prev => ({
+            ...prev,
+            ...cloudStatus,
+            isOnline: true,
+            isSynced: true,
+          }));
+        }
+      }
+    };
+
+    void pollPhoneStatus();
+    timer = setInterval(pollPhoneStatus, 6000);
     return () => {
       if (timer) clearInterval(timer);
     };
