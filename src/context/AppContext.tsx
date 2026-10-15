@@ -706,7 +706,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (newSettings.quickMessages) {
       addChange('Actualizó los mensajes rápidos predeterminados');
     } else if (newSettings.homeAddress || newSettings.safeZoneRadius || newSettings.safeZoneCenter) {
-      addChange('Actualizó la dirección de casa y zona segura');
+      addChange('Actualizó la dirección de casa y el área en el mapa');
     } else if (newSettings.exitPin) {
       addChange('Actualizó el PIN de salida de la aplicación');
     } else {
@@ -897,7 +897,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       calls: 'Falta permiso para realizar llamadas.',
       location: 'Falta permiso de ubicación.',
       microphone: 'Falta permiso del micrófono.',
-      notifications: 'Las notificaciones están desactivadas.',
       batteryUnrestricted: 'El ahorro de batería puede apagar la app.',
     };
 

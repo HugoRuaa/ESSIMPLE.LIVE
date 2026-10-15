@@ -37,7 +37,7 @@ export const ContactAlertsView: React.FC<ContactAlertsViewProps> = ({
         </h1>
 
         <div className="space-y-4 pt-2">
-          {/* Item 1: Emergencia / Caídas */}
+          {/* Emergencia (SOS) */}
           <div
             onClick={() => handleToggle('isEmergency')}
             className={`border-2 rounded-3xl p-5 flex items-center justify-between cursor-pointer transition select-none ${
@@ -47,7 +47,7 @@ export const ContactAlertsView: React.FC<ContactAlertsViewProps> = ({
             }`}
           >
             <span className="text-2xl font-extrabold text-[#14213d] leading-snug pr-4">
-              Avisar si me caigo o pido ayuda
+              Avisar cuando pido ayuda (SOS)
             </span>
             <div className="flex flex-col items-center shrink-0">
               <div
@@ -63,66 +63,6 @@ export const ContactAlertsView: React.FC<ContactAlertsViewProps> = ({
               </div>
               <span className="text-lg font-extrabold mt-1 text-[#14213d]">
                 {contact.isEmergency ? 'Sí' : 'No'}
-              </span>
-            </div>
-          </div>
-
-          {/* Item 2: Salir de la zona */}
-          <div
-            onClick={() => handleToggle('isSafeZone')}
-            className={`border-2 rounded-3xl p-5 flex items-center justify-between cursor-pointer transition select-none ${
-              contact.isSafeZone
-                ? 'bg-[#eef7f0] border-[#0b6b3a]'
-                : 'bg-white border-[#7a7461]'
-            }`}
-          >
-            <span className="text-2xl font-extrabold text-[#14213d] leading-snug pr-4">
-              Avisar si salgo de mi zona
-            </span>
-            <div className="flex flex-col items-center shrink-0">
-              <div
-                className={`w-20 h-11 rounded-full p-1 transition-colors ${
-                  contact.isSafeZone ? 'bg-[#0b6b3a]' : 'bg-[#ddd5c3]'
-                }`}
-              >
-                <div
-                  className={`w-9 h-9 rounded-full bg-white shadow-md transition-transform ${
-                    contact.isSafeZone ? 'translate-x-9' : 'translate-x-0'
-                  }`}
-                />
-              </div>
-              <span className="text-lg font-extrabold mt-1 text-[#14213d]">
-                {contact.isSafeZone ? 'Sí' : 'No'}
-              </span>
-            </div>
-          </div>
-
-          {/* Item 3: Batería baja */}
-          <div
-            onClick={() => handleToggle('isLowBattery')}
-            className={`border-2 rounded-3xl p-5 flex items-center justify-between cursor-pointer transition select-none ${
-              contact.isLowBattery
-                ? 'bg-[#eef7f0] border-[#0b6b3a]'
-                : 'bg-white border-[#7a7461]'
-            }`}
-          >
-            <span className="text-2xl font-extrabold text-[#14213d] leading-snug pr-4">
-              Avisar si mi batería está baja
-            </span>
-            <div className="flex flex-col items-center shrink-0">
-              <div
-                className={`w-20 h-11 rounded-full p-1 transition-colors ${
-                  contact.isLowBattery ? 'bg-[#0b6b3a]' : 'bg-[#ddd5c3]'
-                }`}
-              >
-                <div
-                  className={`w-9 h-9 rounded-full bg-white shadow-md transition-transform ${
-                    contact.isLowBattery ? 'translate-x-9' : 'translate-x-0'
-                  }`}
-                />
-              </div>
-              <span className="text-lg font-extrabold mt-1 text-[#14213d]">
-                {contact.isLowBattery ? 'Sí' : 'No'}
               </span>
             </div>
           </div>

@@ -487,7 +487,7 @@ export const PanelSettings: React.FC = () => {
           <li>Guardamos el nivel de batería del teléfono y si está conectado.</li>
           <li>Guardamos el estado del teléfono y su versión.</li>
           <li>
-            Guardamos un historial de eventos (por ejemplo SOS, caídas, salidas de la zona segura y mensajes enviados) y de los cambios de configuración.
+            Guardamos un historial de eventos (por ejemplo llamadas de SOS y mensajes enviados) y de los cambios de configuración.
           </li>
           <li>
             La ubicación de la persona solo se usa mientras ella la comparte con alguien. No se guarda en este panel.

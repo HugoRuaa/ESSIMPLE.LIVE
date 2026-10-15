@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-  Download, HeartHandshake, MapPin, BatteryLow, Mic, Lock, Siren, ShieldCheck, BellRing,
-  Smartphone, MessageSquareText, Footprints, ChevronDown, Users, Eye,
+  Download, HeartHandshake, MapPin, BatteryLow, Mic, Lock, Siren, ShieldCheck,
+  Smartphone, MessageSquareText, ChevronDown, Users, Eye,
 } from 'lucide-react';
 import { PhoneMockup } from './PhoneMockup';
 import { ApoyoNosUnimos, APOYO_URL } from './ApoyoNosUnimos';
@@ -21,7 +21,7 @@ const FAQ = [
   ['¿Ella tiene que aprender algo?', 'No. Ve sus contactos con fotos grandes y un botón verde para llamar. Todo lo demás, como llamadas, mensajes y ubicación, se hace con un toque.'],
   ['¿Puede salir de la app por error?', 'Es difícil a propósito. Atrás no la cierra y el botón de inicio vuelve a essimple.live. Para salir hace falta un PIN de 4 números que tú eliges.'],
   ['¿Qué pasa si quiero usar el celular normal?', 'Con el PIN aparecen dos botones: volver a la app o volver al estado normal del celular. Los permisos se conservan, y al abrir la app de nuevo todo vuelve como estaba.'],
-  ['¿Ven mi ubicación todo el tiempo?', 'No. La ubicación solo se comparte cuando ella toca "Dónde estoy", cuando pide ayuda o cuando sale de la zona segura que configuraste. No se guarda un historial de recorridos.'],
+  ['¿Ven mi ubicación todo el tiempo?', 'No. La ubicación solo se comparte cuando ella toca "Dónde estoy", cuando pide ayuda con el botón SOS o cuando decide compartirla con su familia. No se guarda un historial de recorridos.'],
   ['¿Cuánto cuesta?', 'Es gratis. Se sostiene con aportes voluntarios de quien quiera apoyar el proyecto.'],
 ];
 
@@ -87,11 +87,11 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             <Eye className="w-9 h-9 text-[#0b6b3a]" aria-hidden />
             <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>En tu panel: lo que te importa saber</h2>
             <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-              Abres el panel desde cualquier navegador y ves si el celular está encendido, cuánta batería tiene y qué pasó en las últimas horas. Tú decides los contactos, la zona segura y el PIN.
+              Abres el panel desde cualquier navegador y ves si el celular está encendido, cuánta batería tiene y qué pasó en las últimas horas. Tú decides los contactos, la dirección de casa y el PIN.
             </p>
             <ul className="mt-5 space-y-2 pl-5 list-disc text-[#3b4a68]">
               <li>Estado en vivo: en línea y nivel de batería.</li>
-              <li>Últimos eventos: llamadas de ayuda, caídas, salidas de la zona segura.</li>
+              <li>Últimos eventos: llamadas de ayuda (SOS) y mensajes enviados.</li>
               <li>Un cambio en el panel aparece en su celular sin que ella haga nada.</li>
             </ul>
           </div>
@@ -102,7 +102,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
       <section id="seguridad" className="bg-[#14213d] text-white">
         <div className="max-w-6xl mx-auto px-5 py-16 md:py-24">
           <h2 className="text-3xl sm:text-5xl font-semibold tracking-tight max-w-3xl" style={display}>
-            Si algo pasa, tú te enteras en segundos
+            Si ella pide ayuda, tú te enteras en segundos
           </h2>
           <div className="mt-12 grid md:grid-cols-12 gap-x-10 gap-y-10">
             <div className="md:col-span-7">
@@ -113,26 +113,19 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
               </p>
             </div>
             <div className="md:col-span-5 md:pt-8">
-              <Footprints className="w-8 h-8 text-[#7dd3fc]" aria-hidden />
-              <h3 className="mt-3 text-xl font-bold">Detección de caídas</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">
-                Pregunta "¿Está bien?" y cuenta 30 segundos. Si ella toca "Estoy bien", todo sigue. Si no responde, avisa a tus contactos.
-              </p>
+              <BatteryLow className="w-8 h-8 text-[#fcd34d]" aria-hidden />
+              <h3 className="mt-3 text-xl font-bold">Estado del celular</h3>
+              <p className="mt-2 text-white/80 leading-relaxed">En tu panel ves si el celular está conectado y cuánta batería tiene, para saber si hay que ayudarla a cargarlo.</p>
+            </div>
+            <div className="md:col-span-7">
+              <MapPin className="w-8 h-8 text-[#86efac]" aria-hidden />
+              <h3 className="mt-3 text-xl font-bold">Llévame a casa</h3>
+              <p className="mt-2 text-white/80 leading-relaxed max-w-xl">Marcas su casa en el mapa y ella toca un botón para ver el camino de regreso y cuánto falta.</p>
             </div>
             <div className="md:col-span-5">
-              <MapPin className="w-8 h-8 text-[#86efac]" aria-hidden />
-              <h3 className="mt-3 text-xl font-bold">Zona segura</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Marcas su casa en el mapa y recibes un aviso si sale del área que definiste.</p>
-            </div>
-            <div className="md:col-span-4">
-              <BatteryLow className="w-8 h-8 text-[#fcd34d]" aria-hidden />
-              <h3 className="mt-3 text-xl font-bold">Batería baja</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Te avisamos antes de que el celular se apague, para que alguien la ayude a cargarlo.</p>
-            </div>
-            <div className="md:col-span-3">
-              <BellRing className="w-8 h-8 text-[#7dd3fc]" aria-hidden />
-              <h3 className="mt-3 text-xl font-bold">Alertas a pantalla completa</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Los avisos importantes se ven aunque el celular esté bloqueado.</p>
+              <ShieldCheck className="w-8 h-8 text-[#7dd3fc]" aria-hidden />
+              <h3 className="mt-3 text-xl font-bold">Lo que no hace</h3>
+              <p className="mt-2 text-white/80 leading-relaxed">No detecta caídas ni avisa sola si ella sale de casa o si el celular se queda sin batería. Funciona cuando ella toca un botón, con la app abierta.</p>
             </div>
           </div>
         </div>
@@ -149,7 +142,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
         <div>
           <MapPin className="w-7 h-7 text-[#0b4f9e]" aria-hidden />
           <h3 className="mt-3 text-xl font-bold">Ubicación solo cuando se comparte</h3>
-          <p className="mt-2 text-[#3b4a68] leading-relaxed">Mientras alguien la ve, aparece un aviso en su pantalla: "Marta te está viendo". No se guarda el historial de recorridos.</p>
+          <p className="mt-2 text-[#3b4a68] leading-relaxed">Mientras alguien la ve, aparece un aviso en su pantalla: "Tu familia está viendo tu ubicación". No se guarda el historial de recorridos.</p>
         </div>
         <div>
           <Mic className="w-7 h-7 text-[#0b4f9e]" aria-hidden />
@@ -207,7 +200,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
           <h3 className="mt-3 text-xl font-bold">Qué guardamos y qué no</h3>
           <ul className="mt-3 space-y-2 pl-5 list-disc text-[#3b4a68] leading-relaxed">
             <li>Guardamos: contactos, estado de batería y conexión, versión de la app e historial de eventos y cambios.</li>
-            <li>No guardamos: recorridos ni historial de ubicación. Solo se comparte en el momento en que ella lo pide o hay una alerta.</li>
+            <li>No guardamos: recorridos ni historial de ubicación. Solo se comparte en el momento en que ella lo pide.</li>
             <li>Sin anuncios y sin venta de datos.</li>
           </ul>
         </div>

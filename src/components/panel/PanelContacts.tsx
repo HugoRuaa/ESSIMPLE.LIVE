@@ -259,27 +259,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={() => handleToggleEmergency(contact.id, contact.isEmergency)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span>Emergencia (SOS y caídas)</span>
-              </label>
-
-              <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={contact.isSafeZone}
-                  onChange={() => handleToggleCheckbox(contact.id, 'isSafeZone', contact.isSafeZone)}
-                  className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
-                />
-                <span>Zona segura</span>
-              </label>
-
-              <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={contact.isLowBattery}
-                  onChange={() => handleToggleCheckbox(contact.id, 'isLowBattery', contact.isLowBattery)}
-                  className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
-                />
-                <span>Batería baja</span>
+                <span>Emergencia (SOS)</span>
               </label>
             </div>
 
@@ -391,7 +371,7 @@ export const PanelContacts: React.FC = () => {
 
             {/* Checkboxes "A quién se le avisa" [28] */}
             <div className="space-y-3 pt-2">
-              <p className="text-lg font-extrabold text-[#14213d]">A quién se le avisa</p>
+              <p className="text-lg font-extrabold text-[#14213d]">A quién se le avisa cuando pide ayuda</p>
 
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -400,27 +380,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={e => setFormEmergency(e.target.checked)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span className="text-lg font-bold text-[#14213d]">Emergencia (SOS y caídas)</span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formSafeZone}
-                  onChange={e => setFormSafeZone(e.target.checked)}
-                  className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
-                />
-                <span className="text-lg font-bold text-[#14213d]">Zona segura</span>
-              </label>
-
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formLowBattery}
-                  onChange={e => setFormLowBattery(e.target.checked)}
-                  className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
-                />
-                <span className="text-lg font-bold text-[#14213d]">Batería baja</span>
+                <span className="text-lg font-bold text-[#14213d]">Emergencia (SOS)</span>
               </label>
             </div>
 

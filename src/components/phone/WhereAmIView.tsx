@@ -431,7 +431,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack, onShareLocat
                 Tu familia aún no la ha guardado en el Panel Familiar.
               </p>
               <p className="text-base font-medium text-[#7a7461]">
-                Pídeles que entren a Ajustes → Casa y zona segura para registrarla y poder guiarte.
+                Pídeles que entren a Ajustes → Casa para registrarla y poder guiarte.
               </p>
             </div>
             <TactileButton variant="card" fontSize="grande" onClick={() => setSubView('menu')}>

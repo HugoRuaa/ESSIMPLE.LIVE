@@ -45,7 +45,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
               </li>
               <li>Guardamos el estado del teléfono y su versión.</li>
               <li>
-                Guardamos un historial de eventos (SOS, caídas, zona segura y mensajes) y cambios de configuración.
+                Guardamos un historial de eventos (SOS y mensajes) y cambios de configuración.
               </li>
               <li>
                 La ubicación de la persona solo se usa mientras ella la comparte con alguien. No se guarda en este panel.
@@ -324,7 +324,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                   className="w-5 h-5 rounded text-[#0b4f9e] accent-[#0b4f9e] mt-1 shrink-0"
                 />
                 <span className="text-sm font-bold text-[#14213d] leading-snug">
-                  Acepto los términos de essimple.live: se guardan los contactos, nivel de batería e historial de alertas familiares para la protección de tu ser querido.
+                  Acepto los términos de essimple.live: se guardan los contactos, nivel de batería e historial de eventos para acompañar a tu ser querido.
                 </span>
               </label>
 
@@ -339,8 +339,8 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
               {showPrivacyDetails && (
                 <div className="ml-8 p-3 bg-[#f6f3ec] rounded-xl text-sm font-medium text-[#374151] space-y-1">
                   <p>• Contactos familiares autorizados (nombre, teléfono y color).</p>
-                  <p>• Nivel de batería para avisar si el teléfono se apaga.</p>
-                  <p>• Alertas de SOS y caídas.</p>
+                  <p>• Nivel de batería y conexión, para que la familia vea el estado del teléfono en el panel.</p>
+                  <p>• Avisos de SOS.</p>
                   <p>• La ubicación solo se usa cuando la persona la comparte, no se almacena permanentemente.</p>
                 </div>
               )}

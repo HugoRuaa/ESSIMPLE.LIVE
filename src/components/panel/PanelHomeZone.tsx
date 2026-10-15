@@ -233,7 +233,7 @@ export const PanelHomeZone: React.FC = () => {
               </span>
             </p>
             <p className="text-xs font-semibold text-[#3b4863]">
-              Los cambios en la dirección de la casa y el perímetro de la zona segura se guardan y sincronizan automáticamente.
+              Los cambios en la dirección de la casa y el área en el mapa se guardan y sincronizan automáticamente.
             </p>
           </div>
         </div>
@@ -410,32 +410,10 @@ export const PanelHomeZone: React.FC = () => {
 
       {/* 2. Zona segura [29] */}
       <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-[#14213d]">Zona segura</h2>
-          {/* Toggle */}
-          <div
-            onClick={() => setSafeZoneActive(!safeZoneActive)}
-            className="flex items-center gap-2 cursor-pointer select-none"
-          >
-            <div
-              className={`w-14 h-8 rounded-full p-1 transition-colors ${
-                safeZoneActive ? 'bg-[#0b4f9e]' : 'bg-[#ddd5c3]'
-              }`}
-            >
-              <div
-                className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
-                  safeZoneActive ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </div>
-            <span className="text-lg font-bold text-[#14213d]">
-              {safeZoneActive ? 'Activa' : 'Inactiva'}
-            </span>
-          </div>
-        </div>
+        <h2 className="text-2xl font-extrabold text-[#14213d]">Área de la casa en el mapa</h2>
 
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
-          Se avisa por SMS solo a los contactos con Zona segura marcada, cuando sale y cuando regresa.
+          Dibuja un círculo alrededor de la casa en el mapa del panel. Es solo una referencia visual: essimple.live no avisa por sí sola cuando ella sale de esta área.
         </p>
 
         {/* Center of the zone */}
@@ -534,7 +512,7 @@ export const PanelHomeZone: React.FC = () => {
           <div className="bg-[#f0f6ff] border border-[#0b4f9e]/30 rounded-2xl p-3.5 text-base font-semibold text-[#14213d] flex items-start gap-2.5">
             <span>⏱️</span>
             <span>
-              Al guardar, el teléfono reiniciará la vigilancia de la zona segura con el nuevo centro o radio.
+              Al guardar, el mapa se actualiza con el nuevo centro o radio.
             </span>
           </div>
 

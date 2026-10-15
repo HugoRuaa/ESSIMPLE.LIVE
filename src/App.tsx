@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Smartphone,
   LayoutDashboard,
-  AlertOctagon,
-  BatteryMedium,
   Maximize2,
   Minimize2,
   LogOut,
@@ -23,9 +21,6 @@ type AppMode = 'phone' | 'panel';
 const MainAppContent: React.FC = () => {
   const {
     settings,
-    phoneStatus,
-    updatePhoneStatus,
-    addEvent,
     account,
     loginDemo,
     logout,
@@ -67,7 +62,6 @@ const MainAppContent: React.FC = () => {
   }, []);
   const [mode, setMode] = useState<AppMode>(isDirectPhoneView ? 'phone' : 'panel');
   const [usePhoneFrame, setUsePhoneFrame] = useState(!isDirectPhoneView);
-  const [isSimulatingFall, setIsSimulatingFall] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -77,63 +71,12 @@ const MainAppContent: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [menuOpen]);
 
-  const handleSimulateFall = () => {
-    setMode('phone');
-    setIsSimulatingFall(true);
-  };
-
-  const handleToggleLowBattery = () => {
-    const newLevel = phoneStatus.batteryLevel > 20 ? 15 : 78;
-    updatePhoneStatus({ batteryLevel: newLevel, isCharging: newLevel > 20 });
-    if (newLevel <= 20) {
-      addEvent({
-        type: 'bateria_baja',
-        title: 'Batería baja',
-        detail: `Batería al ${newLevel} %`,
-        timestamp: 'Ahora mismo',
-        relativeTime: 'Hace 0 min',
-        level: 'warning',
-      });
-    }
-  };
-
   // 1. PANTALLA EXCLUSIVA PARA EL CELULAR DEL ACOMPAÑADO
   // Si entra desde el enlace de instalación o modo teléfono, abre DIRECTA Y ÚNICAMENTE la pantalla del acompañado.
   // Sin barras superiores de administración, sin botones del panel, sin opciones de salir sin PIN.
   if (isDirectPhoneView && mode === 'phone') {
     return (
       <div className="w-full h-dvh bg-[#f6f3ec] text-[#14213d] flex flex-col font-sans select-none overscroll-contain">
-        {isSimulatingFall ? (
-          <div className="fixed inset-0 z-50 bg-[#0b6b3a] text-white flex flex-col justify-between p-6 pt-[calc(1.5rem+var(--safe-top))] pb-[calc(1.5rem+var(--safe-bottom))] select-none animate-in fade-in overflow-y-auto">
-            <div className="pt-8">
-              <h1 className="text-4xl font-extrabold tracking-tight">¿Está bien?</h1>
-            </div>
-            <div className="flex flex-col items-center justify-center my-auto">
-              <span className="text-[140px] font-extrabold leading-none tracking-tight">30</span>
-            </div>
-            <div className="space-y-6 pb-6">
-              <button
-                onClick={() => {
-                  setIsSimulatingFall(false);
-                  addEvent({
-                    type: 'caida_ok',
-                    title: 'Posible caída: respondió que está bien',
-                    detail: 'Canceló la alarma de caída a tiempo',
-                    timestamp: 'Ahora mismo',
-                    relativeTime: 'Hace 0 min',
-                    level: 'normal',
-                  });
-                }}
-                className="w-full bg-white text-[#0b6b3a] text-4xl font-extrabold py-8 rounded-3xl shadow-xl hover:bg-neutral-100 active:scale-95 transition cursor-pointer"
-              >
-                Estoy bien
-              </button>
-              <p className="text-xl font-bold text-center text-white/90 leading-snug">
-                Si no respondes, avisaremos a tus contactos de emergencia.
-              </p>
-            </div>
-          </div>
-        ) : (
           <main className="w-full max-w-md mx-auto min-h-0 flex-1 flex flex-col bg-[#f6f3ec] relative pt-[var(--safe-top)] pb-[var(--safe-bottom)]">
             <PhoneView
               isDedicatedView={true}
@@ -149,7 +92,7 @@ const MainAppContent: React.FC = () => {
               }}
             />
           </main>
-        )}
+
       </div>
     );
   }
@@ -236,24 +179,6 @@ const MainAppContent: React.FC = () => {
 
           {/* Escritorio: simulación y sesión siempre visibles */}
           <div className="hidden sm:flex items-center gap-2">
-            <button
-              onClick={handleSimulateFall}
-              title="Simular sensor de caída en el teléfono"
-              className="bg-[#a61b1b] hover:bg-[#8a1616] text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition active:scale-95"
-            >
-              <AlertOctagon className="w-3.5 h-3.5" />
-              <span>Simular caída</span>
-            </button>
-
-            <button
-              onClick={handleToggleLowBattery}
-              title="Alternar nivel de batería del teléfono"
-              className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition active:scale-95"
-            >
-              <BatteryMedium className="w-3.5 h-3.5" />
-              <span>{phoneStatus.batteryLevel}%</span>
-            </button>
-
             {mode === 'phone' && (
               <button
                 onClick={() => setUsePhoneFrame(!usePhoneFrame)}
@@ -297,24 +222,6 @@ const MainAppContent: React.FC = () => {
                   role="menu"
                   className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-1.5rem))] z-50 rounded-2xl bg-white text-[#14213d] shadow-2xl border-2 border-[#ddd5c3] p-2"
                 >
-                  <p className="px-3 pt-1.5 pb-1 text-xs font-bold uppercase tracking-wide text-[#7a7461]">Simular en el teléfono</p>
-                  <button
-                    role="menuitem"
-                    onClick={() => { setMenuOpen(false); handleSimulateFall(); }}
-                    className="w-full min-h-12 px-3 rounded-xl flex items-center gap-3 text-base font-bold text-left hover:bg-[#f6f3ec] active:bg-[#ede8dc] cursor-pointer"
-                  >
-                    <AlertOctagon className="w-5 h-5 text-[#a61b1b] shrink-0" />
-                    <span>Simular caída</span>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => { handleToggleLowBattery(); }}
-                    className="w-full min-h-12 px-3 rounded-xl flex items-center gap-3 text-base font-bold text-left hover:bg-[#f6f3ec] active:bg-[#ede8dc] cursor-pointer"
-                  >
-                    <BatteryMedium className="w-5 h-5 text-[#0b4f9e] shrink-0" />
-                    <span className="flex-1">Batería baja</span>
-                    <span className="text-sm text-[#5b5f7a]">{phoneStatus.batteryLevel}%</span>
-                  </button>
                   <div className="my-1.5 border-t-2 border-[#ede8dc]" />
                   {account.email && (
                     <p className="px-3 pb-1 text-xs font-semibold text-[#5b5f7a] truncate">{account.email}</p>
@@ -357,45 +264,10 @@ const MainAppContent: React.FC = () => {
               </div>
             )}
 
-            {/* Simulated Fall screen if triggered */}
-            {isSimulatingFall ? (
-              <div className="fixed inset-0 z-50 bg-[#0b6b3a] text-white flex flex-col justify-between p-6 pt-[calc(1.5rem+var(--safe-top))] pb-[calc(1.5rem+var(--safe-bottom))] select-none animate-in fade-in overflow-y-auto">
-                <div className="pt-8">
-                  <h1 className="text-4xl font-extrabold tracking-tight">¿Está bien?</h1>
-                </div>
-
-                <div className="flex flex-col items-center justify-center my-auto">
-                  <span className="text-[140px] font-extrabold leading-none tracking-tight">30</span>
-                </div>
-
-                <div className="space-y-6 pb-6">
-                  <button
-                    onClick={() => {
-                      setIsSimulatingFall(false);
-                      addEvent({
-                        type: 'caida_ok',
-                        title: 'Posible caída: respondió que está bien',
-                        detail: 'Canceló la alarma de caída a tiempo',
-                        timestamp: 'Ahora mismo',
-                        relativeTime: 'Hace 0 min',
-                        level: 'normal',
-                      });
-                    }}
-                    className="w-full bg-white text-[#0b6b3a] text-4xl font-extrabold py-8 rounded-3xl shadow-xl hover:bg-neutral-100 active:scale-95 transition cursor-pointer"
-                  >
-                    Estoy bien
-                  </button>
-
-                  <p className="text-xl font-bold text-center text-white/90 leading-snug">
-                    Si no respondes, avisaremos a tus contactos de emergencia.
-                  </p>
-                </div>
-              </div>
-            ) : (
               <div className="flex-1 min-h-0 overflow-y-auto">
                 <PhoneView onExitToPanel={() => setMode('panel')} />
               </div>
-            )}
+
           </div>
         )}
 

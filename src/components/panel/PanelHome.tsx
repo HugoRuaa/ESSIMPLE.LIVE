@@ -304,7 +304,7 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
               >
                 <div className="w-6 h-6 rounded-full border-2 border-[#7a7461] shrink-0" />
                 <span className="text-[#0b4f9e] underline">
-                  Configurar dirección de casa y zona segura (pendiente)
+                  Configurar la dirección de casa (pendiente)
                 </span>
               </button>
             )}
