@@ -119,34 +119,61 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
               🟢 Compartiendo en vivo ({locationShare.durationHours || 1}h)
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#3b4863] bg-[#f8f7f4] border border-[#ddd5c3] px-3 py-1.5 rounded-full shrink-0">
-              📍 Ubicación en línea
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#7a7461] bg-[#f8f7f4] border border-[#ddd5c3] px-3 py-1.5 rounded-full shrink-0">
+              ⚪ No compartiendo
             </span>
           )}
         </div>
 
-        <p className="text-base font-bold text-[#14213d]">
-          {locationShare.currentCoords.address || 'Obteniendo dirección actual...'}
-        </p>
+        {locationShare.isSharing ? (
+          <>
+            <p className="text-base font-bold text-[#14213d]">
+              {locationShare.currentCoords.address || 'Obteniendo dirección en vivo...'}
+            </p>
 
-        <div className="rounded-2xl overflow-hidden border-2 border-[#ddd5c3]">
-          <LeafletMap
-            center={userCoords}
-            zoom={16}
-            interactive={true}
-            markerType="user"
-            destinationCenter={homeCoords}
-            destinationMarkerType="home"
-            showAccuracyCircle={true}
-            accuracyRadius={locationShare.currentCoords.accuracy || 20}
-            className="h-64 w-full"
-          />
-        </div>
+            <div className="rounded-2xl overflow-hidden border-2 border-[#ddd5c3]">
+              <LeafletMap
+                center={userCoords}
+                zoom={16}
+                interactive={true}
+                markerType="user"
+                destinationCenter={homeCoords}
+                destinationMarkerType="home"
+                showAccuracyCircle={true}
+                accuracyRadius={locationShare.currentCoords.accuracy || 20}
+                className="h-64 w-full"
+              />
+            </div>
 
-        <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
-          <span>🔵 Punto azul: {settings.personName} (en vivo)</span>
-          <span>🏠 Casa fija: {settings.homeAddress ? 'Configurada' : 'Ver mapa'}</span>
-        </div>
+            <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
+              <span>🔵 Punto azul: {settings.personName} (en vivo)</span>
+              <span>🏠 Casa: {settings.homeAddress ? 'Configurada' : 'Ver mapa'}</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-base font-bold text-[#14213d]">
+              {settings.homeAddress ? `Casa: ${settings.homeAddress}` : 'Casa configurada en el mapa'}
+            </p>
+
+            <div className="rounded-2xl overflow-hidden border-2 border-[#ddd5c3] relative">
+              <LeafletMap
+                center={homeCoords}
+                zoom={15}
+                interactive={true}
+                markerType="home"
+                className="h-64 w-full opacity-90"
+              />
+            </div>
+
+            <div className="bg-[#f0f6ff] border border-[#0b4f9e]/30 rounded-2xl p-3 text-xs font-extrabold text-[#0b4f9e] flex items-center gap-2">
+              <span>ℹ️</span>
+              <span>
+                Ubicación en vivo no activa. Aparecerá en el mapa cuando {settings.personName} toque «Compartir mi ubicación» en su teléfono.
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 3. Teléfono de Álvaro Status Card [26] */}

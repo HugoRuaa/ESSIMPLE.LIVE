@@ -329,8 +329,8 @@ export const PanelHomeZone: React.FC = () => {
             zoom={16}
             interactive={true}
             markerType="home"
-            destinationCenter={[locationShare.currentCoords.lat, locationShare.currentCoords.lng]}
-            destinationMarkerType="user"
+            destinationCenter={locationShare.isSharing ? [locationShare.currentCoords.lat, locationShare.currentCoords.lng] : undefined}
+            destinationMarkerType={locationShare.isSharing ? "user" : undefined}
             onLocationSelect={handleMapSelectHome}
             className="h-64 w-full rounded-2xl"
           />
