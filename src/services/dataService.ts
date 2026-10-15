@@ -836,6 +836,8 @@ export const syncLiveLocation = async (
   }
 ) => {
   if (!familiaId || familiaId === 'local-family-id') return;
+
+  // 1) Servidor de desarrollo
   try {
     await fetch(`/api/familias/${encodeURIComponent(familiaId)}/live-location`, {
       method: 'POST',
@@ -845,13 +847,68 @@ export const syncLiveLocation = async (
   } catch {
     // ignore
   }
+
+  // 2) Supabase
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const realId = await toFamiliaUuid(client, familiaId);
+      if (realId) {
+        await client.schema(DB_SCHEMA).from('estado_telefono').upsert({
+          familia_id: realId,
+          last_lat: data.lat,
+          last_lng: data.lng,
+          last_accuracy: data.accuracy || 20,
+          last_location_at: new Date().toISOString(),
+          last_reported_at: new Date().toISOString(),
+          is_sharing: Boolean(data.isSharing),
+        });
+      }
+    } catch (err) {
+      console.warn('Aviso guardando ubicación en Supabase:', err);
+    }
+  }
 };
 
 export const fetchLiveLocation = async (familiaId: string) => {
   if (!familiaId || familiaId === 'local-family-id') return null;
+
+  // 1) Supabase directo
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const realId = await toFamiliaUuid(client, familiaId);
+      if (realId) {
+        const { data, error } = await client
+          .schema(DB_SCHEMA)
+          .from('estado_telefono')
+          .select('*')
+          .eq('familia_id', realId)
+          .maybeSingle();
+
+        if (!error && data) {
+          const isSharing = Boolean(data.is_sharing);
+          const hasCoords = typeof data.last_lat === 'number' && typeof data.last_lng === 'number';
+          if (hasCoords) {
+            return {
+              isSharing,
+              contactName: 'Familia',
+              expiresAt: 0,
+              lat: Number(data.last_lat),
+              lng: Number(data.last_lng),
+              address: `Ubicación actual (${Number(data.last_lat).toFixed(5)}, ${Number(data.last_lng).toFixed(5)})`,
+              accuracy: Number(data.last_accuracy) || 20,
+            };
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // 2) Servidor de desarrollo
   try {
     const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/live-location`);
-    if (res.ok) {
+    if (res.ok && (res.headers.get('content-type') || '').includes('json')) {
       const json = await res.json();
       if (json && json.success && json.data) {
         return json.data;

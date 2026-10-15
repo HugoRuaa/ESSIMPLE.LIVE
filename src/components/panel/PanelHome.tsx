@@ -118,6 +118,10 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
             <span className="inline-flex items-center gap-1.5 text-xs font-black text-[#0b6b3a] bg-[#eef7f0] border border-[#0b6b3a]/30 px-3 py-1.5 rounded-full shrink-0 animate-pulse">
               🟢 Compartiendo en vivo ({locationShare.durationHours || 1}h)
             </span>
+          ) : phoneStatus.lastLocation && typeof phoneStatus.lastLocation.lat === 'number' ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-black text-[#0b6b3a] bg-[#eef7f0] border border-[#0b6b3a]/30 px-3 py-1.5 rounded-full shrink-0">
+              🟢 Última ubicación reportada
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#7a7461] bg-[#f8f7f4] border border-[#ddd5c3] px-3 py-1.5 rounded-full shrink-0">
               ⚪ No compartiendo
@@ -125,28 +129,38 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
           )}
         </div>
 
-        {locationShare.isSharing ? (
+        {locationShare.isSharing || (phoneStatus.lastLocation && typeof phoneStatus.lastLocation.lat === 'number') ? (
           <>
             <p className="text-base font-bold text-[#14213d]">
-              {locationShare.currentCoords.address || 'Obteniendo dirección en vivo...'}
+              {locationShare.isSharing
+                ? locationShare.currentCoords.address || 'Obteniendo dirección en vivo...'
+                : `Última posición del teléfono (${phoneStatus.lastLocation!.lat.toFixed(5)}, ${phoneStatus.lastLocation!.lng.toFixed(5)})`}
             </p>
 
             <div className="rounded-2xl overflow-hidden border-2 border-[#ddd5c3]">
               <LeafletMap
-                center={userCoords}
+                center={
+                  locationShare.isSharing
+                    ? userCoords
+                    : [phoneStatus.lastLocation!.lat, phoneStatus.lastLocation!.lng]
+                }
                 zoom={16}
                 interactive={true}
                 markerType="user"
                 destinationCenter={homeCoords}
                 destinationMarkerType="home"
                 showAccuracyCircle={true}
-                accuracyRadius={locationShare.currentCoords.accuracy || 20}
+                accuracyRadius={
+                  locationShare.isSharing
+                    ? locationShare.currentCoords.accuracy || 20
+                    : phoneStatus.lastLocation?.accuracy || 20
+                }
                 className="h-64 w-full"
               />
             </div>
 
             <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
-              <span>🔵 Punto azul: {settings.personName} (en vivo)</span>
+              <span>🔵 Punto azul: {settings.personName}</span>
               <span>🏠 Casa: {settings.homeAddress ? 'Configurada' : 'Ver mapa'}</span>
             </div>
           </>
