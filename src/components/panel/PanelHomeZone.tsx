@@ -435,7 +435,7 @@ export const PanelHomeZone: React.FC = () => {
         </div>
 
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
-          Se avisa por SMS solo a los contactos con Zona segura marcada, cuando sale y cuando regresa. Necesita que el celular tenga señal y GPS, y que Android no detenga la app.
+          Se registra un aviso en el Panel Familiar cuando sale y cuando regresa de la zona segura.
         </p>
 
         {/* Center of the zone */}

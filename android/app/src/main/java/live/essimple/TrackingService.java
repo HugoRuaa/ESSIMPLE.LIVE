@@ -386,14 +386,12 @@ public class TrackingService extends Service {
             if (outsideStreak >= 2 && !"outside".equals(state)) {
                 prefs().edit().putString(KEY_ZONE_STATE, "outside").apply();
                 if ("inside".equals(state)) {
-                    int sent = sendSmsTo(numbers(cfg, "zoneNumbers"), "essimple.live: " + name + " salió de su zona segura." + mapsLink(fix));
-                    logEvent(cfg, "zona_salida", "Salió de su zona segura", "Avisados por SMS: " + sent, "warning");
+                    logEvent(cfg, "zona_salida", "Salió de su zona segura", "Registrado en el Panel Familiar", "warning");
                 }
             } else if (insideStreak >= 2 && !"inside".equals(state)) {
                 prefs().edit().putString(KEY_ZONE_STATE, "inside").apply();
                 if ("outside".equals(state)) {
-                    int sent = sendSmsTo(numbers(cfg, "zoneNumbers"), "essimple.live: " + name + " volvió a su zona segura.");
-                    logEvent(cfg, "zona_entrada", "Volvió a su zona segura", "Avisados por SMS: " + sent, "normal");
+                    logEvent(cfg, "zona_entrada", "Volvió a su zona segura", "Registrado en el Panel Familiar", "normal");
                 }
             }
         } catch (Exception ignored) {
@@ -411,10 +409,7 @@ public class TrackingService extends Service {
             }
             if (level <= LOW_BATTERY && !alerted) {
                 prefs().edit().putBoolean(KEY_BATTERY_ALERTED, true).apply();
-                String name = cfg.optString("personName", "La persona");
-                int sent = sendSmsTo(numbers(cfg, "batteryNumbers"),
-                    "essimple.live: la batería del teléfono de " + name + " está baja (" + level + " %)." + mapsLink(fix));
-                logEvent(cfg, "bateria_baja", "Batería baja", "Batería al " + level + " %. Avisados por SMS: " + sent, "warning");
+                logEvent(cfg, "bateria_baja", "Batería baja", "Batería al " + level + " %. Registrado en el Panel Familiar", "warning");
             }
         } catch (Exception ignored) {
         }

@@ -1402,7 +1402,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `ev_${Date.now()}`,
       type: 'sos',
       title: 'Pidió ayuda (SOS)',
-      detail: `Avisados: ${names} · Fallidos: ninguno`,
+      detail: `Alerta registrada en el Panel Familiar · Emergencia: ${names}`,
       timestamp: 'Ahora mismo',
       relativeTime: 'Hace 0 min',
       level: 'danger',
@@ -1410,23 +1410,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setEvents(prev => [newEv, ...prev]);
     setActiveEmergencyBanner(newEv);
-
-    // En el APK de Android envía el SMS de auxilio directamente, con la ubicación si está disponible.
-    void (async () => {
-      let place = '';
-      try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000, maximumAge: 60000 })
-        );
-        place = ` Ubicación: https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-      } catch {
-        // sin ubicación: se envía igual
-      }
-      const text = `${settings.personName} pidió ayuda (SOS).${place}`;
-      for (const c of emergencyContacts) {
-        if (c.phone) await sendSmsNative(c.phone, text);
-      }
-    })();
+    const fid = resolveCurrentFamilyId();
+    if (fid && fid !== 'local-family-id') {
+      void logEventToSupabase(fid, {
+        type: 'sos',
+        title: 'Pidió ayuda (SOS)',
+        detail: `Alerta registrada en el Panel Familiar · Emergencia: ${names}`,
+        timestamp: 'Ahora mismo',
+        relativeTime: 'Hace 0 min',
+        level: 'danger',
+      });
+    }
   };
 
   const triggerFall = () => {
