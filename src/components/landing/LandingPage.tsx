@@ -110,23 +110,23 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
               <Siren className="w-9 h-9 text-[#ff8a8a]" aria-hidden />
               <h3 className="mt-3 text-2xl font-bold">Botón SOS</h3>
               <p className="mt-2 text-lg text-white/80 leading-relaxed max-w-xl">
-                Se mantiene presionado tres segundos para que no se active por error. Entonces envía un SMS con su ubicación a tus contactos de emergencia y llama al primero de la lista, sin pasos en el medio.
+                Se mantiene presionado tres segundos para que no se active por error. Entonces deja el aviso en tu panel familiar y llama al primer contacto de emergencia; si no contesta, ella puede llamar al siguiente con un toque.
               </p>
             </div>
             <div className="md:col-span-5 md:pt-8">
               <MapPin className="w-8 h-8 text-[#86efac]" aria-hidden />
               <h3 className="mt-3 text-xl font-bold">Zona segura</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Marcas su casa en el mapa y los contactos que elijas reciben un SMS cuando ella sale del área y cuando vuelve.</p>
+              <p className="mt-2 text-white/80 leading-relaxed">Marcas su casa en el mapa y, cuando ella sale del área o vuelve, queda un aviso en tu panel familiar.</p>
             </div>
             <div className="md:col-span-7">
               <BatteryLow className="w-8 h-8 text-[#fcd34d]" aria-hidden />
               <h3 className="mt-3 text-xl font-bold">Batería baja</h3>
-              <p className="mt-2 text-white/80 leading-relaxed max-w-xl">Al llegar al 20 %, los contactos que elijas reciben un SMS para ayudarla a cargar el celular. En tu panel ves además si está conectado y cuánta batería tiene.</p>
+              <p className="mt-2 text-white/80 leading-relaxed max-w-xl">Al llegar al 20 %, queda un aviso en tu panel para que puedas ayudarla a cargar el celular. En el panel ves además si está conectado y cuánta batería tiene.</p>
             </div>
             <div className="md:col-span-5">
               <ShieldCheck className="w-8 h-8 text-[#7dd3fc]" aria-hidden />
               <h3 className="mt-3 text-xl font-bold">Lo que debes saber</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Estos avisos dependen de que el celular tenga señal y GPS, y de que Android no detenga la app: en algunas marcas hay que quitar el ahorro de batería. Todavía no detecta caídas.</p>
+              <p className="mt-2 text-white/80 leading-relaxed">Los avisos se ven en el panel, no llegan como mensaje al celular de la familia. Dependen de que el celular tenga señal y GPS, y de que Android no detenga la app: en algunas marcas hay que quitar el ahorro de batería.</p>
             </div>
           </div>
         </div>
