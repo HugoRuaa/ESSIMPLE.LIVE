@@ -25,6 +25,17 @@ export interface NativeStatus {
   homeReleased: boolean;
 }
 
+export interface TrackingConfig {
+  url: string;
+  key: string;
+  schema: string;
+  familiaId: string;
+  personName: string;
+  home: { lat: number; lng: number; radius: number; active: boolean };
+  zoneNumbers: string[];
+  batteryNumbers: string[];
+}
+
 interface SimplePlugin {
   requestPermission(opts: { name: PermissionName }): Promise<{ granted: boolean }>;
   getStatus(): Promise<NativeStatus>;
@@ -45,6 +56,10 @@ interface SimplePlugin {
   cancelRecording(): Promise<void>;
   shareVoiceWhatsApp(opts: { phone: string }): Promise<{ granted: boolean; whatsapp: boolean }>;
   shareTextWhatsApp(opts: { phone: string; text: string }): Promise<{ granted: boolean }>;
+  setTrackingConfig(opts: TrackingConfig): Promise<void>;
+  startTracking(): Promise<{ granted: boolean }>;
+  stopTracking(): Promise<void>;
+  getTrackingStatus(): Promise<{ running: boolean; enabled: boolean; lastUploadAt: number; lastUploadOk: boolean }>;
   getBatteryStatus(): Promise<{ batteryLevel: number; isCharging: boolean }>;
 }
 
@@ -319,4 +334,36 @@ export const getBatteryStatus = async (): Promise<{ batteryLevel: number; isChar
   }
 
   return { batteryLevel: 80, isCharging: false };
+};
+
+// ---- Seguimiento en segundo plano (servicio en primer plano con notificación fija) ----
+
+/** Guarda la configuración del servicio y lo enciende. Devuelve false si Android no lo permitió (p. ej. falta el permiso). */
+export const startTracking = async (config: TrackingConfig): Promise<boolean> => {
+  if (!isNative()) return false;
+  try {
+    await Simple.setTrackingConfig(config);
+    return (await Simple.startTracking()).granted;
+  } catch {
+    return false;
+  }
+};
+
+export const stopTracking = async (): Promise<void> => {
+  if (!isNative()) return;
+  try {
+    await Simple.stopTracking();
+  } catch {
+    // Nada que detener.
+  }
+};
+
+export const getTrackingStatus = async (): Promise<{ running: boolean; lastUploadAt: number; lastUploadOk: boolean } | null> => {
+  if (!isNative()) return null;
+  try {
+    const r = await Simple.getTrackingStatus();
+    return { running: r.running, lastUploadAt: r.lastUploadAt, lastUploadOk: r.lastUploadOk };
+  } catch {
+    return null;
+  }
 };

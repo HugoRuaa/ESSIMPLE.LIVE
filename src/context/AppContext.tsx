@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { sendSmsNative, getPairedFamily, getBatteryStatus, getNativeStatus, isNative, onAppResume } from '../lib/native';
+import { sendSmsNative, getPairedFamily, getBatteryStatus, getNativeStatus, isNative, onAppResume, startTracking, type TrackingConfig } from '../lib/native';
 import {
   Contact,
   EventItem,
@@ -9,6 +9,7 @@ import {
   LocationShareState,
   UserAccount,
 } from '../types';
+import { getSupabaseConfig, DB_SCHEMA } from '../lib/supabase';
 import {
   registerFamilyByCode,
   loginFamilyByCode,
@@ -886,6 +887,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Seguimiento en segundo plano (solo el APK): servicio en primer plano que sube batería y última ubicación
+  // y avisa por SMS si sale de la zona segura o la batería baja. Se vuelve a configurar cuando cambian la casa,
+  // la zona o los contactos marcados.
+  const trackingKey = JSON.stringify({
+    c: settings.safeZoneCenter,
+    r: settings.safeZoneRadius,
+    a: settings.safeZoneActive,
+    n: settings.personName,
+    cc: settings.countryCode,
+    z: contacts.filter(c => c.isSafeZone).map(c => c.phone),
+    b: contacts.filter(c => c.isLowBattery).map(c => c.phone),
+    f: account.familiaId || '',
+  });
+  useEffect(() => {
+    if (!isNative()) return;
+    let cancelled = false;
+
+    const toDial = (phone: string): string => {
+      const digits = (phone || '').replace(/\D/g, '');
+      if (!digits) return '';
+      if ((phone || '').trim().startsWith('+')) return '+' + digits;
+      const cc = (settings.countryCode || '+57').replace(/\D/g, '') || '57';
+      if (digits.length === 10 && !digits.startsWith(cc)) return '+' + cc + digits;
+      return digits.length > 10 ? '+' + digits : digits;
+    };
+
+    const resolveUuid = async (): Promise<string | null> => {
+      const looksLikeUuid = (v: string | null | undefined) => !!v && /^[0-9a-f-]{32,36}$/i.test(v);
+      const stored = localStorage.getItem('essimple_family_id');
+      if (looksLikeUuid(stored)) return stored;
+      if (looksLikeUuid(account.familiaId)) return account.familiaId as string;
+      const email = account.email || getPairedFamily();
+      if (!email) return null;
+      const lookup = await lookupFamilyByEmail(email);
+      return looksLikeUuid(lookup?.familiaId) ? (lookup!.familiaId as string) : null;
+    };
+
+    const configure = async () => {
+      const perms = await getNativeStatus();
+      if (!perms || !perms.location) return;
+      const familiaId = await resolveUuid();
+      if (!familiaId || cancelled) return;
+      const { url, anonKey } = getSupabaseConfig();
+      if (!url || !anonKey) return;
+      const config: TrackingConfig = {
+        url,
+        key: anonKey,
+        schema: DB_SCHEMA,
+        familiaId,
+        personName: settings.personName || 'La persona',
+        home: {
+          lat: settings.safeZoneCenter?.lat ?? 0,
+          lng: settings.safeZoneCenter?.lng ?? 0,
+          radius: settings.safeZoneRadius || 300,
+          active: Boolean(settings.safeZoneActive) && !!settings.safeZoneCenter?.lat,
+        },
+        zoneNumbers: contacts.filter(c => c.isSafeZone).map(c => toDial(c.phone)).filter(Boolean),
+        batteryNumbers: contacts.filter(c => c.isLowBattery).map(c => toDial(c.phone)).filter(Boolean),
+      };
+      await startTracking(config);
+    };
+
+    void configure();
+    // Al volver de los ajustes (por ejemplo, tras aprobar "todo el tiempo") se intenta de nuevo.
+    const stopResume = onAppResume(() => {
+      void configure();
+    });
+    return () => {
+      cancelled = true;
+      stopResume();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackingKey]);
+
   // Solo el teléfono del acompañado (el APK) mide y reporta su estado. El panel de la familia solo lo lee:
   // si también reportara, pisaría los datos reales con los del computador o celular de quien mira el panel.
   useEffect(() => {
@@ -897,6 +972,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       calls: 'Falta permiso para realizar llamadas.',
       location: 'Falta permiso de ubicación.',
       microphone: 'Falta permiso del micrófono.',
+      backgroundLocation: 'Falta permitir la ubicación todo el tiempo.',
+      notifications: 'Las notificaciones están desactivadas.',
       batteryUnrestricted: 'El ahorro de batería puede apagar la app.',
     };
 
@@ -949,7 +1026,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setPhoneStatus(prev => ({
             ...prev,
             ...cloudStatus,
-            isOnline: Date.now() - cloudStatus.lastReportTime < 90_000,
+            isOnline: Date.now() - cloudStatus.lastReportTime < 480_000,
             isSynced: true,
           }));
         }

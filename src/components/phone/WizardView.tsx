@@ -28,8 +28,8 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   const { updatePhoneStatus } = useApp();
   const native = isNative();
   const STEP_KEY = 'essimple_wizard_step';
-  // Pantalla 1 = vincular, 2 a 7 = las seis aprobaciones, 8 = resumen.
-  const SUMMARY_STEP = 8;
+  // Pantalla 1 = vincular, 2 a 9 = las ocho aprobaciones, 10 = resumen.
+  const SUMMARY_STEP = 10;
   const [currentStep, setCurrentStep] = useState(() => {
     try {
       const saved = parseInt(sessionStorage.getItem(STEP_KEY) || '1', 10);
@@ -195,8 +195,10 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     { key: 'calls', label: 'Hacer llamadas' },
     { key: 'location', label: 'Ubicación' },
     { key: 'microphone', label: 'Micrófono' },
+    { key: 'notifications', label: 'Notificaciones' },
     { key: 'batteryUnrestricted', label: 'Sin ahorro de batería' },
     { key: 'homeLauncher', label: 'essimple.live como pantalla de inicio' },
+    { key: 'backgroundLocation', label: 'Ubicación todo el tiempo' },
   ];
 
   const runAll = async () => {
@@ -265,14 +267,14 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   // Pide todos los permisos de Android seguidos, para hacerlo una sola vez y con la familia presente.
   const handleAllPermissions = async () => {
     if (!native) {
-      setGrantedPermissions(prev => ({ ...prev, sms: true, calls: true, location: true, microphone: true }));
+      setGrantedPermissions(prev => ({ ...prev, sms: true, calls: true, location: true, microphone: true, notifications: true }));
       updatePhoneStatus({ missingPermissions: [] });
       return;
     }
     if (busy) return;
     setBusy(true);
     try {
-      for (const name of ['sms', 'calls', 'location', 'microphone'] as PermissionName[]) {
+      for (const name of ['sms', 'calls', 'location', 'microphone', 'notifications'] as PermissionName[]) {
         const ok = await requestPermission(name);
         markGranted(name, ok);
       }
@@ -333,7 +335,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   };
 
   // Lo que Android va a pedir aprobar (cada uno es un cuadro o una pantalla de ajustes con un toque).
-  const APPROVAL_KEYS = ['sms', 'calls', 'location', 'microphone', 'batteryUnrestricted', 'homeLauncher'];
+  const APPROVAL_KEYS = ['sms', 'calls', 'location', 'microphone', 'notifications', 'batteryUnrestricted', 'homeLauncher', 'backgroundLocation'];
   const approvalItems = ALL_ITEMS.filter(i => APPROVAL_KEYS.includes(i.key));
   const approvalsLeft = approvalItems.filter(i => {
     const st = allStatus[i.key] || 'pending';
@@ -598,18 +600,30 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
         buttonText: 'Dar permiso de ubicación',
       },
       5: {
+        title: 'Ubicación todo el tiempo',
+        desc: 'Permite que essimple.live comparta la ubicación y la batería con tu familia aunque la pantalla esté apagada. Mientras lo hace, se ve una notificación fija en el celular.',
+        permKey: 'backgroundLocation',
+        buttonText: 'Permitir todo el tiempo',
+      },
+      6: {
         title: 'Permiso de micrófono',
         desc: 'Permite grabar mensajes de voz de hasta 60 segundos para enviarle a la familia.',
         permKey: 'microphone',
         buttonText: 'Dar permiso de micrófono',
       },
-      6: {
+      7: {
+        title: 'Notificaciones activadas',
+        desc: 'Permite mostrar la notificación fija que indica que essimple.live está cuidando y compartiendo la ubicación con tu familia.',
+        permKey: 'notifications',
+        buttonText: 'Activar notificaciones',
+      },
+      8: {
         title: 'Sin ahorro de batería',
-        desc: 'Evita que el sistema apague essimple.live para ahorrar energía mientras está en uso.',
+        desc: 'Evita que el sistema pause essimple.live para ahorrar energía. Sin esto, el seguimiento con la pantalla apagada puede detenerse.',
         permKey: 'batteryUnrestricted',
         buttonText: 'Quitar ahorro de batería',
       },
-      7: {
+      9: {
         title: 'Pantalla de inicio predeterminada',
         desc: 'Elige essimple.live como la aplicación de inicio principal (Siempre), para que no se salga al tocar el botón central.',
         permKey: 'homeLauncher',
@@ -668,8 +682,8 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
   // Resumen final (lo ve quien termina "todo de una vez" y quien termina paso a paso)
   const STEP_OF: Record<string, number> = {
-    linked: 1, sms: 2, calls: 3, location: 4, microphone: 5,
-    batteryUnrestricted: 6, homeLauncher: 7,
+    linked: 1, sms: 2, calls: 3, location: 4, backgroundLocation: 5, microphone: 6,
+    notifications: 7, batteryUnrestricted: 8, homeLauncher: 9,
   };
   const summary = ALL_ITEMS.map(item => ({
     ...item,

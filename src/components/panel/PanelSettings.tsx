@@ -485,12 +485,13 @@ export const PanelSettings: React.FC = () => {
         <ul className="list-disc list-inside space-y-2 text-base font-semibold text-[#3b4863] leading-relaxed">
           <li>Guardamos los contactos que ustedes agregan (nombre, teléfono y foto).</li>
           <li>Guardamos el nivel de batería del teléfono y si está conectado.</li>
+          <li>Guardamos la última ubicación conocida del teléfono (una sola, que se reemplaza en cada actualización; no hay historial de recorridos).</li>
           <li>Guardamos el estado del teléfono y su versión.</li>
           <li>
-            Guardamos un historial de eventos (por ejemplo llamadas de SOS y mensajes enviados) y de los cambios de configuración.
+            Guardamos un historial de eventos (por ejemplo SOS, salidas de la zona segura, batería baja y mensajes enviados) y de los cambios de configuración.
           </li>
           <li>
-            La ubicación de la persona solo se usa mientras ella la comparte con alguien. No se guarda en este panel.
+            El teléfono muestra una notificación fija mientras comparte su ubicación y su batería con la familia. Solo se conserva la última posición, nunca un recorrido.
           </li>
         </ul>
       </div>

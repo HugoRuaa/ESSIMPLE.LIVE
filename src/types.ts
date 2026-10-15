@@ -68,6 +68,8 @@ export interface PhoneStatus {
   isHomeScreen: boolean;
   isSynced: boolean;
   lastReportTime: number;
+  /** Última ubicación conocida del teléfono (una sola, sin historial). */
+  lastLocation?: { lat: number; lng: number; accuracy: number; time: number } | null;
 }
 
 export interface LocationShareState {

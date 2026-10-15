@@ -43,12 +43,13 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
               <li>
                 Guardamos el nivel de batería del teléfono y si está conectado.
               </li>
+              <li>Guardamos la última ubicación conocida del teléfono (una sola, sin historial de recorridos).</li>
               <li>Guardamos el estado del teléfono y su versión.</li>
               <li>
-                Guardamos un historial de eventos (SOS y mensajes) y cambios de configuración.
+                Guardamos un historial de eventos (SOS, zona segura, batería y mensajes) y cambios de configuración.
               </li>
               <li>
-                La ubicación de la persona solo se usa mientras ella la comparte con alguien. No se guarda en este panel.
+                El teléfono muestra una notificación fija mientras comparte su ubicación y su batería con la familia. Solo se conserva la última posición, nunca un recorrido.
               </li>
             </ul>
 
@@ -339,9 +340,9 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
               {showPrivacyDetails && (
                 <div className="ml-8 p-3 bg-[#f6f3ec] rounded-xl text-sm font-medium text-[#374151] space-y-1">
                   <p>• Contactos familiares autorizados (nombre, teléfono y color).</p>
-                  <p>• Nivel de batería y conexión, para que la familia vea el estado del teléfono en el panel.</p>
-                  <p>• Avisos de SOS.</p>
-                  <p>• La ubicación solo se usa cuando la persona la comparte, no se almacena permanentemente.</p>
+                  <p>• Nivel de batería y conexión, para avisar si está baja y mostrar el estado del teléfono.</p>
+                  <p>• Avisos de SOS, de salida de la zona segura y de batería baja.</p>
+                  <p>• La última ubicación conocida del teléfono (una sola, se reemplaza con cada actualización; no hay historial de recorridos).</p>
                 </div>
               )}
             </div>

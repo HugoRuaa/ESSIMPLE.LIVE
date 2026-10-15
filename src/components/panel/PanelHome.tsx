@@ -38,7 +38,7 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
   }, []);
   const hasData = phoneStatus.lastReportTime > 0;
   const ageMs = hasData ? Math.max(0, now - phoneStatus.lastReportTime) : 0;
-  const phoneOnline = hasData && ageMs < 90_000;
+  const phoneOnline = hasData && ageMs < 480_000;
   const ageText = (() => {
     const min = Math.round(ageMs / 60000);
     if (min < 1) return 'hace menos de un minuto';
@@ -231,6 +231,25 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
               )}
             </div>
           </>
+        )}
+
+        {hasData && phoneStatus.lastLocation && (
+          <p className="text-base font-semibold text-[#14213d]">
+            Última ubicación conocida:{' '}
+            {(() => {
+              const min = Math.max(0, Math.round((now - phoneStatus.lastLocation.time) / 60000));
+              return min < 1 ? 'hace menos de un minuto' : min < 60 ? `hace ${min} min` : `hace ${Math.floor(min / 60)} h`;
+            })()}
+            {' · '}
+            <a
+              href={`https://www.google.com/maps?q=${phoneStatus.lastLocation.lat},${phoneStatus.lastLocation.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#0b4f9e] underline"
+            >
+              Ver en el mapa
+            </a>
+          </p>
         )}
 
         <p className="text-base font-semibold text-[#3b4863]">

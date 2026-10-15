@@ -903,6 +903,15 @@ export const fetchPhoneStatus = async (familiaId: string): Promise<PhoneStatus |
             isHomeScreen: Boolean(data.is_home_screen),
             isSynced: true,
             lastReportTime: data.last_reported_at ? new Date(data.last_reported_at).getTime() : 0,
+            lastLocation:
+              typeof data.last_lat === 'number' && typeof data.last_lng === 'number'
+                ? {
+                    lat: data.last_lat,
+                    lng: data.last_lng,
+                    accuracy: Number(data.last_accuracy) || 0,
+                    time: data.last_location_at ? new Date(data.last_location_at).getTime() : 0,
+                  }
+                : null,
           };
         }
       }

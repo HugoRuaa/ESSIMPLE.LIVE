@@ -714,6 +714,67 @@ public class SimplePlugin extends Plugin {
         call.resolve(ret);
     }
 
+    // ------------------------------------------------------------------
+    // Seguimiento en segundo plano (servicio en primer plano con notificación fija)
+    // ------------------------------------------------------------------
+
+    /** Guarda la configuración que usa el servicio (Supabase, casa, zona y números a avisar). */
+    @PluginMethod
+    public void setTrackingConfig(PluginCall call) {
+        JSObject data = call.getData();
+        String previous = prefs().getString(TrackingService.KEY_CONFIG, "");
+        String next = data.toString();
+        SharedPreferences.Editor editor = prefs().edit().putString(TrackingService.KEY_CONFIG, next);
+        try {
+            String oldHome = previous.isEmpty() ? "" : String.valueOf(new org.json.JSONObject(previous).opt("home"));
+            String newHome = String.valueOf(data.opt("home"));
+            if (!newHome.equals(oldHome)) {
+                // Cambió la casa o el radio: el servicio vuelve a decidir si está dentro o fuera sin avisar.
+                editor.remove("track_zone_state");
+            }
+        } catch (Exception ignored) {
+        }
+        editor.apply();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void startTracking(PluginCall call) {
+        if (!has(Manifest.permission.ACCESS_FINE_LOCATION) && !has(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            call.reject("Falta el permiso de ubicación");
+            return;
+        }
+        prefs().edit().putBoolean(TrackingService.KEY_ENABLED, true).apply();
+        try {
+            Intent service = new Intent(getContext(), TrackingService.class);
+            if (Build.VERSION.SDK_INT >= 26) {
+                getContext().startForegroundService(service);
+            } else {
+                getContext().startService(service);
+            }
+            call.resolve(granted(true));
+        } catch (Exception e) {
+            call.reject("No se pudo iniciar el seguimiento: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void stopTracking(PluginCall call) {
+        prefs().edit().putBoolean(TrackingService.KEY_ENABLED, false).apply();
+        getContext().stopService(new Intent(getContext(), TrackingService.class));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void getTrackingStatus(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("running", TrackingService.running);
+        out.put("enabled", prefs().getBoolean(TrackingService.KEY_ENABLED, false));
+        out.put("lastUploadAt", TrackingService.lastUploadAt);
+        out.put("lastUploadOk", TrackingService.lastUploadOk);
+        call.resolve(out);
+    }
+
     private static JSObject granted(boolean value) {
         JSObject out = new JSObject();
         out.put("granted", value);
