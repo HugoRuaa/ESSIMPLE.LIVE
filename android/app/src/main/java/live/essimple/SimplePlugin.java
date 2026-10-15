@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.SharedPreferences;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -23,7 +24,10 @@ import android.telecom.TelecomManager;
 import android.telephony.SmsManager;
 import android.view.WindowManager;
 
+import android.util.Base64;
+
 import androidx.activity.result.ActivityResult;
+import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -38,6 +42,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -387,6 +394,8 @@ public class SimplePlugin extends Plugin {
             if (dialer != null) allowed.add(dialer);
         } catch (Exception ignored) {
         }
+        allowed.add("com.whatsapp");
+        allowed.add("com.whatsapp.w4b");
         allowed.add("com.android.phone");
         allowed.add("com.android.server.telecom");
         allowed.add("com.android.incallui");
@@ -502,6 +511,151 @@ public class SimplePlugin extends Plugin {
     public void minimize(PluginCall call) {
         getActivity().moveTaskToBack(true);
         call.resolve();
+    }
+
+    // ------------------------------------------------------------------
+    // Mensaje de voz: grabación nativa (AAC/m4a, que WhatsApp reproduce) y envío del archivo por WhatsApp
+    // ------------------------------------------------------------------
+
+    private MediaRecorder recorder;
+    private File voiceFile;
+    private long voiceStartedAt = 0;
+
+    private void releaseRecorder() {
+        if (recorder != null) {
+            try {
+                recorder.release();
+            } catch (Exception ignored) {
+            }
+            recorder = null;
+        }
+    }
+
+    @PluginMethod
+    public void startRecording(PluginCall call) {
+        if (!has(Manifest.permission.RECORD_AUDIO)) {
+            call.reject("Falta el permiso del micrófono");
+            return;
+        }
+        releaseRecorder();
+        try {
+            File dir = new File(getContext().getCacheDir(), "voz");
+            if (!dir.exists()) dir.mkdirs();
+            voiceFile = new File(dir, "mensaje-de-voz.m4a");
+            if (voiceFile.exists()) voiceFile.delete();
+
+            recorder = Build.VERSION.SDK_INT >= 31 ? new MediaRecorder(getContext()) : new MediaRecorder();
+            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            recorder.setAudioChannels(1);
+            recorder.setAudioSamplingRate(44100);
+            recorder.setAudioEncodingBitRate(64000);
+            recorder.setMaxDuration(61000);
+            recorder.setOutputFile(voiceFile.getAbsolutePath());
+            recorder.prepare();
+            recorder.start();
+            voiceStartedAt = System.currentTimeMillis();
+            call.resolve(granted(true));
+        } catch (Exception e) {
+            releaseRecorder();
+            call.reject("No se pudo grabar: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void stopRecording(PluginCall call) {
+        if (recorder == null || voiceFile == null) {
+            call.reject("No hay una grabación en curso");
+            return;
+        }
+        try {
+            try {
+                recorder.stop();
+            } catch (RuntimeException tooShort) {
+                // Grabación demasiado corta: el archivo queda inválido.
+                releaseRecorder();
+                if (voiceFile.exists()) voiceFile.delete();
+                call.reject("La grabación fue muy corta");
+                return;
+            }
+            releaseRecorder();
+
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            try (FileInputStream in = new FileInputStream(voiceFile)) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = in.read(buffer)) != -1) bytes.write(buffer, 0, read);
+            }
+            JSObject out = new JSObject();
+            out.put("base64", Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP));
+            out.put("mime", "audio/mp4");
+            out.put("seconds", Math.max(1, Math.round((System.currentTimeMillis() - voiceStartedAt) / 1000f)));
+            call.resolve(out);
+        } catch (Exception e) {
+            releaseRecorder();
+            call.reject("No se pudo guardar la grabación: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void cancelRecording(PluginCall call) {
+        if (recorder != null) {
+            try {
+                recorder.stop();
+            } catch (Exception ignored) {
+            }
+            releaseRecorder();
+        }
+        if (voiceFile != null && voiceFile.exists()) voiceFile.delete();
+        call.resolve();
+    }
+
+    /** Abre WhatsApp con el audio adjunto (y el chat del contacto si se conoce el número). La persona solo toca enviar. */
+    @PluginMethod
+    public void shareVoiceWhatsApp(PluginCall call) {
+        if (voiceFile == null || !voiceFile.exists()) {
+            call.reject("No hay un audio grabado");
+            return;
+        }
+        String phone = call.getString("phone", "");
+        String digits = phone == null ? "" : phone.replaceAll("\\D", "");
+        try {
+            Uri uri = FileProvider.getUriForFile(
+                getContext(), getContext().getPackageName() + ".fileprovider", voiceFile
+            );
+            String[] packages = new String[] { "com.whatsapp", "com.whatsapp.w4b" };
+            String used = null;
+            for (String pkg : packages) {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("audio/mp4");
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+                intent.setPackage(pkg);
+                if (!digits.isEmpty()) intent.putExtra("jid", digits + "@s.whatsapp.net");
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    getActivity().startActivity(intent);
+                    used = pkg;
+                    break;
+                } catch (Exception notInstalled) {
+                    // Probar con el siguiente (WhatsApp Business).
+                }
+            }
+            if (used == null) {
+                // Sin WhatsApp instalado: deja escoger otra app para compartir el audio.
+                Intent generic = new Intent(Intent.ACTION_SEND);
+                generic.setType("audio/mp4");
+                generic.putExtra(Intent.EXTRA_STREAM, uri);
+                generic.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                getActivity().startActivity(Intent.createChooser(generic, "Enviar mensaje de voz"));
+            }
+            JSObject out = new JSObject();
+            out.put("granted", true);
+            out.put("whatsapp", used != null);
+            call.resolve(out);
+        } catch (Exception e) {
+            call.reject("No se pudo abrir WhatsApp: " + e.getMessage());
+        }
     }
 
     private static JSObject granted(boolean value) {

@@ -2,6 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, Square, Play, Pause, RotateCcw, MessageCircle } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
 import { useApp } from '../../context/AppContext';
+import {
+  isNative,
+  startNativeRecording,
+  stopNativeRecording,
+  cancelNativeRecording,
+  shareVoiceWhatsApp,
+} from '../../lib/native';
 
 interface VoiceNoteViewProps {
   contactName: string;
@@ -18,6 +25,9 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
   const audioChunksRef = useRef<Blob[]>([]);
   const audioUrlRef = useRef<string | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const audioBlobRef = useRef<Blob | null>(null);
+  const nativeRecRef = useRef(false);
+  const [sentVia, setSentVia] = useState<'whatsapp' | 'link'>('link');
 
   // Recording timer
   useEffect(() => {
@@ -41,7 +51,7 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
     if (stage === 'sent') {
       const timer = setTimeout(() => {
         onBack();
-      }, 3500);
+      }, 6000);
       return () => clearTimeout(timer);
     }
   }, [stage, onBack]);
@@ -49,6 +59,16 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
   const handleStartRecording = async () => {
     setSeconds(0);
     audioChunksRef.current = [];
+    audioBlobRef.current = null;
+    audioUrlRef.current = null;
+    audioPlayerRef.current = null;
+
+    if (isNative() && (await startNativeRecording())) {
+      nativeRecRef.current = true;
+      setStage('recording');
+      return;
+    }
+    nativeRecRef.current = false;
 
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -61,7 +81,8 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
         };
 
         mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' });
+          audioBlobRef.current = audioBlob;
           audioUrlRef.current = URL.createObjectURL(audioBlob);
           stream.getTracks().forEach(track => track.stop());
         };
@@ -76,6 +97,17 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
   };
 
   const handleStopRecording = () => {
+    if (nativeRecRef.current) {
+      nativeRecRef.current = false;
+      setStage('review');
+      stopNativeRecording().then(r => {
+        if (r) {
+          audioUrlRef.current = r.url;
+          setSeconds(r.seconds);
+        }
+      });
+      return;
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       try {
         mediaRecorderRef.current.stop();
@@ -118,9 +150,9 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
     }
   };
 
-  const handleSendWhatsApp = () => {
-    sendVoiceMessage(contactName, Math.max(seconds, 1));
-    setStage('sent');
+  const handleSendWhatsApp = async () => {
+    const duration = Math.max(seconds, 1);
+    sendVoiceMessage(contactName, duration);
 
     const cleanCountryCode = (settings?.countryCode || '+57').replace(/\D/g, '') || '57';
     const digitsOnly = (contactPhone || '').replace(/\D/g, '');
@@ -128,11 +160,37 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
       ? `${cleanCountryCode}${digitsOnly}`
       : digitsOnly;
 
-    const messageText = `Hola ${contactName}, te envío un mensaje de voz (${seconds} segundos).`;
+    // 1) APK: abre WhatsApp con el audio adjunto; solo falta tocar enviar.
+    if (isNative() && (await shareVoiceWhatsApp(fullWhatsAppPhone))) {
+      setSentVia('whatsapp');
+      setStage('sent');
+      return;
+    }
+
+    // 2) Navegador con compartir archivos.
+    const blob = audioBlobRef.current;
+    if (blob && blob.size > 0 && typeof navigator.share === 'function') {
+      const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'webm';
+      const file = new File([blob], `mensaje-de-voz.${ext}`, { type: blob.type });
+      try {
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          setSentVia('whatsapp');
+          setStage('sent');
+          return;
+        }
+      } catch {
+        // Cancelado o no disponible: se usa el enlace de texto.
+      }
+    }
+
+    // 3) Último recurso: solo se puede abrir el chat con un texto (WhatsApp no deja adjuntar audio por enlace).
+    const messageText = `Hola ${contactName}, te envío un mensaje de voz (${duration} segundos).`;
     const waUrl = fullWhatsAppPhone
       ? `https://api.whatsapp.com/send?phone=${fullWhatsAppPhone}&text=${encodeURIComponent(messageText)}`
       : `https://api.whatsapp.com/send?text=${encodeURIComponent(messageText)}`;
-
+    setSentVia('link');
+    setStage('sent');
     try {
       window.location.href = waUrl;
     } catch {
@@ -141,6 +199,10 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
   };
 
   const handleReset = () => {
+    if (nativeRecRef.current) {
+      nativeRecRef.current = false;
+      cancelNativeRecording();
+    }
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
     }
@@ -155,10 +217,12 @@ export const VoiceNoteView: React.FC<VoiceNoteViewProps> = ({ contactName, conta
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-200">
         <div className="pt-8 space-y-4">
           <h1 className="text-4xl font-extrabold tracking-tight">
-            Mensaje enviado a {contactName}
+            {sentVia === 'whatsapp' ? `Audio listo para ${contactName}` : `Abrimos WhatsApp con ${contactName}`}
           </h1>
           <p className="text-2xl font-bold text-[#14213d] leading-relaxed">
-            Volvemos al inicio en un momento.
+            {sentVia === 'whatsapp'
+              ? 'En WhatsApp toca el botón verde de enviar.'
+              : 'Toca enviar en WhatsApp. Este modo no puede adjuntar el audio.'}
           </p>
         </div>
 

@@ -40,6 +40,10 @@ interface SimplePlugin {
   minimize(): Promise<void>;
   releaseHome(): Promise<{ released: boolean }>;
   restoreHome(): Promise<{ wasDefaultHome: boolean }>;
+  startRecording(): Promise<{ granted: boolean }>;
+  stopRecording(): Promise<{ base64: string; mime: string; seconds: number }>;
+  cancelRecording(): Promise<void>;
+  shareVoiceWhatsApp(opts: { phone: string }): Promise<{ granted: boolean; whatsapp: boolean }>;
 }
 
 const Simple = registerPlugin<SimplePlugin>('Simple');
@@ -241,5 +245,42 @@ export const savePairedFamily = (email: string): void => {
     localStorage.setItem(PAIR_STORAGE_KEY, email);
   } catch {
     // ignorar
+  }
+};
+
+// ---- Mensaje de voz nativo (AAC/m4a: WhatsApp lo reproduce; el webm del navegador no) ----
+
+export const startNativeRecording = async (): Promise<boolean> => {
+  if (!isNative()) return false;
+  try {
+    return (await Simple.startRecording()).granted;
+  } catch {
+    return false;
+  }
+};
+
+export const stopNativeRecording = async (): Promise<{ url: string; seconds: number } | null> => {
+  try {
+    const r = await Simple.stopRecording();
+    return { url: `data:${r.mime};base64,${r.base64}`, seconds: r.seconds };
+  } catch {
+    return null;
+  }
+};
+
+export const cancelNativeRecording = async (): Promise<void> => {
+  try {
+    await Simple.cancelRecording();
+  } catch {
+    // Nada que cancelar.
+  }
+};
+
+/** Abre WhatsApp con el audio ya adjunto. Devuelve false si no se pudo. */
+export const shareVoiceWhatsApp = async (phone: string): Promise<boolean> => {
+  try {
+    return (await Simple.shareVoiceWhatsApp({ phone })).granted;
+  } catch {
+    return false;
   }
 };
