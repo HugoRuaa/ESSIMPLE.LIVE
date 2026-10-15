@@ -806,3 +806,44 @@ export const fetchFamilyQuickMessages = async (familiaId: string): Promise<strin
   }
   return null;
 };
+
+// 10. Ubicación en Tiempo Real
+export const syncLiveLocation = async (
+  familiaId: string,
+  data: {
+    lat: number;
+    lng: number;
+    address: string;
+    accuracy?: number;
+    isSharing?: boolean;
+    contactName?: string;
+    expiresAt?: number;
+  }
+) => {
+  if (!familiaId || familiaId === 'local-family-id') return;
+  try {
+    await fetch(`/api/familias/${encodeURIComponent(familiaId)}/live-location`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+  } catch {
+    // ignore
+  }
+};
+
+export const fetchLiveLocation = async (familiaId: string) => {
+  if (!familiaId || familiaId === 'local-family-id') return null;
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/live-location`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        return json.data;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+};

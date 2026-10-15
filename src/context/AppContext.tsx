@@ -23,6 +23,8 @@ import {
   fetchFamilyChanges,
   syncQuickMessagesToSupabase,
   fetchFamilyQuickMessages,
+  syncLiveLocation,
+  fetchLiveLocation,
 } from '../services/dataService';
 
 interface AppContextType {
@@ -742,15 +744,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Location share
   const updateCurrentCoords = (coords: { lat: number; lng: number; address: string; accuracy?: number }) => {
-    setLocationShare(prev => ({
-      ...prev,
-      currentCoords: {
-        lat: coords.lat,
-        lng: coords.lng,
-        address: coords.address,
-        accuracy: coords.accuracy ?? prev.currentCoords.accuracy ?? 25,
-      },
-    }));
+    setLocationShare(prev => {
+      const next = {
+        ...prev,
+        currentCoords: {
+          lat: coords.lat,
+          lng: coords.lng,
+          address: coords.address,
+          accuracy: coords.accuracy ?? prev.currentCoords.accuracy ?? 25,
+        },
+      };
+
+      const familyId = resolveCurrentFamilyId();
+      if (familyId && familyId !== 'local-family-id') {
+        void syncLiveLocation(familyId, {
+          lat: coords.lat,
+          lng: coords.lng,
+          address: coords.address,
+          accuracy: coords.accuracy ?? 25,
+          isSharing: prev.isSharing,
+          contactName: prev.contactName,
+          expiresAt: prev.expiresAt,
+        });
+      }
+
+      return next;
+    });
+
     try {
       localStorage.setItem(
         'essimple_real_location',
@@ -830,18 +850,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Consulta periódica de la ubicación en tiempo real desde el servidor/Supabase para el panel familiar
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    const pollLiveLocation = async () => {
+      const fid = resolveCurrentFamilyId();
+      if (fid && fid !== 'local-family-id') {
+        const cloudLoc = await fetchLiveLocation(fid);
+        if (cloudLoc && typeof cloudLoc.lat === 'number') {
+          setLocationShare(prev => ({
+            ...prev,
+            isSharing: Boolean(cloudLoc.isSharing),
+            contactName: cloudLoc.contactName || prev.contactName,
+            expiresAt: cloudLoc.expiresAt || prev.expiresAt,
+            currentCoords: {
+              lat: cloudLoc.lat,
+              lng: cloudLoc.lng,
+              address: cloudLoc.address || prev.currentCoords.address,
+              accuracy: cloudLoc.accuracy || prev.currentCoords.accuracy || 20,
+            },
+          }));
+        }
+      }
+    };
+
+    void pollLiveLocation();
+    timer = setInterval(pollLiveLocation, 5000);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, []);
+
   const startLocationShare = (contactName: string, hours: number) => {
     const token = `share-${Date.now()}`;
     const now = Date.now();
     const expiresAt = now + hours * 3600 * 1000;
-    setLocationShare(prev => ({
-      ...prev,
-      isSharing: true,
-      contactName,
-      durationHours: hours,
-      startTime: now,
-      expiresAt,
-    }));
+    setLocationShare(prev => {
+      const next = {
+        ...prev,
+        isSharing: true,
+        contactName,
+        durationHours: hours,
+        startTime: now,
+        expiresAt,
+      };
+
+      const familyId = resolveCurrentFamilyId();
+      if (familyId && familyId !== 'local-family-id') {
+        void syncLiveLocation(familyId, {
+          lat: prev.currentCoords.lat,
+          lng: prev.currentCoords.lng,
+          address: prev.currentCoords.address,
+          accuracy: prev.currentCoords.accuracy,
+          isSharing: true,
+          contactName,
+          expiresAt,
+        });
+      }
+
+      return next;
+    });
 
     addEvent({
       type: 'ubicacion_inicio',
@@ -856,7 +924,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const stopLocationShare = () => {
-    setLocationShare(prev => ({ ...prev, isSharing: false }));
+    setLocationShare(prev => {
+      const next = { ...prev, isSharing: false };
+      const familyId = resolveCurrentFamilyId();
+      if (familyId && familyId !== 'local-family-id') {
+        void syncLiveLocation(familyId, {
+          lat: prev.currentCoords.lat,
+          lng: prev.currentCoords.lng,
+          address: prev.currentCoords.address,
+          accuracy: prev.currentCoords.accuracy,
+          isSharing: false,
+          contactName: '',
+          expiresAt: 0,
+        });
+      }
+      return next;
+    });
+
     addEvent({
       type: 'ubicacion_fin',
       title: 'Dejó de compartir su ubicación',

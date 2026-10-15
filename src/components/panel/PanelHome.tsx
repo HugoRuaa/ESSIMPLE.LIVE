@@ -9,7 +9,9 @@ import {
   Battery,
   AlertCircle,
   ArrowRight,
+  MapPin,
 } from 'lucide-react';
+import { LeafletMap } from '../map/LeafletMap';
 import { useApp } from '../../context/AppContext';
 
 interface PanelHomeProps {
@@ -24,7 +26,17 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
     dismissEmergencyBanner,
     events,
     contacts,
+    locationShare,
   } = useApp();
+
+  const userCoords: [number, number] = [
+    locationShare.currentCoords.lat,
+    locationShare.currentCoords.lng,
+  ];
+  const homeCoords: [number, number] = [
+    settings.homeCenter.lat,
+    settings.homeCenter.lng,
+  ];
 
   const recentEvents = events.slice(0, 3);
 
@@ -75,7 +87,51 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
         </div>
       )}
 
-      {/* 2. Teléfono de Álvaro Status Card [26] */}
+      {/* 2. Ubicación en Tiempo Real Map Card */}
+      <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-6 h-6 text-[#0b4f9e]" />
+            <h2 className="text-2xl font-extrabold text-[#14213d]">
+              Ubicación de {settings.personName}
+            </h2>
+          </div>
+          {locationShare.isSharing ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-black text-[#0b6b3a] bg-[#eef7f0] border border-[#0b6b3a]/30 px-3 py-1.5 rounded-full shrink-0 animate-pulse">
+              🟢 En vivo con {locationShare.contactName}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#3b4863] bg-[#f8f7f4] border border-[#ddd5c3] px-3 py-1.5 rounded-full shrink-0">
+              📍 Ubicación en línea
+            </span>
+          )}
+        </div>
+
+        <p className="text-base font-bold text-[#14213d]">
+          {locationShare.currentCoords.address || 'Obteniendo dirección actual...'}
+        </p>
+
+        <div className="rounded-2xl overflow-hidden border-2 border-[#ddd5c3]">
+          <LeafletMap
+            center={userCoords}
+            zoom={16}
+            interactive={true}
+            markerType="user"
+            destinationCenter={homeCoords}
+            destinationMarkerType="home"
+            showAccuracyCircle={true}
+            accuracyRadius={locationShare.currentCoords.accuracy || 20}
+            className="h-64 w-full"
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
+          <span>🔵 Punto azul: {settings.personName} (en vivo)</span>
+          <span>🏠 Casa fija: {settings.homeAddress ? 'Configurada' : 'Ver mapa'}</span>
+        </div>
+      </div>
+
+      {/* 3. Teléfono de Álvaro Status Card [26] */}
       <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
         <h2 className="text-2xl font-extrabold text-[#14213d]">
           Teléfono de {settings.personName}

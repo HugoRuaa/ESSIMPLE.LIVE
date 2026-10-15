@@ -107,6 +107,8 @@ const quickMessagesStore = new Map<string, string[]>();
 quickMessagesStore.set(DEFAULT_FAMILIA_ID, ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
 quickMessagesStore.set('hugofrua@gmail.com', ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
 
+const liveLocationStore = new Map<string, any>();
+
 // Supabase API endpoints
 app.get('/api/supabase/config', (req, res) => {
   res.json({
@@ -846,6 +848,48 @@ app.post('/api/familias/:familiaId/quick-messages', async (req, res) => {
     return res.json({ success: true, familiaId, data: cleaned });
   }
   return res.status(400).json({ success: false, message: 'Formato de mensajes inválido' });
+});
+
+// Endpoints para Ubicación en Tiempo Real de la Familia
+app.get('/api/familias/:familiaId/live-location', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const familiaId = await resolveFamiliaId(rawId);
+
+  const defaultLoc = {
+    lat: 6.2088,
+    lng: -75.5684,
+    address: 'Calle 10 # 43A-25, El Poblado, Medellín',
+    accuracy: 25,
+    isSharing: false,
+    contactName: '',
+    expiresAt: 0,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const data = liveLocationStore.get(familiaId) || liveLocationStore.get(rawId?.toLowerCase()) || defaultLoc;
+  return res.json({ success: true, familiaId, data });
+});
+
+app.post('/api/familias/:familiaId/live-location', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const body = req.body || {};
+  const familiaId = await resolveFamiliaId(rawId);
+
+  const locationData = {
+    lat: typeof body.lat === 'number' ? body.lat : 6.2088,
+    lng: typeof body.lng === 'number' ? body.lng : -75.5684,
+    address: body.address || 'Ubicación actual',
+    accuracy: typeof body.accuracy === 'number' ? body.accuracy : 20,
+    isSharing: Boolean(body.isSharing),
+    contactName: body.contactName || '',
+    expiresAt: typeof body.expiresAt === 'number' ? body.expiresAt : 0,
+    updatedAt: new Date().toISOString(),
+  };
+
+  liveLocationStore.set(familiaId, locationData);
+  if (rawId && rawId !== familiaId) liveLocationStore.set(rawId.toLowerCase(), locationData);
+
+  return res.json({ success: true, familiaId, data: locationData });
 });
 
 // In-memory data store for live link sharing between screens

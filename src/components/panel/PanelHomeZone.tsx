@@ -22,7 +22,7 @@ interface GeocodeResult {
 }
 
 export const PanelHomeZone: React.FC = () => {
-  const { settings, saveSettings, account } = useApp();
+  const { settings, saveSettings, account, locationShare } = useApp();
 
   // Local draft states
   const [homeAddress, setHomeAddress] = useState(settings.homeAddress);
@@ -329,6 +329,8 @@ export const PanelHomeZone: React.FC = () => {
             zoom={16}
             interactive={true}
             markerType="home"
+            destinationCenter={[locationShare.currentCoords.lat, locationShare.currentCoords.lng]}
+            destinationMarkerType="user"
             onLocationSelect={handleMapSelectHome}
             className="h-64 w-full rounded-2xl"
           />
