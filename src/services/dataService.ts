@@ -510,10 +510,39 @@ export const reportPhoneStatusToSupabase = async (familiaId: string, status: Pho
   }
 };
 
-// 7. Registrar Evento en essimple.eventos
+// Helper para tiempo relativo amigable
+export const formatRelativeTime = (date: Date): string => {
+  const diffMs = Date.now() - date.getTime();
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMin < 1) return 'Hace un momento';
+  if (diffMin < 60) return `Hace ${diffMin} min`;
+  if (diffHours < 24) return `Hace ${diffHours} h`;
+  return `Hace ${diffDays} d`;
+};
+
+// 7. Registrar Evento en essimple.eventos (Servidor + Supabase)
 export const logEventToSupabase = async (familiaId: string, event: Omit<EventItem, 'id' | 'createdAtMs'>) => {
+  if (!familiaId || familiaId === 'local-family-id') return;
+
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(event),
+    });
+    if (res.ok) return;
+  } catch {
+    // fallback a cliente directo
+  }
+
+  // Intento 2: Cliente Supabase
   const client = getSupabaseClient();
-  if (!client || !familiaId || familiaId === 'local-family-id') return;
+  if (!client) return;
 
   try {
     await client.schema(DB_SCHEMA).from('eventos').insert({
@@ -524,22 +553,191 @@ export const logEventToSupabase = async (familiaId: string, event: Omit<EventIte
       level: event.level,
       failed_contacts: event.failedContacts || [],
     });
+
+    // Conservar solo los últimos 50 eventos
+    const { data: excess } = await client
+      .schema(DB_SCHEMA)
+      .from('eventos')
+      .select('id')
+      .eq('familia_id', familiaId)
+      .order('created_at', { ascending: false })
+      .range(50, 250);
+
+    if (excess && excess.length > 0) {
+      await client
+        .schema(DB_SCHEMA)
+        .from('eventos')
+        .delete()
+        .in('id', excess.map(x => x.id));
+    }
   } catch (err) {
     console.error('Error al registrar evento en Supabase:', err);
   }
 };
 
-// 8. Registrar Cambio en essimple.cambios
-export const logChangeToSupabase = async (familiaId: string, description: string) => {
+// 7b. Consultar Eventos de la Familia (Servidor + Supabase)
+export const fetchFamilyEvents = async (familiaId: string): Promise<EventItem[] | null> => {
+  if (!familiaId || familiaId === 'local-family-id') return null;
+
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/events`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.data)) {
+        return json.data.map((row: any) => {
+          const createdDate = row.created_at ? new Date(row.created_at) : new Date();
+          return {
+            id: row.id || `ev_${Date.now()}`,
+            type: (row.event_type || row.type || 'aviso') as EventItem['type'],
+            title: row.title || 'Evento',
+            detail: row.detail || '',
+            timestamp: createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            relativeTime: formatRelativeTime(createdDate),
+            level: (row.level || 'normal') as EventItem['level'],
+            createdAtMs: createdDate.getTime(),
+            failedContacts: row.failed_contacts || row.failedContacts || [],
+          };
+        });
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  // Intento 2: Cliente Supabase
   const client = getSupabaseClient();
-  if (!client || !familiaId || familiaId === 'local-family-id') return;
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .schema(DB_SCHEMA)
+      .from('eventos')
+      .select('*')
+      .eq('familia_id', familiaId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error || !data) return null;
+
+    return data.map(row => {
+      const createdDate = row.created_at ? new Date(row.created_at) : new Date();
+      return {
+        id: row.id,
+        type: row.event_type as EventItem['type'],
+        title: row.title,
+        detail: row.detail,
+        timestamp: createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        relativeTime: formatRelativeTime(createdDate),
+        level: row.level as EventItem['level'],
+        createdAtMs: createdDate.getTime(),
+        failedContacts: row.failed_contacts || [],
+      };
+    });
+  } catch (err) {
+    console.error('Error al consultar eventos en Supabase:', err);
+    return null;
+  }
+};
+
+// 8. Registrar Cambio en essimple.cambios (Servidor + Supabase)
+export const logChangeToSupabase = async (familiaId: string, description: string) => {
+  if (!familiaId || familiaId === 'local-family-id') return;
+
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/changes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description }),
+    });
+    if (res.ok) return;
+  } catch {
+    // fallback
+  }
+
+  // Intento 2: Cliente Supabase
+  const client = getSupabaseClient();
+  if (!client) return;
 
   try {
     await client.schema(DB_SCHEMA).from('cambios').insert({
       familia_id: familiaId,
       description,
     });
+
+    // Conservar solo los últimos 50 cambios
+    const { data: excess } = await client
+      .schema(DB_SCHEMA)
+      .from('cambios')
+      .select('id')
+      .eq('familia_id', familiaId)
+      .order('created_at', { ascending: false })
+      .range(50, 250);
+
+    if (excess && excess.length > 0) {
+      await client
+        .schema(DB_SCHEMA)
+        .from('cambios')
+        .delete()
+        .in('id', excess.map(x => x.id));
+    }
   } catch (err) {
     console.error('Error al registrar cambio en Supabase:', err);
+  }
+};
+
+// 8b. Consultar Cambios de la Familia (Servidor + Supabase)
+export const fetchFamilyChanges = async (familiaId: string): Promise<ChangeItem[] | null> => {
+  if (!familiaId || familiaId === 'local-family-id') return null;
+
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/changes`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.data)) {
+        return json.data.map((row: any) => {
+          const createdDate = row.created_at ? new Date(row.created_at) : new Date();
+          return {
+            id: row.id || `ch_${Date.now()}`,
+            description: row.description || 'Modificación guardada',
+            timestamp: createdDate.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' + createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            createdAtMs: createdDate.getTime(),
+          };
+        });
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  // Intento 2: Cliente Supabase
+  const client = getSupabaseClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .schema(DB_SCHEMA)
+      .from('cambios')
+      .select('*')
+      .eq('familia_id', familiaId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error || !data) return null;
+
+    return data.map(row => {
+      const createdDate = row.created_at ? new Date(row.created_at) : new Date();
+      return {
+        id: row.id,
+        description: row.description,
+        timestamp: createdDate.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' ' + createdDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        createdAtMs: createdDate.getTime(),
+      };
+    });
+  } catch (err) {
+    console.error('Error al consultar cambios en Supabase:', err);
+    return null;
   }
 };

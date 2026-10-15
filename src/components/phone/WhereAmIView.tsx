@@ -10,7 +10,6 @@ import {
   Loader2,
   CheckCircle2,
   LocateFixed,
-  ChevronLeft,
 } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
 import { LeafletMap } from '../map/LeafletMap';
@@ -337,16 +336,8 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
     : 'Sin ubicación todavía';
   const timeLabel = lastUpdated ? ` · ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
 
-  const topBar = (title: string, onBackClick: () => void, withRefresh: boolean) => (
-    <div className="shrink-0 flex items-center gap-2 px-3 pt-3 pb-2">
-      <button
-        onClick={onBackClick}
-        aria-label="Volver"
-        className="h-12 pl-2.5 pr-4 rounded-2xl bg-[#14213d] text-white border-2 border-[#0b1324] shadow-[0_3px_0_#070d18] active:translate-y-0.5 active:shadow-none flex items-center gap-1.5 text-lg font-extrabold cursor-pointer transition-transform"
-      >
-        <ChevronLeft className="w-6 h-6 text-white stroke-[2.5]" />
-        Volver
-      </button>
+  const topBar = (title: string, withRefresh = false) => (
+    <div className="shrink-0 flex items-center justify-between gap-2 px-4 pt-3 pb-2">
       <h1 className="flex-1 min-w-0 truncate text-2xl font-extrabold tracking-tight">{title}</h1>
       {withRefresh && (
         <button
@@ -378,7 +369,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   if (subView === 'map') {
     return (
       <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-        {topBar('Dónde estoy', () => setSubView('menu'), true)}
+        {topBar('Dónde estoy', true)}
 
         <div className="relative flex-1 min-h-[180px]">
           {located ? (
@@ -424,6 +415,9 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
             <ExternalLink className="w-5 h-5" />
             Ver en Google Maps
           </a>
+          <TactileButton variant="card" fontSize="grande" onClick={() => setSubView('menu')}>
+            Volver
+          </TactileButton>
         </div>
       </div>
     );
@@ -436,8 +430,8 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
     if (!isHomeValid) {
       return (
         <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-          {topBar('Ruta a casa', () => setSubView('menu'), false)}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
+          {topBar('Ruta a casa', false)}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6 space-y-4">
             <div className="bg-white border-2 border-[#b7791f] rounded-3xl p-5 space-y-3 shadow-sm">
               <AlertTriangle className="w-10 h-10 text-[#b7791f]" />
               <h2 className="text-2xl font-extrabold">Falta la dirección de tu casa</h2>
@@ -448,6 +442,9 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
                 Pídeles que entren a Ajustes → Casa y zona segura para registrarla y poder guiarte.
               </p>
             </div>
+            <TactileButton variant="card" fontSize="grande" onClick={() => setSubView('menu')}>
+              Volver
+            </TactileButton>
           </div>
         </div>
       );
@@ -464,7 +461,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
 
     return (
       <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-        {topBar('Ruta a casa', () => setSubView('menu'), true)}
+        {topBar('Ruta a casa', true)}
 
         <div className="relative flex-1 min-h-[180px]">
           {located ? (
@@ -500,6 +497,9 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
             {settings.travelMode === 'pie' ? 'Ruta caminando' : 'Ruta en transporte o taxi'}
             {coords.isRealGps ? ' · GPS activo' : ''}
           </p>
+          <TactileButton variant="card" fontSize="grande" onClick={() => setSubView('menu')}>
+            Volver
+          </TactileButton>
         </div>
       </div>
     );
@@ -510,7 +510,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   // ==========================================
   return (
     <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-      {topBar('Dónde estoy', onBack, false)}
+      {topBar('Dónde estoy', false)}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 space-y-4">
 
         {/* Tarjeta de estado de ubicación en tiempo real */}
@@ -597,9 +597,12 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
           >
             Llévame a casa
           </TactileButton>
+
+          <TactileButton variant="card" fontSize="grande" onClick={onBack}>
+            Volver
+          </TactileButton>
         </div>
       </div>
-
     </div>
   );
 };

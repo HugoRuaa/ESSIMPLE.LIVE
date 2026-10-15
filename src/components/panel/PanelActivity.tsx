@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
   Mic,
@@ -8,14 +8,29 @@ import {
   MessageSquare,
   MapPin,
   Phone,
+  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const PanelActivity: React.FC = () => {
-  const { events, changes } = useApp();
+  const { events, changes, refreshEventsAndChanges } = useApp();
   const [activeTab, setActiveTab] = useState<'eventos' | 'cambios'>('eventos');
   const [filter, setFilter] = useState<'todos' | 'alertas' | 'mensajes' | 'bateria'>('todos');
-  const [visibleCount, setVisibleCount] = useState(10);
+  const [visibleCount] = useState(50);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    void refreshEventsAndChanges?.();
+  }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshEventsAndChanges?.();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const filteredEvents = events.filter(e => {
     if (filter === 'alertas') return e.type === 'sos' || e.type === 'caida_alerta' || e.type === 'zona_salida';
@@ -50,6 +65,25 @@ export const PanelActivity: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-in fade-in duration-150 pb-20">
+      {/* Header with Title & Refresh */}
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <div>
+          <h2 className="text-3xl font-extrabold text-[#14213d] tracking-tight">Actividad</h2>
+          <p className="text-base font-semibold text-[#7a7461]">
+            Historial de los últimos 50 eventos y 50 cambios
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="bg-white border-2 border-[#ddd5c3] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none p-2.5 sm:px-4 sm:py-2.5 rounded-2xl flex items-center gap-2 text-base font-extrabold text-[#0b4f9e] cursor-pointer disabled:opacity-50"
+          title="Actualizar eventos y cambios"
+        >
+          <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span className="hidden sm:inline">Actualizar</span>
+        </button>
+      </div>
+
       {/* 2 Tabs matching [30] & [31] */}
       <div className="grid grid-cols-2 gap-2 bg-[#ede7d8] p-1.5 rounded-2xl">
         <button
@@ -60,7 +94,7 @@ export const PanelActivity: React.FC = () => {
               : 'text-[#14213d] hover:bg-black/5'
           }`}
         >
-          Eventos
+          Eventos ({Math.min(filteredEvents.length, 50)})
         </button>
         <button
           onClick={() => setActiveTab('cambios')}
@@ -70,7 +104,7 @@ export const PanelActivity: React.FC = () => {
               : 'text-[#14213d] hover:bg-black/5'
           }`}
         >
-          Cambios
+          Cambios ({Math.min(changes.length, 50)})
         </button>
       </div>
 
@@ -99,7 +133,12 @@ export const PanelActivity: React.FC = () => {
             ))}
           </div>
 
-          {/* List of events matching mockup [30] */}
+          <div className="flex items-center justify-between text-sm font-bold text-[#7a7461] px-1">
+            <span>Últimos {Math.min(filteredEvents.length, 50)} eventos guardados</span>
+            <span>Máximo 50</span>
+          </div>
+
+          {/* List of events */}
           <div className="space-y-3">
             {filteredEvents.length === 0 ? (
               <div className="bg-white border-2 border-dashed border-[#ddd5c3] rounded-3xl p-8 text-center space-y-2">
@@ -109,7 +148,7 @@ export const PanelActivity: React.FC = () => {
                 </p>
               </div>
             ) : (
-              filteredEvents.slice(0, visibleCount).map(event => (
+              filteredEvents.slice(0, 50).map(event => (
               <div
                 key={event.id}
                 className={`p-4 rounded-3xl border-2 transition ${
@@ -138,21 +177,17 @@ export const PanelActivity: React.FC = () => {
             ))
             )}
           </div>
-
-          {filteredEvents.length > visibleCount && (
-            <button
-              onClick={() => setVisibleCount(c => c + 10)}
-              className="w-full bg-white border-2 border-[#7a7461] rounded-2xl py-3.5 text-xl font-extrabold text-[#14213d] shadow-sm cursor-pointer active:scale-95 transition"
-            >
-              Cargar más
-            </button>
-          )}
         </div>
       )}
 
       {/* Tab 2: Cambios [31] */}
       {activeTab === 'cambios' && (
         <div className="space-y-3">
+          <div className="flex items-center justify-between text-sm font-bold text-[#7a7461] px-1">
+            <span>Últimos {Math.min(changes.length, 50)} cambios guardados</span>
+            <span>Máximo 50</span>
+          </div>
+
           {changes.length === 0 ? (
             <div className="bg-white border-2 border-dashed border-[#ddd5c3] rounded-3xl p-8 text-center space-y-2">
               <p className="text-2xl font-extrabold text-[#14213d]">Sin historial de cambios</p>
@@ -161,7 +196,7 @@ export const PanelActivity: React.FC = () => {
               </p>
             </div>
           ) : (
-            changes.map(change => (
+            changes.slice(0, 50).map(change => (
             <div
               key={change.id}
               className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-4 shadow-sm space-y-1"
@@ -174,15 +209,6 @@ export const PanelActivity: React.FC = () => {
               </p>
             </div>
           ))
-          )}
-
-          {changes.length > 0 && (
-            <button
-              onClick={() => alert('No hay más cambios anteriores registrados.')}
-              className="w-full bg-white border-2 border-[#7a7461] rounded-2xl py-3.5 text-xl font-extrabold text-[#14213d] shadow-sm cursor-pointer active:scale-95 transition mt-2"
-            >
-              Cargar más
-            </button>
           )}
         </div>
       )}

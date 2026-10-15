@@ -27,14 +27,14 @@ const supabaseServerClient = (SUPABASE_URL && SUPABASE_KEY)
   : null;
 
 // Default fallback family ID and in-memory stores for zero-downtime resilience
-const DEFAULT_FAMILIA_ID = 'b3d4f82a-579c-4e89-a2e1-893cf117654a';
+const DEFAULT_FAMILIA_ID = '7a886a1f-3f70-42f2-9d1d-2550067f3214';
 
 const defaultFamilyData = {
   id: DEFAULT_FAMILIA_ID,
   email: 'hugofrua@gmail.com',
   password_hash: '123456',
   exit_pin: '1234',
-  person_name: 'Álvaro',
+  person_name: 'Fabio Papa',
   font_size: 'grande',
   country_code: '57',
 };
@@ -101,6 +101,9 @@ const contactsStore = new Map<string, any[]>();
 contactsStore.set(DEFAULT_FAMILIA_ID, defaultContactsList);
 contactsStore.set('hugofrua@gmail.com', defaultContactsList);
 
+const eventsStore = new Map<string, any[]>();
+const changesStore = new Map<string, any[]>();
+
 // Supabase API endpoints
 app.get('/api/supabase/config', (req, res) => {
   res.json({
@@ -131,13 +134,6 @@ async function resolveFamiliaId(identifier?: string | null): Promise<string> {
   const trimmed = identifier.trim();
   const lower = trimmed.toLowerCase();
 
-  if (familiesStore.has(lower)) {
-    return familiesStore.get(lower).id;
-  }
-  if (familiesStore.has(trimmed)) {
-    return familiesStore.get(trimmed).id;
-  }
-
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
   if (isUuid) return trimmed;
 
@@ -146,11 +142,12 @@ async function resolveFamiliaId(identifier?: string | null): Promise<string> {
       const { data, error } = await supabaseServerClient
         .schema(SUPABASE_SCHEMA)
         .from('familias')
-        .select('id')
+        .select('id, email, exit_pin, person_name, font_size, country_code')
         .eq('email', lower)
         .maybeSingle();
       if (!error && data?.id) {
-        familiesStore.set(lower, { id: data.id, email: lower });
+        familiesStore.set(lower, data);
+        familiesStore.set(data.id, data);
         return data.id;
       }
     } catch {
@@ -158,11 +155,18 @@ async function resolveFamiliaId(identifier?: string | null): Promise<string> {
     }
   }
 
+  if (familiesStore.has(lower)) {
+    return familiesStore.get(lower).id;
+  }
+  if (familiesStore.has(trimmed)) {
+    return familiesStore.get(trimmed).id;
+  }
+
   // Create in-memory entry for this email so all subsequent requests succeed
   const fallback = {
     id: DEFAULT_FAMILIA_ID,
     email: lower,
-    person_name: 'Álvaro',
+    person_name: 'Fabio Papa',
     font_size: 'grande',
     country_code: '57',
     exit_pin: '1234',
@@ -323,11 +327,6 @@ app.get('/api/familias/lookup', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Correo requerido' });
   }
 
-  if (familiesStore.has(email)) {
-    const data = familiesStore.get(email);
-    return res.json({ success: true, familiaId: data.id, familyData: data });
-  }
-
   if (supabaseServerClient) {
     try {
       const { data, error } = await supabaseServerClient
@@ -347,10 +346,15 @@ app.get('/api/familias/lookup', async (req, res) => {
     }
   }
 
+  if (familiesStore.has(email)) {
+    const data = familiesStore.get(email);
+    return res.json({ success: true, familiaId: data.id, familyData: data });
+  }
+
   const fallback = {
     id: DEFAULT_FAMILIA_ID,
     email,
-    person_name: 'Álvaro',
+    person_name: 'Fabio Papa',
     font_size: 'grande',
     country_code: '57',
     exit_pin: '1234',
@@ -614,6 +618,176 @@ app.get('/api/familias/:familiaId/home-zone', async (req, res) => {
 
   const cached = homeZoneStore.get(familiaId) || homeZoneStore.get(rawId?.toLowerCase()) || homeZoneStore.get(DEFAULT_FAMILIA_ID) || defaultHomeZoneData;
   return res.json({ success: true, familiaId, data: cached });
+});
+
+// Endpoints para Historial de Eventos (essimple.eventos)
+app.get('/api/familias/:familiaId/events', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const familiaId = await resolveFamiliaId(rawId);
+
+  if (supabaseServerClient) {
+    try {
+      const { data, error } = await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('eventos')
+        .select('*')
+        .eq('familia_id', familiaId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && Array.isArray(data)) {
+        eventsStore.set(familiaId, data);
+        if (rawId && rawId !== familiaId) eventsStore.set(rawId.toLowerCase(), data);
+        return res.json({ success: true, familiaId, data });
+      }
+    } catch (err: unknown) {
+      console.warn('[Supabase Events Get Error]:', err);
+    }
+  }
+
+  const cached = eventsStore.get(familiaId) || eventsStore.get(rawId?.toLowerCase()) || eventsStore.get(DEFAULT_FAMILIA_ID) || [];
+  return res.json({ success: true, familiaId, data: cached });
+});
+
+app.post('/api/familias/:familiaId/events', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const body = req.body || {};
+  const familiaId = await resolveFamiliaId(rawId);
+
+  const eventItem = {
+    id: body.id || `ev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    familia_id: familiaId,
+    event_type: body.type || body.event_type || 'aviso',
+    title: body.title || 'Evento registrado',
+    detail: body.detail || '',
+    level: body.level || 'normal',
+    failed_contacts: body.failedContacts || body.failed_contacts || [],
+    created_at: body.created_at || new Date().toISOString(),
+  };
+
+  const existing = eventsStore.get(familiaId) || [];
+  const updated = [eventItem, ...existing].slice(0, 50);
+  eventsStore.set(familiaId, updated);
+  if (rawId && rawId !== familiaId) eventsStore.set(rawId.toLowerCase(), updated);
+
+  if (supabaseServerClient) {
+    try {
+      await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('eventos')
+        .insert({
+          familia_id: familiaId,
+          event_type: eventItem.event_type,
+          title: eventItem.title,
+          detail: eventItem.detail,
+          level: eventItem.level,
+          failed_contacts: eventItem.failed_contacts,
+        });
+
+      // Conservar solo los últimos 50 eventos en la base de datos (purgar anteriores)
+      const { data: excessEvents } = await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('eventos')
+        .select('id')
+        .eq('familia_id', familiaId)
+        .order('created_at', { ascending: false })
+        .range(50, 300);
+
+      if (excessEvents && excessEvents.length > 0) {
+        const idsToDelete = excessEvents.map((e: any) => e.id);
+        await supabaseServerClient
+          .schema(SUPABASE_SCHEMA)
+          .from('eventos')
+          .delete()
+          .in('id', idsToDelete);
+      }
+    } catch (err: unknown) {
+      console.warn('[Supabase Event Insert Warning]:', err);
+    }
+  }
+
+  return res.json({ success: true, data: eventItem });
+});
+
+// Endpoints para Historial de Cambios (essimple.cambios)
+app.get('/api/familias/:familiaId/changes', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const familiaId = await resolveFamiliaId(rawId);
+
+  if (supabaseServerClient) {
+    try {
+      const { data, error } = await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('cambios')
+        .select('*')
+        .eq('familia_id', familiaId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (!error && Array.isArray(data)) {
+        changesStore.set(familiaId, data);
+        if (rawId && rawId !== familiaId) changesStore.set(rawId.toLowerCase(), data);
+        return res.json({ success: true, familiaId, data });
+      }
+    } catch (err: unknown) {
+      console.warn('[Supabase Changes Get Error]:', err);
+    }
+  }
+
+  const cached = changesStore.get(familiaId) || changesStore.get(rawId?.toLowerCase()) || changesStore.get(DEFAULT_FAMILIA_ID) || [];
+  return res.json({ success: true, familiaId, data: cached });
+});
+
+app.post('/api/familias/:familiaId/changes', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const body = req.body || {};
+  const familiaId = await resolveFamiliaId(rawId);
+
+  const changeItem = {
+    id: body.id || `ch_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    familia_id: familiaId,
+    description: body.description || 'Modificación guardada',
+    created_at: body.created_at || new Date().toISOString(),
+  };
+
+  const existing = changesStore.get(familiaId) || [];
+  const updated = [changeItem, ...existing].slice(0, 50);
+  changesStore.set(familiaId, updated);
+  if (rawId && rawId !== familiaId) changesStore.set(rawId.toLowerCase(), updated);
+
+  if (supabaseServerClient) {
+    try {
+      await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('cambios')
+        .insert({
+          familia_id: familiaId,
+          description: changeItem.description,
+        });
+
+      // Conservar solo los últimos 50 cambios en la base de datos (purgar anteriores)
+      const { data: excessChanges } = await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('cambios')
+        .select('id')
+        .eq('familia_id', familiaId)
+        .order('created_at', { ascending: false })
+        .range(50, 300);
+
+      if (excessChanges && excessChanges.length > 0) {
+        const idsToDelete = excessChanges.map((c: any) => c.id);
+        await supabaseServerClient
+          .schema(SUPABASE_SCHEMA)
+          .from('cambios')
+          .delete()
+          .in('id', idsToDelete);
+      }
+    } catch (err: unknown) {
+      console.warn('[Supabase Change Insert Warning]:', err);
+    }
+  }
+
+  return res.json({ success: true, data: changeItem });
 });
 
 // In-memory data store for live link sharing between screens

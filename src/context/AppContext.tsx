@@ -19,6 +19,8 @@ import {
   lookupFamilyByEmail,
   logEventToSupabase,
   logChangeToSupabase,
+  fetchFamilyEvents,
+  fetchFamilyChanges,
 } from '../services/dataService';
 
 interface AppContextType {
@@ -56,6 +58,7 @@ interface AppContextType {
   addEvent: (item: Omit<EventItem, 'id' | 'createdAtMs'>) => void;
   activeEmergencyBanner: EventItem | null;
   dismissEmergencyBanner: () => void;
+  refreshEventsAndChanges: () => Promise<void>;
 
   // Account & Auth
   account: UserAccount;
@@ -545,6 +548,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setHasContactChanges(false);
           }
         }
+        // 3. Cargar eventos e historial de cambios desde la nube
+        const [cloudEvents, cloudChanges] = await Promise.all([
+          fetchFamilyEvents(identifier),
+          fetchFamilyChanges(identifier),
+        ]);
+        if (cloudEvents && cloudEvents.length > 0 && isMounted) {
+          setEvents(cloudEvents);
+          try {
+            localStorage.setItem('essimple_events', JSON.stringify(cloudEvents));
+            localStorage.setItem(`essimple_events_${familyId || identifier}`, JSON.stringify(cloudEvents));
+          } catch {}
+        }
+        if (cloudChanges && cloudChanges.length > 0 && isMounted) {
+          setChanges(cloudChanges);
+          try {
+            localStorage.setItem('essimple_changes', JSON.stringify(cloudChanges));
+            localStorage.setItem(`essimple_changes_${familyId || identifier}`, JSON.stringify(cloudChanges));
+          } catch {}
+        }
       } catch (err) {
         console.warn('Error cargando datos familiares desde Supabase en arranque:', err);
       }
@@ -662,7 +684,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<{ success: boolean; message?: string }> => {
     const updated: AppSettings = { ...settings, ...newSettings };
     setSettings(updated);
-    addChange('Guardó cambios en ajustes y configuración');
+    if (newSettings.homeAddress || newSettings.safeZoneRadius || newSettings.safeZoneCenter) {
+      addChange('Actualizó la dirección de casa y zona segura');
+    } else if (newSettings.exitPin) {
+      addChange('Actualizó el PIN de salida de la aplicación');
+    } else {
+      addChange('Guardó cambios en ajustes y configuración');
+    }
 
     // Identificar la familia asociada: ID guardado o correo de la cuenta iniciada
     const storedFamilyId = localStorage.getItem('essimple_family_id');
@@ -822,27 +850,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addEvent = (item: Omit<EventItem, 'id' | 'createdAtMs'>) => {
     const newEvent: EventItem = {
       ...item,
-      id: `ev_${Date.now()}`,
+      id: `ev_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       createdAtMs: Date.now(),
     };
-    setEvents(prev => [newEvent, ...prev]);
+    setEvents(prev => {
+      const next = [newEvent, ...prev].slice(0, 50);
+      try {
+        localStorage.setItem('essimple_events', JSON.stringify(next));
+        const fid = resolveCurrentFamilyId();
+        if (fid) {
+          localStorage.setItem(`essimple_events_${fid}`, JSON.stringify(next));
+        }
+      } catch {}
+      return next;
+    });
     if (item.level === 'danger') {
       setActiveEmergencyBanner(newEvent);
     }
-    const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
-    logEventToSupabase(familyId, item);
+    const familyId = resolveCurrentFamilyId();
+    void logEventToSupabase(familyId, item);
   };
 
   const addChange = (desc: string) => {
     const newChange: ChangeItem = {
-      id: `ch_${Date.now()}`,
+      id: `ch_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       description: desc,
       timestamp: 'Hoy, hace un momento',
       createdAtMs: Date.now(),
     };
-    setChanges(prev => [newChange, ...prev]);
-    const familyId = localStorage.getItem('essimple_family_id') || 'local-family-id';
-    logChangeToSupabase(familyId, desc);
+    setChanges(prev => {
+      const next = [newChange, ...prev].slice(0, 50);
+      try {
+        localStorage.setItem('essimple_changes', JSON.stringify(next));
+        const fid = resolveCurrentFamilyId();
+        if (fid) {
+          localStorage.setItem(`essimple_changes_${fid}`, JSON.stringify(next));
+        }
+      } catch {}
+      return next;
+    });
+    const familyId = resolveCurrentFamilyId();
+    void logChangeToSupabase(familyId, desc);
+  };
+
+  const refreshEventsAndChanges = async () => {
+    const fid = resolveCurrentFamilyId();
+    if (!fid) return;
+    try {
+      const [cloudEvents, cloudChanges] = await Promise.all([
+        fetchFamilyEvents(fid),
+        fetchFamilyChanges(fid),
+      ]);
+      if (cloudEvents && cloudEvents.length > 0) {
+        const top50Events = cloudEvents.slice(0, 50);
+        setEvents(top50Events);
+        try {
+          localStorage.setItem('essimple_events', JSON.stringify(top50Events));
+          localStorage.setItem(`essimple_events_${fid}`, JSON.stringify(top50Events));
+        } catch {}
+      }
+      if (cloudChanges && cloudChanges.length > 0) {
+        const top50Changes = cloudChanges.slice(0, 50);
+        setChanges(top50Changes);
+        try {
+          localStorage.setItem('essimple_changes', JSON.stringify(top50Changes));
+          localStorage.setItem(`essimple_changes_${fid}`, JSON.stringify(top50Changes));
+        } catch {}
+      }
+    } catch (err) {
+      console.warn('Error refrescando actividad:', err);
+    }
   };
 
   const dismissEmergencyBanner = () => {
@@ -887,15 +964,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         // Cargar eventos asociados a esta familia
-        const savedEvents = localStorage.getItem(`essimple_events_${res.familiaId}`);
-        const eventList = savedEvents ? JSON.parse(savedEvents) : [];
-        setEvents(eventList);
-        localStorage.setItem('essimple_events', JSON.stringify(eventList));
+        const cloudEvents = await fetchFamilyEvents(res.familiaId);
+        if (cloudEvents && cloudEvents.length > 0) {
+          setEvents(cloudEvents);
+          try {
+            localStorage.setItem('essimple_events', JSON.stringify(cloudEvents));
+            localStorage.setItem(`essimple_events_${res.familiaId}`, JSON.stringify(cloudEvents));
+          } catch {}
+        } else {
+          const savedEvents = localStorage.getItem(`essimple_events_${res.familiaId}`) || localStorage.getItem('essimple_events');
+          if (savedEvents) {
+            try {
+              const eventList = JSON.parse(savedEvents);
+              if (Array.isArray(eventList) && eventList.length > 0) {
+                setEvents(eventList);
+              }
+            } catch {}
+          }
+        }
 
-        const savedChanges = localStorage.getItem(`essimple_changes_${res.familiaId}`);
-        const changeList = savedChanges ? JSON.parse(savedChanges) : [];
-        setChanges(changeList);
-        localStorage.setItem('essimple_changes', JSON.stringify(changeList));
+        const cloudChanges = await fetchFamilyChanges(res.familiaId);
+        if (cloudChanges && cloudChanges.length > 0) {
+          setChanges(cloudChanges);
+          try {
+            localStorage.setItem('essimple_changes', JSON.stringify(cloudChanges));
+            localStorage.setItem(`essimple_changes_${res.familiaId}`, JSON.stringify(cloudChanges));
+          } catch {}
+        } else {
+          const savedChanges = localStorage.getItem(`essimple_changes_${res.familiaId}`) || localStorage.getItem('essimple_changes');
+          if (savedChanges) {
+            try {
+              const changeList = JSON.parse(savedChanges);
+              if (Array.isArray(changeList) && changeList.length > 0) {
+                setChanges(changeList);
+              }
+            } catch {}
+          }
+        }
         setActiveEmergencyBanner(null);
       }
       setAccount({
@@ -1133,6 +1238,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addEvent,
         activeEmergencyBanner,
         dismissEmergencyBanner,
+        refreshEventsAndChanges,
 
         account,
         login,
