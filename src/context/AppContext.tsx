@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { sendSmsNative, getPairedFamily, getBatteryStatus } from '../lib/native';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { sendSmsNative, getPairedFamily, getBatteryStatus, getNativeStatus, isNative, onAppResume } from '../lib/native';
 import {
   Contact,
   EventItem,
@@ -351,16 +351,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // Phone status state
+  const phoneStatusRef = useRef<PhoneStatus | null>(null) as React.MutableRefObject<PhoneStatus>;
   const [phoneStatus, setPhoneStatus] = useState<PhoneStatus>({
     isOnline: true,
     batteryLevel: 80,
     isCharging: false,
     appVersion: '0.1.0-alpha',
-    missingPermissions: ['Falta permiso para realizar llamadas.'],
+    missingPermissions: [],
     isHomeScreen: true,
     isSynced: true,
-    lastReportTime: Date.now(),
+    // 0 = todavía no se ha recibido ningún dato del teléfono.
+    lastReportTime: 0,
   });
+  phoneStatusRef.current = phoneStatus;
 
   // Location share state
   const [locationShare, setLocationShare] = useState<LocationShareState>(() => {
@@ -883,48 +886,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Medición real de la batería del dispositivo (Android y Navegador) y reporte al servidor
+  // Solo el teléfono del acompañado (el APK) mide y reporta su estado. El panel de la familia solo lo lee:
+  // si también reportara, pisaría los datos reales con los del computador o celular de quien mira el panel.
   useEffect(() => {
+    if (!isNative()) return;
     let timer: NodeJS.Timeout | null = null;
 
-    const updateRealBattery = async () => {
-      const bat = await getBatteryStatus();
-      setPhoneStatus(prev => {
-        const next = {
-          ...prev,
-          batteryLevel: bat.batteryLevel,
-          isCharging: bat.isCharging,
-          lastReportTime: Date.now(),
-        };
-
-        const fid = resolveCurrentFamilyId();
-        if (fid && fid !== 'local-family-id') {
-          void syncPhoneStatus(fid, next);
-        }
-        return next;
-      });
+    const PERMISSION_TEXT: Record<string, string> = {
+      sms: 'Falta permiso para enviar mensajes (SMS).',
+      calls: 'Falta permiso para realizar llamadas.',
+      location: 'Falta permiso de ubicación.',
+      microphone: 'Falta permiso del micrófono.',
+      notifications: 'Las notificaciones están desactivadas.',
+      batteryUnrestricted: 'El ahorro de batería puede apagar la app.',
     };
 
-    void updateRealBattery();
-    timer = setInterval(updateRealBattery, 10000);
+    const report = async () => {
+      const [bat, perms] = await Promise.all([getBatteryStatus(), getNativeStatus()]);
+      const missing = perms
+        ? Object.keys(PERMISSION_TEXT)
+            .filter(key => !(perms as unknown as Record<string, boolean>)[key])
+            .map(key => PERMISSION_TEXT[key])
+        : [];
+      const next: PhoneStatus = {
+        ...phoneStatusRef.current,
+        isOnline: true,
+        batteryLevel: bat.batteryLevel,
+        isCharging: bat.isCharging,
+        missingPermissions: missing,
+        isHomeScreen: perms ? perms.homeLauncher : phoneStatusRef.current.isHomeScreen,
+        isSynced: true,
+        lastReportTime: Date.now(),
+      };
+      setPhoneStatus(next);
+      const fid = resolveCurrentFamilyId();
+      if (fid && fid !== 'local-family-id') {
+        void syncPhoneStatus(fid, next);
+      }
+    };
+
+    void report();
+    timer = setInterval(report, 10000);
+    // Al volver de los ajustes de Android se reporta de inmediato, para que la familia vea el cambio sin esperar.
+    const stopResume = onAppResume(() => {
+      void report();
+    });
     return () => {
       if (timer) clearInterval(timer);
+      stopResume();
     };
   }, []);
 
-  // Polling del estado del teléfono (batería, conexión, etc.) para el panel familiar
+  // Panel de la familia: lee el estado que reportó el teléfono y calcula si sigue conectado según la hora del último reporte.
   useEffect(() => {
+    if (isNative()) return;
     let timer: NodeJS.Timeout | null = null;
 
     const pollPhoneStatus = async () => {
       const fid = resolveCurrentFamilyId();
       if (fid && fid !== 'local-family-id') {
         const cloudStatus = await fetchPhoneStatus(fid);
-        if (cloudStatus && typeof cloudStatus.batteryLevel === 'number') {
+        if (cloudStatus && typeof cloudStatus.batteryLevel === 'number' && cloudStatus.lastReportTime > 0) {
           setPhoneStatus(prev => ({
             ...prev,
             ...cloudStatus,
-            isOnline: true,
+            isOnline: Date.now() - cloudStatus.lastReportTime < 90_000,
             isSynced: true,
           }));
         }

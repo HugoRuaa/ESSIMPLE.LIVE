@@ -489,14 +489,28 @@ export const fetchFamilyHomeZone = async (
   }
 };
 
+// Acepta el id (uuid) o el correo de la familia y devuelve siempre el uuid.
+const toFamiliaUuid = async (client: any, idOrEmail: string): Promise<string | null> => {
+  if (!idOrEmail.includes('@')) return idOrEmail;
+  const { data } = await client
+    .schema(DB_SCHEMA)
+    .from('familias')
+    .select('id')
+    .eq('email', idOrEmail.trim().toLowerCase())
+    .maybeSingle();
+  return data?.id || null;
+};
+
 // 6. Reportar Estado del Teléfono en essimple.estado_telefono
 export const reportPhoneStatusToSupabase = async (familiaId: string, status: PhoneStatus) => {
   const client = getSupabaseClient();
   if (!client || !familiaId || familiaId === 'local-family-id') return;
 
   try {
-    await client.schema(DB_SCHEMA).from('estado_telefono').upsert({
-      familia_id: familiaId,
+    const realId = await toFamiliaUuid(client, familiaId);
+    if (!realId) return;
+    const { error } = await client.schema(DB_SCHEMA).from('estado_telefono').upsert({
+      familia_id: realId,
       is_online: status.isOnline,
       battery_level: status.batteryLevel,
       is_charging: status.isCharging,
@@ -505,6 +519,7 @@ export const reportPhoneStatusToSupabase = async (familiaId: string, status: Pho
       is_home_screen: status.isHomeScreen,
       last_reported_at: new Date().toISOString(),
     });
+    if (error) console.error('Error al reportar estado a Supabase:', error.message);
   } catch (err) {
     console.error('Error al reportar estado a Supabase:', err);
   }
@@ -865,9 +880,41 @@ export const syncPhoneStatus = async (familiaId: string, status: PhoneStatus) =>
 
 export const fetchPhoneStatus = async (familiaId: string): Promise<PhoneStatus | null> => {
   if (!familiaId || familiaId === 'local-family-id') return null;
+
+  // 1) Lo que reportó el teléfono, leído directo de Supabase (es la fuente real).
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const realId = await toFamiliaUuid(client, familiaId);
+      if (realId) {
+        const { data, error } = await client
+          .schema(DB_SCHEMA)
+          .from('estado_telefono')
+          .select('*')
+          .eq('familia_id', realId)
+          .maybeSingle();
+        if (!error && data) {
+          return {
+            isOnline: Boolean(data.is_online),
+            batteryLevel: Number(data.battery_level),
+            isCharging: Boolean(data.is_charging),
+            appVersion: data.app_version || '',
+            missingPermissions: Array.isArray(data.missing_permissions) ? data.missing_permissions : [],
+            isHomeScreen: Boolean(data.is_home_screen),
+            isSynced: true,
+            lastReportTime: data.last_reported_at ? new Date(data.last_reported_at).getTime() : 0,
+          };
+        }
+      }
+    } catch {
+      // se prueba el servidor propio
+    }
+  }
+
+  // 2) Servidor propio (solo existe si la web corre con server.ts).
   try {
     const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/phone-status`);
-    if (res.ok) {
+    if (res.ok && (res.headers.get('content-type') || '').includes('json')) {
       const json = await res.json();
       if (json && json.success && json.data) {
         return json.data;

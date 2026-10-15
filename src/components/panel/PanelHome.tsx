@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Wifi,
+  WifiOff,
   BatteryCharging,
   AlertTriangle,
   CheckCircle,
@@ -28,6 +29,23 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
     contacts,
     locationShare,
   } = useApp();
+
+  // Reloj para que "hace X minutos" y el estado de conexión se refresquen aunque no lleguen datos nuevos.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(t);
+  }, []);
+  const hasData = phoneStatus.lastReportTime > 0;
+  const ageMs = hasData ? Math.max(0, now - phoneStatus.lastReportTime) : 0;
+  const phoneOnline = hasData && ageMs < 90_000;
+  const ageText = (() => {
+    const min = Math.round(ageMs / 60000);
+    if (min < 1) return 'hace menos de un minuto';
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    return h < 24 ? `hace ${h} h` : `hace ${Math.floor(h / 24)} d`;
+  })();
 
   const userCoords: [number, number] = [
     locationShare.currentCoords.lat,
@@ -137,45 +155,63 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
           Teléfono de {settings.personName}
         </h2>
 
-        {/* Online Status Pill */}
-        <div className="inline-flex items-center gap-2 bg-[#eef7f0] border border-[#0b6b3a] px-4 py-2 rounded-2xl text-[#0b6b3a] font-bold text-lg">
-          <Wifi className="w-5 h-5 stroke-[2.5]" />
-          <span>Conectado</span>
-        </div>
+        {/* Estado de conexión según el último reporte real del teléfono */}
+        {!hasData ? (
+          <div className="inline-flex items-center gap-2 bg-[#f6f3ec] border border-[#7a7461] px-4 py-2 rounded-2xl text-[#3b4863] font-bold text-lg">
+            <WifiOff className="w-5 h-5 stroke-[2.5]" />
+            <span>Aún no hay datos del teléfono</span>
+          </div>
+        ) : phoneOnline ? (
+          <div className="inline-flex items-center gap-2 bg-[#eef7f0] border border-[#0b6b3a] px-4 py-2 rounded-2xl text-[#0b6b3a] font-bold text-lg">
+            <Wifi className="w-5 h-5 stroke-[2.5]" />
+            <span>Conectado</span>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-2 bg-[#fff1c9] border border-[#b7791f] px-4 py-2 rounded-2xl text-[#5c3a00] font-bold text-lg">
+            <WifiOff className="w-5 h-5 stroke-[2.5]" />
+            <span>Sin conexión · último dato {ageText}</span>
+          </div>
+        )}
 
-        {/* Battery Level */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-lg font-extrabold text-[#14213d]">
-            <span className="flex items-center gap-2">
-              Batería: {phoneStatus.batteryLevel} %
-              {phoneStatus.isCharging && (
-                <span className="inline-flex items-center text-sm font-bold text-[#0b6b3a]">
-                  <BatteryCharging className="w-5 h-5 ml-1 mr-0.5" /> Cargando
+        {hasData && (
+          <>
+            {/* Battery Level */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-lg font-extrabold text-[#14213d]">
+                <span className="flex items-center gap-2">
+                  Batería: {phoneStatus.batteryLevel} %
+                  {phoneOnline && phoneStatus.isCharging && (
+                    <span className="inline-flex items-center text-sm font-bold text-[#0b6b3a]">
+                      <BatteryCharging className="w-5 h-5 ml-1 mr-0.5" /> Cargando
+                    </span>
+                  )}
                 </span>
+              </div>
+              <div className="w-full bg-[#f6f3ec] h-4 rounded-full overflow-hidden border border-[#ddd5c3]">
+                <div
+                  className={`h-full transition-all rounded-full ${
+                    phoneStatus.batteryLevel <= 10
+                      ? 'bg-[#a61b1b]'
+                      : phoneStatus.batteryLevel <= 20
+                      ? 'bg-[#b7791f]'
+                      : 'bg-[#0b6b3a]'
+                  }`}
+                  style={{ width: `${phoneStatus.batteryLevel}%` }}
+                />
+              </div>
+              {!phoneOnline && (
+                <p className="text-sm font-semibold text-[#5c3a00]">Última lectura {ageText}.</p>
               )}
-            </span>
-          </div>
-          {/* Progress bar */}
-          <div className="w-full bg-[#f6f3ec] h-4 rounded-full overflow-hidden border border-[#ddd5c3]">
-            <div
-              className={`h-full transition-all rounded-full ${
-                phoneStatus.batteryLevel <= 10
-                  ? 'bg-[#a61b1b]'
-                  : phoneStatus.batteryLevel <= 20
-                  ? 'bg-[#b7791f]'
-                  : 'bg-[#0b6b3a]'
-              }`}
-              style={{ width: `${phoneStatus.batteryLevel}%` }}
-            />
-          </div>
-        </div>
+            </div>
+          </>
+        )}
 
         <p className="text-base font-semibold text-[#3b4863]">
           Versión de la app: {phoneStatus.appVersion}
         </p>
 
         {/* Missing permissions warning pill */}
-        {phoneStatus.missingPermissions.map((perm, idx) => (
+        {hasData && phoneStatus.missingPermissions.map((perm, idx) => (
           <div
             key={idx}
             className="bg-[#fff1c9] border border-[#b7791f] text-[#5c3a00] p-3 rounded-2xl flex items-center gap-2 text-base font-bold"
@@ -185,10 +221,17 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
           </div>
         ))}
 
-        <div className="flex items-center gap-2 text-[#0b6b3a] font-bold text-lg pt-1">
-          <CheckCircle className="w-6 h-6 stroke-[2.5]" />
-          <span>Teléfono al día</span>
-        </div>
+        {hasData && phoneOnline && phoneStatus.missingPermissions.length === 0 && (
+          <div className="flex items-center gap-2 text-[#0b6b3a] font-bold text-lg pt-1">
+            <CheckCircle className="w-6 h-6 stroke-[2.5]" />
+            <span>Teléfono al día</span>
+          </div>
+        )}
+        {hasData && phoneStatus.missingPermissions.length > 0 && (
+          <p className="text-base font-semibold text-[#5c3a00]">
+            Abre essimple.live en el teléfono y toca Atrás en el resumen para aprobar lo que falta.
+          </p>
+        )}
       </div>
 
       {/* 3. Primeros pasos Checklist [26] */}
