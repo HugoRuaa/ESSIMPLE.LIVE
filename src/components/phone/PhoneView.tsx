@@ -293,14 +293,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
               Mensaje de voz
             </TactileButton>
 
-            <TactileButton
-              variant="primary"
-              fontSize={settings.fontSize}
-              icon={<Share2 className="w-9 h-9 text-white stroke-[2.5]" />}
-              onClick={() => setCurrentScreen('share_location')}
-            >
-              Compartir mi ubicación
-            </TactileButton>
           </div>
 
           {/* Avisos button */}
@@ -353,11 +345,11 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
     );
   }
 
-  if (currentScreen === 'share_location' && selectedContact) {
+  if (currentScreen === 'share_location') {
     return (
       <ShareLocationView
-        contactName={selectedContact.name}
-        onBack={() => setCurrentScreen('contact_detail')}
+        contactName={selectedContact?.name}
+        onBack={() => setCurrentScreen(selectedContact ? 'contact_detail' : 'home')}
         onSharedStarted={() => setCurrentScreen('home')}
       />
     );
@@ -374,7 +366,12 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
   }
 
   if (currentScreen === 'where_am_i') {
-    return <WhereAmIView onBack={() => setCurrentScreen('home')} />;
+    return (
+      <WhereAmIView
+        onBack={() => setCurrentScreen('home')}
+        onShareLocation={() => setCurrentScreen('share_location')}
+      />
+    );
   }
 
   if (currentScreen === 'exit_menu') {
@@ -430,7 +427,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
         {locationShare.isSharing && (
           <div className="bg-[#0b6b3a] text-white rounded-3xl p-3 flex flex-col min-[400px]:flex-row min-[400px]:items-center justify-between gap-3 shadow-md animate-in slide-in-from-top duration-200">
             <span className="text-xl min-[400px]:text-2xl font-extrabold pl-2 leading-tight">
-              {locationShare.contactName} te está viendo
+              Tu familia está viendo tu ubicación
             </span>
             <button
               onClick={() => {

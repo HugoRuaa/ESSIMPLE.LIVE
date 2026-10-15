@@ -914,7 +914,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addEvent({
       type: 'ubicacion_inicio',
       title: 'Empezó a compartir su ubicación',
-      detail: `Con ${contactName}, por ${hours} ${hours === 1 ? 'hora' : 'horas'}`,
+      detail: `En tiempo real por ${hours} ${hours === 1 ? 'hora' : 'horas'}`,
       timestamp: 'Ahora mismo',
       relativeTime: 'Hace un momento',
       level: 'normal',

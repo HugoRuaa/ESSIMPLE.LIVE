@@ -98,7 +98,7 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
           </div>
           {locationShare.isSharing ? (
             <span className="inline-flex items-center gap-1.5 text-xs font-black text-[#0b6b3a] bg-[#eef7f0] border border-[#0b6b3a]/30 px-3 py-1.5 rounded-full shrink-0 animate-pulse">
-              🟢 En vivo con {locationShare.contactName}
+              🟢 Compartiendo en vivo ({locationShare.durationHours || 1}h)
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#3b4863] bg-[#f8f7f4] border border-[#ddd5c3] px-3 py-1.5 rounded-full shrink-0">

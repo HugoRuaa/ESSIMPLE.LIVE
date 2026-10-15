@@ -10,6 +10,7 @@ import {
   Loader2,
   CheckCircle2,
   LocateFixed,
+  Share2,
 } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
 import { LeafletMap } from '../map/LeafletMap';
@@ -18,6 +19,7 @@ import { isNative, requestPermission } from '../../lib/native';
 
 interface WhereAmIViewProps {
   onBack: () => void;
+  onShareLocation?: () => void;
 }
 
 // Cálculo preciso de distancia en metros (Fórmula de Haversine)
@@ -66,7 +68,7 @@ function getCompassDirection(
   return 'noroccidente';
 }
 
-export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
+export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack, onShareLocation }) => {
   const { settings, locationShare, updateCurrentCoords } = useApp();
   const [subView, setSubView] = useState<'menu' | 'map' | 'navigating'>('menu');
 
@@ -587,6 +589,17 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
           >
             Llévame a casa
           </TactileButton>
+
+          {onShareLocation && (
+            <TactileButton
+              variant="primary"
+              fontSize="grande"
+              icon={<Share2 className="w-9 h-9 text-white stroke-[2.5]" />}
+              onClick={onShareLocation}
+            >
+              Compartir mi ubicación con mi familia
+            </TactileButton>
+          )}
 
           <TactileButton variant="card" fontSize="grande" onClick={onBack}>
             Volver
