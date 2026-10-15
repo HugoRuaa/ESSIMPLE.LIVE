@@ -342,9 +342,9 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
       <button
         onClick={onBackClick}
         aria-label="Volver"
-        className="h-12 pl-2 pr-4 rounded-2xl bg-white border-2 border-[#ddd5c3] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none flex items-center gap-1 text-lg font-extrabold cursor-pointer"
+        className="h-12 pl-2.5 pr-4 rounded-2xl bg-[#14213d] text-white border-2 border-[#0b1324] shadow-[0_3px_0_#070d18] active:translate-y-0.5 active:shadow-none flex items-center gap-1.5 text-lg font-extrabold cursor-pointer transition-transform"
       >
-        <ChevronLeft className="w-6 h-6" />
+        <ChevronLeft className="w-6 h-6 text-white stroke-[2.5]" />
         Volver
       </button>
       <h1 className="flex-1 min-w-0 truncate text-2xl font-extrabold tracking-tight">{title}</h1>

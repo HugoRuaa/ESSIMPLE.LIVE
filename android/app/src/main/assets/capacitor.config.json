@@ -1,0 +1,8 @@
+{
+	"appId": "live.essimple",
+	"appName": "essimple.live",
+	"webDir": "dist",
+	"android": {
+		"allowMixedContent": false
+	}
+}

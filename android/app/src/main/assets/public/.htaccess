@@ -1,0 +1,19 @@
+# Hostinger (Apache/LiteSpeed): cualquier ruta que no sea un archivo carga la app (por ejemplo /d/<código>).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Permite que el APK (que corre en https://localhost) cargue la versión más reciente desde este sitio.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|json|map|woff2?)$">
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+  <FilesMatch "^live\.json$">
+    Header set Cache-Control "no-store, max-age=0"
+  </FilesMatch>
+</IfModule>
