@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TactileButton } from '../common/TactileButton';
 import { useApp } from '../../context/AppContext';
 import {
@@ -239,6 +239,12 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       setBusy(false);
     }
     setAllDone(true);
+    if (!pairedNow) {
+      setTimeout(() => {
+        setCurrentStep(13);
+        setMode('steps');
+      }, 700);
+    }
     if (pairedNow) {
       // Recarga para leer los datos de la familia recién vinculada y cae directo en el resumen.
       try {
@@ -366,11 +372,24 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     }
   };
 
+  // Si se llegó a un paso desde el resumen ("Atrás"), Siguiente y Atrás devuelven al resumen.
+  const fromSummaryRef = useRef(false);
+
   const nextStep = () => {
+    if (fromSummaryRef.current) {
+      fromSummaryRef.current = false;
+      setCurrentStep(13);
+      return;
+    }
     if (currentStep < 13) setCurrentStep(s => s + 1);
   };
 
   const prevStep = () => {
+    if (fromSummaryRef.current) {
+      fromSummaryRef.current = false;
+      setCurrentStep(13);
+      return;
+    }
     if (currentStep > 1) setCurrentStep(s => s - 1);
     else setMode('choose');
   };
@@ -426,7 +445,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
   // Progreso del modo "todo de una vez"
   if (mode === 'all') {
-    const failedBackground = allStatus.backgroundLocation === 'fail';
     return (
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-5 pt-4">
@@ -457,21 +475,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           </ul>
         </div>
 
-        {allDone && (
-          <div className="pb-6 pt-8 space-y-4">
-            {failedBackground && native && (
-              <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={() => openAppSettings()} className="!py-4 !text-xl">
-                Abrir ajustes: elegir "Permitir todo el tiempo"
-              </TactileButton>
-            )}
-            <TactileButton variant="green" fontSize="grande" onClick={onFinish}>
-              Abrir essimple.live
-            </TactileButton>
-            <TactileButton variant="card" fontSize="normal" minHeight={false} onClick={() => { setCurrentStep(13); setMode('steps'); }} className="!py-4 !text-xl">
-              Ver resumen
-            </TactileButton>
-          </div>
-        )}
       </div>
     );
   }
@@ -698,58 +701,58 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     );
   }
 
-  // Step 13: Resumen [22]
+  // Step 13: Resumen final (lo ve quien termina "todo de una vez" y quien termina paso a paso)
+  const STEP_OF: Record<string, number> = {
+    linked: 1, sms: 2, calls: 3, location: 4, backgroundLocation: 5, microphone: 6,
+    notifications: 7, batteryUnrestricted: 8, fullScreenAlerts: 9, homeLauncher: 10, protectedMode: 11,
+  };
+  const summary = ALL_ITEMS.map(item => ({
+    ...item,
+    ok: item.key === 'linked' ? isLinked : !!grantedPermissions[item.key],
+  }));
+  const missingItems = summary.filter(i => !i.ok);
+  const goFixMissing = () => {
+    setPermHint('');
+    fromSummaryRef.current = true;
+    setMode('steps');
+    setCurrentStep(missingItems.length > 0 ? STEP_OF[missingItems[0].key] || 1 : 2);
+  };
+
   return (
     <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
-      <div className="space-y-6 pt-4">
-        <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 13 de 13</p>
-        <h1 className="text-4xl font-extrabold tracking-tight">Resumen</h1>
+      <div className="space-y-5 pt-4">
+        <h1 className="text-4xl font-extrabold tracking-tight leading-tight">
+          {missingItems.length > 0 ? 'Aún falta algo por aprobar' : 'Todo quedó aprobado'}
+        </h1>
+        {missingItems.length > 0 && (
+          <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
+            Toca Atrás para aprobar lo que falta, o abre essimple.live y sigue sin ello.
+          </p>
+        )}
 
-        {(() => {
-          const checks: { key: string; ok: boolean; good: string; bad: string }[] = [
-            { key: 'linked', ok: isLinked, good: 'Teléfono vinculado con el panel familiar', bad: 'Falta vincular con el panel familiar' },
-            { key: 'sms', ok: !!grantedPermissions.sms, good: 'Permiso de SMS concedido', bad: 'Permiso de SMS pendiente' },
-            { key: 'calls', ok: !!grantedPermissions.calls, good: 'Permiso de llamadas concedido', bad: 'Permiso de llamadas pendiente' },
-            { key: 'location', ok: !!grantedPermissions.location, good: 'Permiso de ubicación concedido', bad: 'Permiso de ubicación pendiente' },
-            { key: 'microphone', ok: !!grantedPermissions.microphone, good: 'Micrófono concedido', bad: 'Permiso de micrófono pendiente' },
-            { key: 'notifications', ok: !!grantedPermissions.notifications, good: 'Notificaciones activadas', bad: 'Notificaciones pendientes' },
-            { key: 'homeLauncher', ok: !!grantedPermissions.homeLauncher, good: 'essimple.live configurada como pantalla de inicio', bad: 'essimple.live aún no es la pantalla de inicio' },
-          ];
-          const missing = checks.filter(c => !c.ok);
-          const okItems = checks.filter(c => c.ok);
-          return (
-            <>
-              {missing.length > 0 && (
-                <div className="bg-[#fff1c9] border-2 border-[#b7791f] rounded-2xl p-5 text-[#5c3a00]">
-                  <h2 className="text-xl font-extrabold mb-2">Falta</h2>
-                  <ul className="list-disc list-inside space-y-1 font-semibold text-lg">
-                    {missing.map(c => (
-                      <li key={c.key}>{c.bad}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {okItems.length > 0 && (
-                <div className="bg-[#eef7f0] border-2 border-[#0b6b3a] rounded-2xl p-5 text-[#0b6b3a]">
-                  <h2 className="text-xl font-extrabold mb-3">Está bien</h2>
-                  <ul className="list-disc list-inside space-y-2 font-bold text-lg text-[#14213d]">
-                    {okItems.map(c => (
-                      <li key={c.key}>{c.good}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          );
-        })()}
+        <ul className="space-y-2">
+          {summary.map(item => (
+            <li key={item.key} className={`flex items-start gap-3 text-xl font-bold ${item.ok ? 'text-[#0b6b3a]' : 'text-[#a61b1b]'}`}>
+              <span className="w-7 text-center">{item.ok ? '✓' : '✗'}</span>
+              <span className="text-[#14213d] leading-snug">
+                {item.label}
+                {!item.ok && (
+                  <span className="block text-lg text-[#a61b1b]">
+                    {item.key === 'linked' ? 'No se vinculó' : 'No se aprobó'}
+                  </span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="pb-6 pt-8 space-y-4">
-        <TactileButton variant="green" fontSize="grande" onClick={onFinish}>
-          Abrir essimple.live
-        </TactileButton>
-        <TactileButton variant="card" fontSize="grande" onClick={prevStep}>
+        <TactileButton variant={missingItems.length > 0 ? 'green' : 'card'} fontSize="grande" onClick={goFixMissing}>
           Atrás
+        </TactileButton>
+        <TactileButton variant={missingItems.length > 0 ? 'card' : 'green'} fontSize="grande" onClick={onFinish}>
+          Abrir essimple.live
         </TactileButton>
       </div>
     </div>
