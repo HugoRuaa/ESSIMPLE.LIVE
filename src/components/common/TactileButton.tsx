@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type ButtonVariant = 'primary' | 'green' | 'danger' | 'card' | 'outline' | 'ghost';
+export type ButtonVariant = 'primary' | 'green' | 'pending' | 'danger' | 'card' | 'outline' | 'ghost';
 
 interface TactileButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -45,6 +45,8 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
         return 'bg-[#0b4f9e] text-white border-2 border-[#093f7e] shadow-[0_4px_0_#062a54] active:shadow-[0_1px_0_#062a54]';
       case 'green':
         return 'bg-[#0b6b3a] text-white border-2 border-[#08542d] shadow-[0_4px_0_#063e21] active:shadow-[0_1px_0_#063e21]';
+      case 'pending':
+        return 'bg-[#ffe3b8] text-[#5c3a00] border-2 border-[#e3a84f] shadow-[0_4px_0_#c98a3a] active:shadow-[0_1px_0_#c98a3a]';
       case 'danger':
         return 'bg-[#a61b1b] text-white border-2 border-[#8a1616] shadow-[0_4px_0_#681010] active:shadow-[0_1px_0_#681010]';
       case 'card':

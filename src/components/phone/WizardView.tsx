@@ -177,6 +177,17 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     }
   };
 
+  // Un solo botón por aprobación: pendiente (naranja) → pide el permiso; aprobado (verde) → abre el ajuste para cambiarlo.
+  // Android no permite quitar un permiso desde la app; al volver, el botón se actualiza solo.
+  const handleToggle = async (key: string) => {
+    if (native && grantedPermissions[key]) {
+      setPermHint('Cambia el permiso en los ajustes que se abrieron y vuelve aquí: el botón se actualiza solo.');
+      await openAppSettings();
+      return;
+    }
+    await handlePermission(key);
+  };
+
   // Modo "todo de una vez": recorre todos los permisos en cadena; la persona solo toca "Permitir" en cada cuadro de Android.
   const ALL_ITEMS: { key: string; label: string }[] = [
     { key: 'linked', label: 'Vincular con la familia' },
@@ -462,7 +473,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               const state = allStatus[item.key] || 'pending';
               const icon = state === 'ok' ? '✓' : state === 'fail' ? '✗' : state === 'running' ? '…' : '○';
               const color =
-                state === 'ok' ? 'text-[#0b6b3a]' : state === 'fail' ? 'text-[#a61b1b]' : state === 'running' ? 'text-[#0b4f9e]' : 'text-[#7a7461]';
+                state === 'ok' ? 'text-[#0b6b3a]' : state === 'fail' ? 'text-[#b45309]' : state === 'running' ? 'text-[#0b4f9e]' : 'text-[#7a7461]';
               return (
                 <li key={item.key} className={`flex items-center gap-3 text-xl font-bold ${color}`}>
                   <span className="w-7 text-center">{icon}</span>
@@ -506,7 +517,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
         </div>
 
         <div className="pb-6 pt-8 space-y-4">
-          <TactileButton variant="green" fontSize="grande" onClick={nextStep}>
+          <TactileButton variant="primary" fontSize="grande" onClick={nextStep}>
             Siguiente
           </TactileButton>
         </div>
@@ -530,13 +541,13 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
           <div className="space-y-4 pt-2">
             <TactileButton
-              variant={isGranted ? 'card' : 'green'}
+              variant={isGranted ? 'green' : 'pending'}
               fontSize="grande"
               minHeight={false}
-              onClick={() => handlePermission('sms')}
+              onClick={() => handleToggle('sms')}
               className="!py-5"
             >
-              {isGranted ? '✓ Permiso de SMS concedido' : 'Dar permiso de SMS'}
+              {isGranted ? '✓ Permiso de SMS aprobado' : 'Dar permiso de SMS'}
             </TactileButton>
 
             {permHint && <p className="text-lg font-semibold text-[#5c3a00]">{permHint}</p>}
@@ -555,21 +566,12 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               <p className="text-lg font-bold leading-snug">
                 Sin este permiso, el botón SOS no podrá enviar mensajes de texto.
               </p>
-              <p className="text-base font-medium">
-                Puedes seguir sin este permiso, o activarlo a mano en los ajustes de la app.
-              </p>
-              <button
-                onClick={() => (native ? openAppSettings() : alert('Solo disponible en el APK de Android.'))}
-                className="w-full bg-white text-[#14213d] border-2 border-[#7a7461] rounded-2xl py-3 text-lg font-bold shadow-sm cursor-pointer"
-              >
-                Abrir ajustes de essimple.live
-              </button>
             </div>
           </div>
         </div>
 
         <div className="pb-6 pt-8 space-y-4">
-          <TactileButton variant="green" fontSize="grande" onClick={nextStep}>
+          <TactileButton variant="primary" fontSize="grande" onClick={nextStep}>
             Siguiente
           </TactileButton>
           <TactileButton variant="card" fontSize="grande" onClick={prevStep}>
@@ -653,30 +655,20 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
           <div className="pt-4">
             <TactileButton
-              variant={isDone ? 'card' : 'green'}
+              variant={isDone ? 'green' : 'pending'}
               fontSize="grande"
               minHeight={false}
-              onClick={async () => {
-                await handlePermission(stepData.permKey);
-              }}
+              onClick={() => handleToggle(stepData.permKey)}
               className="!py-5"
             >
-              {isDone ? '✓ Configurado correctamente' : stepData.buttonText}
+              {isDone ? '✓ Aprobado' : stepData.buttonText}
             </TactileButton>
             {permHint && <p className="mt-3 text-lg font-semibold text-[#5c3a00]">{permHint}</p>}
-            {native && (
-              <button
-                onClick={() => openAppSettings()}
-                className="mt-4 w-full bg-white text-[#14213d] border-2 border-[#7a7461] rounded-2xl py-3 text-lg font-bold shadow-sm cursor-pointer"
-              >
-                Cambiar en los ajustes de Android
-              </button>
-            )}
           </div>
         </div>
 
         <div className="pb-6 pt-8 space-y-4">
-          <TactileButton variant="green" fontSize="grande" onClick={nextStep}>
+          <TactileButton variant="primary" fontSize="grande" onClick={nextStep}>
             Siguiente
           </TactileButton>
           <TactileButton variant="card" fontSize="grande" onClick={prevStep}>
@@ -718,12 +710,12 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
 
         <ul className="space-y-2">
           {summary.map(item => (
-            <li key={item.key} className={`flex items-start gap-3 text-xl font-bold ${item.ok ? 'text-[#0b6b3a]' : 'text-[#a61b1b]'}`}>
+            <li key={item.key} className={`flex items-start gap-3 text-xl font-bold ${item.ok ? 'text-[#0b6b3a]' : 'text-[#b45309]'}`}>
               <span className="w-7 text-center">{item.ok ? '✓' : '✗'}</span>
               <span className="text-[#14213d] leading-snug">
                 {item.label}
                 {!item.ok && (
-                  <span className="block text-lg text-[#a61b1b]">
+                  <span className="block text-lg text-[#b45309]">
                     {item.key === 'linked' ? 'No se vinculó' : 'No se aprobó'}
                   </span>
                 )}
@@ -734,7 +726,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       </div>
 
       <div className="pb-6 pt-8 space-y-4">
-        <TactileButton variant={missingItems.length > 0 ? 'green' : 'card'} fontSize="grande" onClick={goFixMissing}>
+        <TactileButton variant={missingItems.length > 0 ? 'pending' : 'card'} fontSize="grande" onClick={goFixMissing}>
           Atrás
         </TactileButton>
         <TactileButton variant={missingItems.length > 0 ? 'card' : 'green'} fontSize="grande" onClick={onFinish}>
