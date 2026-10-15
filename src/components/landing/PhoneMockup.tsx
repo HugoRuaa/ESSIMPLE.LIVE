@@ -2,10 +2,30 @@ import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Phone } from 'lucide-react';
 
 const CONTACTS = [
-  { name: 'Marta', role: 'Hija', color: '#0b4f9e' },
-  { name: 'Andrés', role: 'Hijo', color: '#0b6b3a' },
-  { name: 'Dra. Rojas', role: 'Médica', color: '#7a4a9e' },
-  { name: 'Lucía', role: 'Vecina', color: '#b45309' },
+  {
+    name: 'Laura (Marta)',
+    role: 'Hija',
+    color: '#0b4f9e',
+    photo: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
+  },
+  {
+    name: 'Didier (Hugo)',
+    role: 'Hijo',
+    color: '#0b6b3a',
+    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400',
+  },
+  {
+    name: 'Carlos',
+    role: 'Hijo / Familiar',
+    color: '#7a4a9e',
+    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400',
+  },
+  {
+    name: 'Dra. Rojas',
+    role: 'Médica',
+    color: '#b45309',
+    photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=400',
+  },
 ];
 
 /**
@@ -68,9 +88,17 @@ export const PhoneMockup: React.FC<{ className?: string }> = ({ className = '' }
           <div className="flex-1 px-4 pt-2 space-y-2 overflow-hidden">
             {CONTACTS.map(c => (
               <div key={c.name} className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-2.5 shadow-[0_4px_0_#cfc6b2] flex items-center gap-3">
-                <div className="w-14 h-14 rounded-full text-white text-2xl font-extrabold flex items-center justify-center shrink-0" style={{ backgroundColor: c.color }}>
-                  {c.name[0]}
-                </div>
+                {c.photo ? (
+                  <img
+                    src={c.photo}
+                    alt={c.name}
+                    className="w-14 h-14 rounded-full object-cover shrink-0 border-2 border-white shadow-sm"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full text-white text-2xl font-extrabold flex items-center justify-center shrink-0" style={{ backgroundColor: c.color }}>
+                    {c.name[0]}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xl font-extrabold leading-tight truncate">{c.name}</p>
                   <p className="text-sm text-[#7a7461] font-semibold">{c.role}</p>

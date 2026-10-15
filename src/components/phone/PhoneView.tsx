@@ -246,12 +246,20 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
         <div className="space-y-4 pt-2">
           {/* Avatar and name header [3] */}
           <div className="flex items-center gap-5">
-            <div
-              style={{ backgroundColor: selectedContact.avatarColor }}
-              className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl font-extrabold shadow-md shrink-0"
-            >
-              {selectedContact.name.charAt(0).toUpperCase()}
-            </div>
+            {selectedContact.photoUrl ? (
+              <img
+                src={selectedContact.photoUrl}
+                alt={selectedContact.name}
+                className="w-20 h-20 rounded-full object-cover shadow-md shrink-0 border-2 border-white"
+              />
+            ) : (
+              <div
+                style={{ backgroundColor: selectedContact.avatarColor }}
+                className="w-20 h-20 rounded-full flex items-center justify-center text-white text-4xl font-extrabold shadow-md shrink-0"
+              >
+                {selectedContact.name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <h1 className="text-4xl font-extrabold text-[#14213d] tracking-tight">
               {selectedContact.name}
             </h1>
@@ -471,12 +479,20 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
                     className="flex items-center gap-3 min-[360px]:gap-4 cursor-pointer flex-1 min-w-0"
                     title={`Abrir opciones para ${contact.name}`}
                   >
-                    <div
-                      style={{ backgroundColor: contact.avatarColor }}
-                      className="w-12 h-12 min-[360px]:w-14 min-[360px]:h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-xl min-[360px]:text-2xl sm:text-3xl font-extrabold shadow-sm shrink-0"
-                    >
-                      {contact.name.charAt(0).toUpperCase()}
-                    </div>
+                    {contact.photoUrl ? (
+                      <img
+                        src={contact.photoUrl}
+                        alt={contact.name}
+                        className="w-12 h-12 min-[360px]:w-14 min-[360px]:h-14 sm:w-16 sm:h-16 rounded-full object-cover shadow-sm shrink-0 border-2 border-white"
+                      />
+                    ) : (
+                      <div
+                        style={{ backgroundColor: contact.avatarColor }}
+                        className="w-12 h-12 min-[360px]:w-14 min-[360px]:h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-xl min-[360px]:text-2xl sm:text-3xl font-extrabold shadow-sm shrink-0"
+                      >
+                        {contact.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <span className="text-xl min-[360px]:text-2xl sm:text-3xl font-extrabold text-[#14213d] block leading-tight break-words line-clamp-2">
                         {contact.name}
