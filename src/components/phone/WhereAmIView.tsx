@@ -10,6 +10,7 @@ import {
   Loader2,
   CheckCircle2,
   LocateFixed,
+  ChevronLeft,
 } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
 import { LeafletMap } from '../map/LeafletMap';
@@ -304,103 +305,105 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   const googleMapsCurrentUrl = `https://www.google.com/maps?q=${coords.lat},${coords.lng}`;
 
   // ==========================================
+  // Piezas compartidas (diseño de celular: barra superior fija, mapa que ocupa el resto y panel inferior)
+  // ==========================================
+  const located = coords.isRealGps || coords.isApproximate;
+  const statusLine = coords.isRealGps
+    ? `GPS exacto, ±${coords.accuracy} m`
+    : coords.isApproximate
+    ? 'Ubicación aproximada por red'
+    : isLocating
+    ? 'Buscando tu ubicación…'
+    : 'Sin ubicación todavía';
+  const timeLabel = lastUpdated ? ` · ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
+
+  const topBar = (title: string, onBackClick: () => void, withRefresh: boolean) => (
+    <div className="shrink-0 flex items-center gap-2 px-3 pt-3 pb-2">
+      <button
+        onClick={onBackClick}
+        aria-label="Volver"
+        className="h-12 pl-2 pr-4 rounded-2xl bg-white border-2 border-[#ddd5c3] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none flex items-center gap-1 text-lg font-extrabold cursor-pointer"
+      >
+        <ChevronLeft className="w-6 h-6" />
+        Volver
+      </button>
+      <h1 className="flex-1 min-w-0 truncate text-2xl font-extrabold tracking-tight">{title}</h1>
+      {withRefresh && (
+        <button
+          onClick={() => void fetchLocation()}
+          disabled={isLocating}
+          aria-label="Actualizar ubicación"
+          className="h-12 w-12 shrink-0 rounded-2xl bg-white border-2 border-[#7a7461] shadow-sm active:scale-95 flex items-center justify-center cursor-pointer disabled:opacity-60"
+        >
+          <RefreshCw className={`w-6 h-6 text-[#0b4f9e] ${isLocating ? 'animate-spin' : ''}`} />
+        </button>
+      )}
+    </div>
+  );
+
+  const sheetClass =
+    'shrink-0 bg-white rounded-t-3xl border-t-2 border-x-2 border-[#ddd5c3] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-3 shadow-[0_-8px_24px_rgba(20,33,61,0.10)]';
+
+  const mapPlaceholder = (
+    <div className="absolute inset-0 bg-[#ede8dc] flex items-center justify-center p-6 text-center">
+      <p className="text-xl font-bold text-[#3b4863] leading-snug">
+        {isLocating ? 'Buscando tu ubicación real…' : 'Todavía no hay ubicación. Toca el botón de actualizar.'}
+      </p>
+    </div>
+  );
+
+  // ==========================================
   // PANTALLA 1: Mapa "Ver dónde estoy"
   // ==========================================
   if (subView === 'map') {
     return (
-      <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
-        <div className="space-y-4 pt-2">
-          <div className="flex items-center justify-between">
-            <h1 className="text-4xl font-extrabold tracking-tight">Dónde estoy</h1>
-            <button
-              onClick={() => void fetchLocation()}
-              disabled={isLocating}
-              className="flex items-center gap-2 bg-white border-2 border-[#7a7461] px-4 py-2 rounded-2xl text-base font-extrabold text-[#14213d] shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`w-5 h-5 text-[#0b4f9e] ${isLocating ? 'animate-spin' : ''}`} />
-              <span>{isLocating ? 'Buscando...' : 'Actualizar'}</span>
-            </button>
-          </div>
+      <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
+        {topBar('Dónde estoy', () => setSubView('menu'), true)}
 
-          {/* Dirección real en texto grande */}
-          <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-2">
-            <div className="flex items-start gap-3">
-              <MapPin className="w-8 h-8 text-[#0b6b3a] shrink-0 mt-0.5" />
-              <div className="space-y-1 w-full">
-                <p className="text-2xl sm:text-3xl font-extrabold text-[#14213d] leading-snug">
-                  {isLocating && !coords.isRealGps && !coords.isApproximate
-                    ? 'Conectando con satélites GPS...'
-                    : coords.address}
-                </p>
-                {coords.isRealGps ? (
-                  <p className="text-sm sm:text-base font-bold text-[#0b6b3a] flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#0b6b3a] animate-pulse inline-block" />
-                    Ubicación satelital exacta (Precisión: ±{coords.accuracy} m)
-                  </p>
-                ) : coords.isApproximate ? (
-                  <p className="text-sm sm:text-base font-bold text-[#b7791f] flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#b7791f] inline-block" />
-                    Ubicación aproximada por red
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-
-          {/* Mapa Leaflet interactivo centrado en la posición real */}
-          <div className="pt-1 relative">
-            {coords.isRealGps || coords.isApproximate ? (
-              <LeafletMap
-                key={`map-${mapCenterKey}`}
-                center={[coords.lat, coords.lng]}
-                zoom={17}
-                interactive={true}
-                showAccuracyCircle={coords.isRealGps}
-                accuracyRadius={coords.accuracy}
-                className="h-80 w-full rounded-3xl shadow-inner border-2 border-[#7a7461]/40"
-              />
-            ) : (
-              <div className="h-80 w-full rounded-3xl border-2 border-[#7a7461]/40 bg-[#ede8dc] flex items-center justify-center p-6 text-center">
-                <p className="text-xl font-bold text-[#3b4863] leading-snug">
-                  {isLocating ? 'Buscando tu ubicación real…' : 'Todavía no hay ubicación. Toca "Actualizar".'}
-                </p>
-              </div>
-            )}
-            {/* Botón flotante para recentrar en mi posición */}
-            <button
-              onClick={() => {
-                setMapCenterKey(k => k + 1);
-                void fetchLocation();
-              }}
-              title="Centrar en mi posición"
-              className="absolute top-4 right-4 z-10 bg-white/95 border-2 border-[#0b4f9e] text-[#0b4f9e] p-3 rounded-2xl shadow-lg active:scale-95 flex items-center gap-2 font-bold cursor-pointer hover:bg-white"
-            >
-              <LocateFixed className="w-6 h-6 text-[#0b4f9e]" />
-              <span className="text-sm hidden sm:inline">Centrar</span>
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between pt-1 px-1">
-            <p className="text-2xl font-extrabold text-[#14213d] flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded-full bg-[#0b4f9e] animate-ping inline-block" />
-              Estás aquí
-            </p>
-            <a
-              href={googleMapsCurrentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-base font-bold text-[#0b4f9e] underline flex items-center gap-1.5 hover:text-[#093f7e]"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span>Ver en Google Maps</span>
-            </a>
-          </div>
+        <div className="relative flex-1 min-h-[180px]">
+          {located ? (
+            <LeafletMap
+              key={`map-${mapCenterKey}`}
+              center={[coords.lat, coords.lng]}
+              zoom={17}
+              interactive={true}
+              showAccuracyCircle={coords.isRealGps}
+              accuracyRadius={coords.accuracy}
+              className="!absolute inset-0 !border-0 !rounded-none"
+            />
+          ) : (
+            mapPlaceholder
+          )}
+          <button
+            onClick={() => {
+              setMapCenterKey(k => k + 1);
+              void fetchLocation();
+            }}
+            aria-label="Centrar en mi posición"
+            className="absolute bottom-4 right-4 z-10 h-14 w-14 bg-white border-2 border-[#0b4f9e] text-[#0b4f9e] rounded-2xl shadow-lg active:scale-95 flex items-center justify-center cursor-pointer"
+          >
+            <LocateFixed className="w-7 h-7" />
+          </button>
         </div>
 
-        <div className="pb-6 pt-4">
-          <TactileButton variant="card" fontSize="grande" onClick={() => setSubView('menu')}>
-            Volver
-          </TactileButton>
+        <div className={sheetClass}>
+          <p className={`text-sm font-bold flex items-center gap-2 ${coords.isRealGps ? 'text-[#0b6b3a]' : 'text-[#b7791f]'}`}>
+            <span className={`w-2.5 h-2.5 rounded-full inline-block ${coords.isRealGps ? 'bg-[#0b6b3a] animate-pulse' : 'bg-[#b7791f]'}`} />
+            {statusLine}
+            {timeLabel}
+          </p>
+          <p className="text-xl font-extrabold leading-snug line-clamp-3">
+            {located ? coords.address : 'Estamos buscando dónde estás…'}
+          </p>
+          <a
+            href={googleMapsCurrentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full h-12 rounded-2xl border-2 border-[#0b4f9e] text-[#0b4f9e] text-lg font-extrabold flex items-center justify-center gap-2 active:scale-[0.98]"
+          >
+            <ExternalLink className="w-5 h-5" />
+            Ver en Google Maps
+          </a>
         </div>
       </div>
     );
@@ -410,96 +413,73 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   // PANTALLA 2: "Llévame a casa"
   // ==========================================
   if (subView === 'navigating') {
-    return (
-      <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
-        <div className="space-y-4 pt-2">
-          <h1 className="text-4xl font-extrabold tracking-tight">Ruta a casa</h1>
-
-          {!isHomeValid ? (
-            /* Caso cuando la familia aún no guardó la dirección de casa */
-            <div className="bg-white border-2 border-[#b7791f] rounded-3xl p-6 text-[#14213d] space-y-4 shadow-sm">
-              <div className="flex items-start gap-4">
-                <AlertTriangle className="w-10 h-10 text-[#b7791f] shrink-0 mt-1" />
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-extrabold text-[#14213d]">
-                    Dirección de casa no configurada
-                  </h2>
-                  <p className="text-xl font-medium text-[#5c3a00] leading-relaxed">
-                    Tu familia aún no ha guardado la dirección de tu casa en el Panel Familiar.
-                  </p>
-                  <p className="text-base font-medium text-[#7a7461]">
-                    Pídeles que ingresen a Ajustes → Casa y zona segura para registrarla y poder guiarte paso a paso.
-                  </p>
-                </div>
-              </div>
+    if (!isHomeValid) {
+      return (
+        <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
+          {topBar('Ruta a casa', () => setSubView('menu'), false)}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
+            <div className="bg-white border-2 border-[#b7791f] rounded-3xl p-5 space-y-3 shadow-sm">
+              <AlertTriangle className="w-10 h-10 text-[#b7791f]" />
+              <h2 className="text-2xl font-extrabold">Falta la dirección de tu casa</h2>
+              <p className="text-lg font-medium text-[#5c3a00] leading-relaxed">
+                Tu familia aún no la ha guardado en el Panel Familiar.
+              </p>
+              <p className="text-base font-medium text-[#7a7461]">
+                Pídeles que entren a Ajustes → Casa y zona segura para registrarla y poder guiarte.
+              </p>
             </div>
+          </div>
+        </div>
+      );
+    }
+
+    const distanceText =
+      distanceToHome === null
+        ? 'Calculando la distancia a tu casa…'
+        : distanceToHome < 50
+        ? '¡Ya estás en tu casa o a pocos pasos!'
+        : distanceToHome < 1000
+        ? `Estás a unos ${distanceToHome} metros de casa${directionToHome ? `, hacia el ${directionToHome}` : ''}.`
+        : `Estás a unos ${(distanceToHome / 1000).toFixed(1)} km de casa${directionToHome ? `, hacia el ${directionToHome}` : ''}.`;
+
+    return (
+      <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
+        {topBar('Ruta a casa', () => setSubView('menu'), true)}
+
+        <div className="relative flex-1 min-h-[180px]">
+          {located ? (
+            <LeafletMap
+              center={[coords.lat, coords.lng]}
+              zoom={15}
+              markerType="user"
+              markerLabel="Estás aquí"
+              destinationCenter={[homeLat!, homeLng!]}
+              destinationMarkerType="home"
+              className="!absolute inset-0 !border-0 !rounded-none"
+            />
           ) : (
-            <>
-              {/* Tarjeta de guía en tiempo real */}
-              <div className="bg-[#eef7f0] border-2 border-[#0b6b3a] rounded-3xl p-6 text-[#14213d] space-y-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-xl font-extrabold text-[#0b6b3a] flex items-center gap-2">
-                    <Navigation className="w-6 h-6" />
-                    Modo: {settings.travelMode === 'pie' ? 'Caminando (A pie)' : 'En transporte / taxi'}
-                  </span>
-                  {coords.isRealGps && (
-                    <span className="text-sm font-bold bg-[#0b6b3a] text-white px-3 py-1 rounded-full flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4" />
-                      GPS activo
-                    </span>
-                  )}
-                </div>
-
-                <p className="text-2xl font-bold text-[#14213d]">
-                  Destino: {settings.homeAddress}
-                </p>
-
-                {distanceToHome !== null ? (
-                  <p className="text-2xl sm:text-3xl font-black text-[#0b4f9e] leading-snug">
-                    {distanceToHome < 50
-                      ? '¡Ya estás en tu casa o a pocos pasos!'
-                      : distanceToHome < 1000
-                      ? `Estás a unos ${distanceToHome} metros de casa${directionToHome ? ` en dirección ${directionToHome}` : ''}.`
-                      : `Estás a unos ${(distanceToHome / 1000).toFixed(1)} km de casa${directionToHome ? ` en dirección ${directionToHome}` : ''}.`}
-                  </p>
-                ) : (
-                  <p className="text-xl font-medium text-[#3b4863]">
-                    Calculando la distancia exacta a tu casa por satélite...
-                  </p>
-                )}
-              </div>
-
-              {/* Mapa con la posición actual Y la casa de destino */}
-              <div className="pt-1">
-                <LeafletMap
-                  center={[coords.lat, coords.lng]}
-                  zoom={15}
-                  markerType="user"
-                  markerLabel="Estás aquí"
-                  destinationCenter={[homeLat!, homeLng!]}
-                  destinationMarkerType="home"
-                  className="h-64 w-full rounded-3xl border-2 border-[#0b6b3a]/50 shadow-inner"
-                />
-              </div>
-
-              {/* Botón para iniciar la navegación guiada por voz en Google Maps */}
-              <a
-                href={googleMapsRouteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full bg-[#0b6b3a] hover:bg-[#08542d] text-white py-4 px-6 rounded-3xl text-2xl font-extrabold shadow-lg flex items-center justify-center gap-3 transition active:scale-95 cursor-pointer text-center"
-              >
-                <Navigation className="w-7 h-7 shrink-0" />
-                <span>Abrir ruta en Google Maps</span>
-              </a>
-            </>
+            mapPlaceholder
           )}
         </div>
 
-        <div className="pb-6 pt-4">
-          <TactileButton variant="card" fontSize="grande" onClick={() => setSubView('menu')}>
-            Volver
-          </TactileButton>
+        <div className={sheetClass}>
+          <p className="text-2xl font-black text-[#0b4f9e] leading-snug">{distanceText}</p>
+          <p className="text-base font-semibold text-[#3b4863] leading-snug line-clamp-2">
+            Destino: {settings.homeAddress}
+          </p>
+          <a
+            href={googleMapsRouteUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full min-h-[60px] bg-[#0b6b3a] text-white px-5 rounded-3xl text-xl font-extrabold shadow-[0_4px_0_#074d2a] flex items-center justify-center gap-3 active:translate-y-1 active:shadow-none"
+          >
+            <Navigation className="w-7 h-7 shrink-0" />
+            <span>Abrir ruta en Google Maps</span>
+          </a>
+          <p className="text-sm font-semibold text-[#7a7461] text-center">
+            {settings.travelMode === 'pie' ? 'Ruta caminando' : 'Ruta en transporte o taxi'}
+            {coords.isRealGps ? ' · GPS activo' : ''}
+          </p>
         </div>
       </div>
     );
@@ -509,9 +489,9 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   // PANTALLA PRINCIPAL: Menú "Dónde estoy"
   // ==========================================
   return (
-    <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
-      <div className="space-y-6 pt-4">
-        <h1 className="text-4xl font-extrabold tracking-tight">Dónde estoy</h1>
+    <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
+      {topBar('Dónde estoy', onBack, false)}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 space-y-4">
 
         {/* Tarjeta de estado de ubicación en tiempo real */}
         <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-3">
@@ -564,8 +544,8 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
                 </button>
               </div>
 
-              <p className="text-2xl sm:text-3xl font-extrabold text-[#14213d] leading-snug">
-                {coords.address}
+              <p className="text-xl font-extrabold text-[#14213d] leading-snug">
+                {located ? coords.address : 'Buscando tu ubicación…'}
               </p>
 
               <p className="text-sm font-bold text-[#7a7461]">
@@ -600,11 +580,6 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="pb-6">
-        <TactileButton variant="card" fontSize="grande" onClick={onBack}>
-          Volver
-        </TactileButton>
-      </div>
     </div>
   );
 };
