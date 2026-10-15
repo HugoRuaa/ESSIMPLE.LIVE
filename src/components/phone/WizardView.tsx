@@ -540,6 +540,9 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           </p>
 
           <div className="space-y-4 pt-2">
+            <p className={`text-xl font-extrabold leading-snug ${isGranted ? 'text-[#0b6b3a]' : 'text-[#b45309]'}`}>
+              {isGranted ? 'Listo, esto ya está aprobado. Toca Siguiente.' : 'Toca el botón naranja para aprobar.'}
+            </p>
             <TactileButton
               variant={isGranted ? 'green' : 'pending'}
               fontSize="grande"
@@ -547,7 +550,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               onClick={() => handleToggle('sms')}
               className="!py-5"
             >
-              {isGranted ? '✓ Permiso de SMS aprobado' : 'Dar permiso de SMS'}
+              {isGranted ? '✓ Permiso de SMS aprobado' : '👆 Dar permiso de SMS'}
             </TactileButton>
 
             {permHint && <p className="text-lg font-semibold text-[#5c3a00]">{permHint}</p>}
@@ -654,6 +657,10 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">{stepData.desc}</p>
 
           <div className="pt-4">
+            <div className="space-y-3">
+            <p className={`text-xl font-extrabold leading-snug ${isDone ? 'text-[#0b6b3a]' : 'text-[#b45309]'}`}>
+              {isDone ? 'Listo, esto ya está aprobado. Toca Siguiente.' : 'Toca el botón naranja para aprobar.'}
+            </p>
             <TactileButton
               variant={isDone ? 'green' : 'pending'}
               fontSize="grande"
@@ -661,9 +668,10 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               onClick={() => handleToggle(stepData.permKey)}
               className="!py-5"
             >
-              {isDone ? '✓ Aprobado' : stepData.buttonText}
+              {isDone ? '✓ Aprobado' : `👆 ${stepData.buttonText}`}
             </TactileButton>
             {permHint && <p className="mt-3 text-lg font-semibold text-[#5c3a00]">{permHint}</p>}
+            </div>
           </div>
         </div>
 
