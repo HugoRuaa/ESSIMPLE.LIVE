@@ -741,3 +741,68 @@ export const fetchFamilyChanges = async (familiaId: string): Promise<ChangeItem[
     return null;
   }
 };
+
+// 9. Sincronizar Mensajes Rápidos
+export const syncQuickMessagesToSupabase = async (familiaId: string, messages: string[]) => {
+  if (!familiaId || familiaId === 'local-family-id') return;
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/quick-messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages }),
+    });
+    if (res.ok) return;
+  } catch {
+    // fallback
+  }
+
+  // Intento 2: Supabase cliente directo
+  const client = getSupabaseClient();
+  if (!client) return;
+  try {
+    await client
+      .schema(DB_SCHEMA)
+      .from('familias')
+      .update({ quick_messages: messages, updated_at: new Date().toISOString() })
+      .eq('id', familiaId);
+  } catch (err) {
+    console.warn('Aviso guardando quick_messages en Supabase:', err);
+  }
+};
+
+// 9b. Consultar Mensajes Rápidos
+export const fetchFamilyQuickMessages = async (familiaId: string): Promise<string[] | null> => {
+  if (!familiaId || familiaId === 'local-family-id') return null;
+  // Intento 1: Servidor
+  try {
+    const res = await fetch(`/api/familias/${encodeURIComponent(familiaId)}/quick-messages`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && Array.isArray(json.data) && json.data.length > 0) {
+        return json.data;
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  // Intento 2: Supabase cliente directo
+  const client = getSupabaseClient();
+  if (!client) return null;
+  try {
+    const { data, error } = await client
+      .schema(DB_SCHEMA)
+      .from('familias')
+      .select('quick_messages')
+      .eq('id', familiaId)
+      .maybeSingle();
+
+    if (!error && data?.quick_messages && Array.isArray(data.quick_messages) && data.quick_messages.length > 0) {
+      return data.quick_messages;
+    }
+  } catch {
+    // fallback
+  }
+  return null;
+};

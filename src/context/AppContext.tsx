@@ -21,6 +21,8 @@ import {
   logChangeToSupabase,
   fetchFamilyEvents,
   fetchFamilyChanges,
+  syncQuickMessagesToSupabase,
+  fetchFamilyQuickMessages,
 } from '../services/dataService';
 
 interface AppContextType {
@@ -255,6 +257,8 @@ const demoChanges: ChangeItem[] = [
   },
 ];
 
+const DEFAULT_QUICK_MESSAGES = ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino'];
+
 const demoSettings: AppSettings = {
   personName: 'Álvaro',
   fontSize: 'grande',
@@ -270,6 +274,7 @@ const demoSettings: AppSettings = {
     address: 'Calle 10 # 43A-25, El Poblado, Medellín',
   },
   safeZoneRadius: 300,
+  quickMessages: DEFAULT_QUICK_MESSAGES,
 };
 
 // Configuración limpia por defecto para cuentas nuevas (información vacía)
@@ -288,6 +293,7 @@ const cleanEmptySettings: AppSettings = {
     address: '',
   },
   safeZoneRadius: 300,
+  quickMessages: DEFAULT_QUICK_MESSAGES,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -567,6 +573,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             localStorage.setItem(`essimple_changes_${familyId || identifier}`, JSON.stringify(cloudChanges));
           } catch {}
         }
+
+        // 4. Cargar mensajes rápidos desde el servidor
+        const cloudQuickMsgs = await fetchFamilyQuickMessages(identifier);
+        if (cloudQuickMsgs && cloudQuickMsgs.length > 0 && isMounted) {
+          setSettings(prev => ({ ...prev, quickMessages: cloudQuickMsgs }));
+        }
       } catch (err) {
         console.warn('Error cargando datos familiares desde Supabase en arranque:', err);
       }
@@ -684,7 +696,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ): Promise<{ success: boolean; message?: string }> => {
     const updated: AppSettings = { ...settings, ...newSettings };
     setSettings(updated);
-    if (newSettings.homeAddress || newSettings.safeZoneRadius || newSettings.safeZoneCenter) {
+    if (newSettings.quickMessages) {
+      addChange('Actualizó los mensajes rápidos predeterminados');
+    } else if (newSettings.homeAddress || newSettings.safeZoneRadius || newSettings.safeZoneCenter) {
       addChange('Actualizó la dirección de casa y zona segura');
     } else if (newSettings.exitPin) {
       addChange('Actualizó el PIN de salida de la aplicación');
@@ -708,7 +722,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setAccount(prev => ({ ...prev, familiaId: res.familiaId }));
         }
       }
+      if (newSettings.quickMessages) {
+        void syncQuickMessagesToSupabase(identifier, newSettings.quickMessages);
+      }
       return res;
+    }
+
+    if (newSettings.quickMessages) {
+      void syncQuickMessagesToSupabase('hugofrua@gmail.com', newSettings.quickMessages);
     }
 
     return { success: true, message: 'Guardado localmente' };
@@ -1000,6 +1021,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
             } catch {}
           }
+        }
+        const cloudQuickMsgs = await fetchFamilyQuickMessages(res.familiaId);
+        if (cloudQuickMsgs && cloudQuickMsgs.length > 0) {
+          setSettings(prev => ({ ...prev, quickMessages: cloudQuickMsgs }));
         }
         setActiveEmergencyBanner(null);
       }

@@ -26,6 +26,7 @@ create table if not exists essimple.familias (
   person_name text not null default 'Álvaro',
   font_size text not null default 'grande' check (font_size in ('normal', 'grande', 'muy_grande')),
   country_code text not null default '57',
+  quick_messages text[] not null default array['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino'],
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

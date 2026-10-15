@@ -56,6 +56,7 @@ export interface AppSettings {
   safeZoneActive: boolean;
   safeZoneCenter: { lat: number; lng: number; address: string };
   safeZoneRadius: number; // in meters (100 - 5000)
+  quickMessages?: string[];
 }
 
 export interface PhoneStatus {

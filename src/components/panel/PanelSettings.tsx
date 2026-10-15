@@ -14,6 +14,36 @@ export const PanelSettings: React.FC = () => {
   const [fontSize, setFontSize] = useState<FontSize>(settings.fontSize);
   const [countryCode, setCountryCode] = useState(settings.countryCode);
 
+  // Mensajes rápidos predeterminados
+  const [quickMessages, setQuickMessages] = useState<string[]>(() =>
+    settings.quickMessages && settings.quickMessages.length === 4
+      ? settings.quickMessages
+      : ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']
+  );
+  const [quickMsgSuccess, setQuickMsgSuccess] = useState('');
+
+  useEffect(() => {
+    if (settings.quickMessages && settings.quickMessages.length > 0) {
+      setQuickMessages(settings.quickMessages);
+    }
+  }, [settings.quickMessages]);
+
+  const handleQuickMessageChange = (index: number, val: string) => {
+    setQuickMessages(prev => {
+      const next = [...prev];
+      next[index] = val.slice(0, 30);
+      return next;
+    });
+  };
+
+  const handleSaveQuickMessages = () => {
+    const cleaned = quickMessages.map((m, i) => m.trim() || `Mensaje ${i + 1}`);
+    saveSettings({ quickMessages: cleaned });
+    setQuickMessages(cleaned);
+    setQuickMsgSuccess('Frases guardadas correctamente.');
+    setTimeout(() => setQuickMsgSuccess(''), 3000);
+  };
+
   // PIN change
   const [pin, setPin] = useState(settings.exitPin || '1234');
   const [showPin, setShowPin] = useState(true);
@@ -269,7 +299,58 @@ export const PanelSettings: React.FC = () => {
         </button>
       </div>
 
-      {/* 2. PIN de salida [32] */}
+      {/* 2. Mensajes rápidos predeterminados (4 frases) */}
+      <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-2xl font-extrabold text-[#14213d]">Mensajes rápidos</h2>
+            <p className="text-sm font-semibold text-[#7a7461]">
+              Las 4 opciones que aparecen al escribir un mensaje en el teléfono
+            </p>
+          </div>
+          <span className="text-xs font-black text-[#0b4f9e] bg-[#eef4fb] px-2.5 py-1 rounded-full border border-[#0b4f9e]/20 shrink-0">
+            4 frases
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          {quickMessages.map((msg, idx) => (
+            <div key={idx} className="flex items-center gap-2.5 bg-[#f8f7f4] border border-[#ddd5c3] rounded-2xl px-3 py-2.5 focus-within:border-[#0b4f9e] focus-within:bg-white transition">
+              <span className="w-6 h-6 rounded-full bg-[#14213d] text-white text-xs font-black flex items-center justify-center shrink-0">
+                {idx + 1}
+              </span>
+              <input
+                type="text"
+                maxLength={30}
+                value={msg}
+                onChange={e => handleQuickMessageChange(idx, e.target.value)}
+                placeholder={`Frase ${idx + 1}`}
+                className="w-full bg-transparent text-lg font-bold text-[#14213d] focus:outline-none placeholder:text-[#a39a85]"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 pt-1">
+          {quickMsgSuccess ? (
+            <span className="text-sm font-bold text-[#0b6b3a] flex items-center gap-1 animate-in fade-in">
+              <Check className="w-4 h-4 stroke-[3]" /> {quickMsgSuccess}
+            </span>
+          ) : (
+            <span className="text-xs font-semibold text-[#7a7461]">
+              Máximo 30 letras por mensaje
+            </span>
+          )}
+          <button
+            onClick={handleSaveQuickMessages}
+            className="bg-[#0b4f9e] hover:bg-[#093f7e] text-white px-4 py-2.5 rounded-xl text-base font-extrabold shadow-sm active:scale-95 transition cursor-pointer"
+          >
+            Guardar frases
+          </button>
+        </div>
+      </div>
+
+      {/* 3. PIN de salida [32] */}
       <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
         <h2 className="text-2xl font-extrabold text-[#14213d]">PIN de salida</h2>
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">

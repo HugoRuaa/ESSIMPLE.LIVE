@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, MessageSquare, Check, Phone } from 'lucide-react';
+import React, { useState } from 'react';
+import { MessageSquare, Check, Phone } from 'lucide-react';
 import { TactileButton } from '../common/TactileButton';
 import { callNumber } from '../../lib/native';
 import { useApp } from '../../context/AppContext';
@@ -16,53 +16,9 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
   onBack,
 }) => {
   const { testSendSms, settings } = useApp();
-  const [message, setMessage] = useState('Ya llegué a casa, mija');
-  const [isListening, setIsListening] = useState(false);
+  const [message, setMessage] = useState('');
   const [isSent, setIsSent] = useState(false);
   const [sentMethod, setSentMethod] = useState<'sms' | 'whatsapp'>('sms');
-
-  // Speech Recognition (Web Speech API)
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'es-CO';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setMessage(prev => (prev ? `${prev} ${transcript}` : transcript));
-      setIsListening(false);
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    if (isListening) {
-      try {
-        recognition.start();
-      } catch {
-        setIsListening(false);
-      }
-    }
-
-    return () => {
-      try {
-        recognition.stop();
-      } catch {
-        // Ignore
-      }
-    };
-  }, [isListening]);
 
   // Limpiar y preparar número telefónico
   const cleanPhone = (contactPhone || '').trim().replace(/[^\d+]/g, '');
@@ -185,36 +141,31 @@ export const WriteMessageView: React.FC<WriteMessageViewProps> = ({
           <textarea
             value={message}
             onChange={e => setMessage(e.target.value.slice(0, 500))}
-            placeholder="Escribe aquí"
+            placeholder="Escribe en este espacio"
             maxLength={500}
             rows={3}
-            className="w-full bg-white border-2 border-[#7a7461] rounded-3xl p-4 text-2xl font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] shadow-[0_3px_0_#ddd5c3] resize-none"
+            className="w-full bg-white border-2 border-[#7a7461] rounded-3xl p-4 text-2xl font-bold text-[#14213d] placeholder:text-[#8c826e] placeholder:font-semibold placeholder:italic focus:outline-none focus:border-[#0b4f9e] shadow-[0_3px_0_#ddd5c3] resize-none"
           />
         </div>
 
-        {/* Hablar / Dictar */}
-        <TactileButton
-          variant="primary"
-          fontSize="grande"
-          minHeight={false}
-          icon={isListening ? <MicOff className="w-8 h-8 text-white" /> : <Mic className="w-8 h-8 text-white" />}
-          onClick={() => setIsListening(prev => !prev)}
-          className={`!py-4 ${isListening ? '!bg-[#a61b1b] animate-pulse' : ''}`}
-        >
-          {isListening ? 'Te escucho… Toca para parar' : 'Hablar (Dictar)'}
-        </TactileButton>
 
-        {/* Quick phrases: 2x2 grid */}
+        {/* Quick phrases: 2x2 grid configurables desde Ajustes */}
         <div className="grid grid-cols-2 gap-3 pt-1">
-          {['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino'].map(phrase => (
-            <button
-              key={phrase}
-              onClick={() => setMessage(phrase)}
-              className="bg-white border-2 border-[#7a7461] rounded-3xl py-3.5 px-3 text-xl font-bold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-1 active:shadow-none transition text-center cursor-pointer min-h-[66px] flex items-center justify-center"
-            >
-              {phrase}
-            </button>
-          ))}
+          {(settings.quickMessages && settings.quickMessages.length > 0
+            ? settings.quickMessages
+            : ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']
+          ).slice(0, 4).map((phrase, idx) => {
+            const cleanPhrase = (phrase || '').trim() || `Mensaje ${idx + 1}`;
+            return (
+              <button
+                key={idx}
+                onClick={() => setMessage(cleanPhrase)}
+                className="bg-white border-2 border-[#7a7461] rounded-3xl py-3 px-3 text-xl font-bold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-1 active:shadow-none transition text-center cursor-pointer min-h-[66px] flex items-center justify-center leading-snug break-words"
+              >
+                {cleanPhrase}
+              </button>
+            );
+          })}
         </div>
       </div>
 

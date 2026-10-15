@@ -103,6 +103,9 @@ contactsStore.set('hugofrua@gmail.com', defaultContactsList);
 
 const eventsStore = new Map<string, any[]>();
 const changesStore = new Map<string, any[]>();
+const quickMessagesStore = new Map<string, string[]>();
+quickMessagesStore.set(DEFAULT_FAMILIA_ID, ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
+quickMessagesStore.set('hugofrua@gmail.com', ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
 
 // Supabase API endpoints
 app.get('/api/supabase/config', (req, res) => {
@@ -788,6 +791,61 @@ app.post('/api/familias/:familiaId/changes', async (req, res) => {
   }
 
   return res.json({ success: true, data: changeItem });
+});
+
+// Endpoints para Mensajes Rápidos de la Familia
+app.get('/api/familias/:familiaId/quick-messages', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const familiaId = await resolveFamiliaId(rawId);
+
+  if (supabaseServerClient) {
+    try {
+      const { data, error } = await supabaseServerClient
+        .schema(SUPABASE_SCHEMA)
+        .from('familias')
+        .select('quick_messages')
+        .eq('id', familiaId)
+        .maybeSingle();
+
+      if (!error && data?.quick_messages && Array.isArray(data.quick_messages) && data.quick_messages.length > 0) {
+        quickMessagesStore.set(familiaId, data.quick_messages);
+        if (rawId && rawId !== familiaId) quickMessagesStore.set(rawId.toLowerCase(), data.quick_messages);
+        return res.json({ success: true, familiaId, data: data.quick_messages });
+      }
+    } catch {
+      // fallback a memoria
+    }
+  }
+
+  const data = quickMessagesStore.get(familiaId) || quickMessagesStore.get(rawId?.toLowerCase()) || ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino'];
+  return res.json({ success: true, familiaId, data });
+});
+
+app.post('/api/familias/:familiaId/quick-messages', async (req, res) => {
+  const { familiaId: rawId } = req.params;
+  const { messages } = req.body || {};
+  const familiaId = await resolveFamiliaId(rawId);
+
+  if (Array.isArray(messages) && messages.length > 0) {
+    const cleaned = messages.slice(0, 4).map((m: any, i: number) => String(m || '').trim() || `Mensaje ${i + 1}`);
+    quickMessagesStore.set(familiaId, cleaned);
+    if (rawId && rawId !== familiaId) quickMessagesStore.set(rawId.toLowerCase(), cleaned);
+
+    if (supabaseServerClient) {
+      try {
+        await supabaseServerClient
+          .schema(SUPABASE_SCHEMA)
+          .from('familias')
+          .update({ quick_messages: cleaned, updated_at: new Date().toISOString() })
+          .eq('id', familiaId);
+      } catch (err: unknown) {
+        console.warn('[Supabase quick_messages warning]:', err);
+      }
+    }
+
+    return res.json({ success: true, familiaId, data: cleaned });
+  }
+  return res.status(400).json({ success: false, message: 'Formato de mensajes inválido' });
 });
 
 // In-memory data store for live link sharing between screens

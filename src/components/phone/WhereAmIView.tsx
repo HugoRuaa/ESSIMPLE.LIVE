@@ -336,19 +336,9 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
     : 'Sin ubicación todavía';
   const timeLabel = lastUpdated ? ` · ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '';
 
-  const topBar = (title: string, withRefresh = false) => (
-    <div className="shrink-0 flex items-center justify-between gap-2 px-4 pt-3 pb-2">
-      <h1 className="flex-1 min-w-0 truncate text-2xl font-extrabold tracking-tight">{title}</h1>
-      {withRefresh && (
-        <button
-          onClick={() => void fetchLocation()}
-          disabled={isLocating}
-          aria-label="Actualizar ubicación"
-          className="h-12 w-12 shrink-0 rounded-2xl bg-white border-2 border-[#7a7461] shadow-sm active:scale-95 flex items-center justify-center cursor-pointer disabled:opacity-60"
-        >
-          <RefreshCw className={`w-6 h-6 text-[#0b4f9e] ${isLocating ? 'animate-spin' : ''}`} />
-        </button>
-      )}
+  const topBar = (title: string) => (
+    <div className="shrink-0 px-4 pt-4 pb-2">
+      <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
     </div>
   );
 
@@ -369,7 +359,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   if (subView === 'map') {
     return (
       <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-        {topBar('Dónde estoy', true)}
+        {topBar('Dónde estoy')}
 
         <div className="relative flex-1 min-h-[180px]">
           {located ? (
@@ -430,7 +420,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
     if (!isHomeValid) {
       return (
         <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-          {topBar('Ruta a casa', false)}
+          {topBar('Ruta a casa')}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6 space-y-4">
             <div className="bg-white border-2 border-[#b7791f] rounded-3xl p-5 space-y-3 shadow-sm">
               <AlertTriangle className="w-10 h-10 text-[#b7791f]" />
@@ -461,7 +451,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
 
     return (
       <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-        {topBar('Ruta a casa', true)}
+        {topBar('Ruta a casa')}
 
         <div className="relative flex-1 min-h-[180px]">
           {located ? (
@@ -510,7 +500,7 @@ export const WhereAmIView: React.FC<WhereAmIViewProps> = ({ onBack }) => {
   // ==========================================
   return (
     <div className="h-full min-h-0 flex flex-col bg-[#f6f3ec] text-[#14213d] select-none animate-in fade-in duration-150">
-      {topBar('Dónde estoy', false)}
+      {topBar('Dónde estoy')}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4 space-y-4">
 
         {/* Tarjeta de estado de ubicación en tiempo real */}
