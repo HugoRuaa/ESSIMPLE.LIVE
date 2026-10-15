@@ -8,7 +8,6 @@ import {
   requestBatteryUnrestricted,
   requestFullScreenAlerts,
   requestHomeLauncher,
-  enterKiosk,
   openAppSettings,
   onAppResume,
   readClipboardText,
@@ -29,10 +28,12 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   const { updatePhoneStatus } = useApp();
   const native = isNative();
   const STEP_KEY = 'essimple_wizard_step';
+  // Pantalla 1 = vincular, 2 a 10 = las nueve aprobaciones, 11 = resumen.
+  const SUMMARY_STEP = 11;
   const [currentStep, setCurrentStep] = useState(() => {
     try {
       const saved = parseInt(sessionStorage.getItem(STEP_KEY) || '1', 10);
-      return saved >= 1 && saved <= 13 ? saved : 1;
+      return saved >= 1 ? Math.min(saved, SUMMARY_STEP) : 1;
     } catch {
       return 1;
     }
@@ -60,7 +61,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
           batteryUnrestricted: true,
           fullScreenAlerts: true,
           homeLauncher: true,
-          protectedMode: true,
         }
   );
   const [busy, setBusy] = useState(false);
@@ -146,7 +146,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     if (key === 'batteryUnrestricted') return requestBatteryUnrestricted();
     if (key === 'fullScreenAlerts') return requestFullScreenAlerts();
     if (key === 'homeLauncher') return requestHomeLauncher();
-    if (key === 'protectedMode') return (await enterKiosk()) !== null;
     return true;
   };
 
@@ -189,7 +188,6 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     { key: 'batteryUnrestricted', label: 'Sin ahorro de batería' },
     { key: 'fullScreenAlerts', label: 'Alertas en pantalla completa' },
     { key: 'homeLauncher', label: 'essimple.live como pantalla de inicio' },
-    { key: 'protectedMode', label: 'Modo protegido' },
     { key: 'backgroundLocation', label: 'Ubicación todo el tiempo' },
   ];
 
@@ -241,14 +239,14 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     setAllDone(true);
     if (!pairedNow) {
       setTimeout(() => {
-        setCurrentStep(13);
+        setCurrentStep(SUMMARY_STEP);
         setMode('steps');
       }, 700);
     }
     if (pairedNow) {
       // Recarga para leer los datos de la familia recién vinculada y cae directo en el resumen.
       try {
-        sessionStorage.setItem(STEP_KEY, '13');
+        sessionStorage.setItem(STEP_KEY, String(SUMMARY_STEP));
       } catch {
         // ignorar
       }
@@ -378,16 +376,16 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
   const nextStep = () => {
     if (fromSummaryRef.current) {
       fromSummaryRef.current = false;
-      setCurrentStep(13);
+      setCurrentStep(SUMMARY_STEP);
       return;
     }
-    if (currentStep < 13) setCurrentStep(s => s + 1);
+    if (currentStep < SUMMARY_STEP) setCurrentStep(s => s + 1);
   };
 
   const prevStep = () => {
     if (fromSummaryRef.current) {
       fromSummaryRef.current = false;
-      setCurrentStep(13);
+      setCurrentStep(SUMMARY_STEP);
       return;
     }
     if (currentStep > 1) setCurrentStep(s => s - 1);
@@ -435,7 +433,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
               Paso a paso
             </TactileButton>
             <p className="text-base text-[#3b4863] font-medium leading-snug">
-              13 pantallas, un permiso en cada una. Útil si algo falla o quieres revisar cada permiso.
+              Una pantalla por cada una de las {approvalItems.length} aprobaciones. Útil si algo falla o quieres revisar cada permiso.
             </p>
           </div>
         </div>
@@ -484,7 +482,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     return (
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-6 pt-4">
-          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 1 de 13</p>
+          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · vincular</p>
           <h1 className="text-4xl font-extrabold tracking-tight">Vincular con el panel</h1>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">
             Si instalaste essimple.live desde el enlace que te envió tu familia, se vincula sola: no tienes que escribir nada. Si no pasa, toca el botón de abajo.
@@ -522,7 +520,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     return (
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-6 pt-4">
-          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · paso 2 de 13</p>
+          <p className="text-base text-[#3b4863] font-semibold">Asistente de primera vez · aprobación 1 de {approvalItems.length}</p>
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight">
             Permiso para enviar mensajes (SMS)
           </h1>
@@ -582,8 +580,8 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     );
   }
 
-  // Steps 3 to 13: Generic permissions steps
-  if (currentStep < 13) {
+  // Pasos 3 a 10: aprobaciones genéricas
+  if (currentStep < SUMMARY_STEP) {
     const stepTitles: Record<number, { title: string; desc: string; permKey: string; buttonText: string }> = {
       3: {
         title: 'Permiso para realizar llamadas',
@@ -598,52 +596,40 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
         buttonText: 'Dar permiso de ubicación',
       },
       5: {
-        title: 'Ubicación todo el tiempo',
-        desc: 'Permite vigilar si sale de su zona segura incluso con la pantalla apagada o en el bolsillo.',
-        permKey: 'backgroundLocation',
-        buttonText: 'Permitir todo el tiempo',
-      },
-      6: {
         title: 'Permiso de micrófono',
         desc: 'Permite grabar mensajes de voz de hasta 60 segundos para enviarle a la familia.',
         permKey: 'microphone',
         buttonText: 'Dar permiso de micrófono',
       },
-      7: {
+      6: {
         title: 'Notificaciones activadas',
         desc: 'Permite mostrar avisos importantes en la barra de estado y confirmar que essimple.live sigue cuidando.',
         permKey: 'notifications',
         buttonText: 'Activar notificaciones',
       },
-      8: {
+      7: {
         title: 'Sin ahorro de batería',
         desc: 'Evita que el sistema operativo congele o apague essimple.live para ahorrar energía.',
         permKey: 'batteryUnrestricted',
         buttonText: 'Quitar ahorro de batería',
       },
-      9: {
+      8: {
         title: 'Alertas en pantalla completa',
         desc: 'Permite que la alerta de posible caída aparezca en la pantalla aunque el celular esté bloqueado.',
         permKey: 'fullScreenAlerts',
         buttonText: 'Permitir sobre otras apps',
       },
-      10: {
+      9: {
         title: 'Pantalla de inicio predeterminada',
         desc: 'Elige essimple.live como la aplicación de inicio principal (Siempre), para que no se salga al tocar el botón central.',
         permKey: 'homeLauncher',
         buttonText: 'Elegir como pantalla de inicio',
       },
-      11: {
-        title: 'Nivel de modo protegido',
-        desc: 'Configura la protección con PIN para que no se puedan abrir ajustes ni cerrar la app por error.',
-        permKey: 'protectedMode',
-        buttonText: 'Activar modo protegido',
-      },
-      12: {
-        title: 'Recomendaciones de la marca',
-        desc: 'Guía específica para teléfonos Samsung, Xiaomi o Motorola para desactivar optimizaciones agresivas.',
-        permKey: 'brandTips',
-        buttonText: 'Optimización configurada',
+      10: {
+        title: 'Ubicación todo el tiempo',
+        desc: 'Permite vigilar si sale de su zona segura incluso con la pantalla apagada o en el bolsillo.',
+        permKey: 'backgroundLocation',
+        buttonText: 'Permitir todo el tiempo',
       },
     };
 
@@ -660,7 +646,7 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
       <div className="min-h-full bg-[#f6f3ec] text-[#14213d] flex flex-col justify-between p-6 select-none animate-in fade-in duration-150">
         <div className="space-y-6 pt-4">
           <p className="text-base text-[#3b4863] font-semibold">
-            Asistente de primera vez · paso {currentStep} de 13
+            Asistente de primera vez · aprobación {currentStep - 1} de {approvalItems.length}
           </p>
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight">{stepData.title}</h1>
           <p className="text-xl text-[#3b4863] font-medium leading-relaxed">{stepData.desc}</p>
@@ -701,10 +687,10 @@ export const WizardView: React.FC<WizardViewProps> = ({ onFinish, onCancel }) =>
     );
   }
 
-  // Step 13: Resumen final (lo ve quien termina "todo de una vez" y quien termina paso a paso)
+  // Resumen final (lo ve quien termina "todo de una vez" y quien termina paso a paso)
   const STEP_OF: Record<string, number> = {
-    linked: 1, sms: 2, calls: 3, location: 4, backgroundLocation: 5, microphone: 6,
-    notifications: 7, batteryUnrestricted: 8, fullScreenAlerts: 9, homeLauncher: 10, protectedMode: 11,
+    linked: 1, sms: 2, calls: 3, location: 4, microphone: 5, backgroundLocation: 10,
+    notifications: 6, batteryUnrestricted: 7, fullScreenAlerts: 8, homeLauncher: 9,
   };
   const summary = ALL_ITEMS.map(item => ({
     ...item,
