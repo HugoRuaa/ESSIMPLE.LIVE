@@ -118,6 +118,10 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
             <span className="inline-flex items-center gap-1.5 text-xs font-black text-[#0b6b3a] bg-[#eef7f0] border border-[#0b6b3a]/30 px-3 py-1.5 rounded-full shrink-0 animate-pulse">
               🟢 Compartiendo en vivo ({locationShare.durationHours || 1}h)
             </span>
+          ) : phoneStatus.lastLocation && typeof phoneStatus.lastLocation.lat === 'number' ? (
+            <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#0b4f9e] bg-[#eff6ff] border border-[#0b4f9e]/30 px-3 py-1.5 rounded-full shrink-0">
+              📍 Última posición conocida
+            </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-[#7a7461] bg-[#f8f7f4] border border-[#ddd5c3] px-3 py-1.5 rounded-full shrink-0">
               ⚪ No compartiendo
@@ -148,6 +152,35 @@ export const PanelHome: React.FC<PanelHomeProps> = ({ onNavigateTab }) => {
             <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
               <span>🔵 Punto azul: {settings.personName} (en vivo)</span>
               <span>🏠 Casa: {settings.homeAddress ? 'Configurada' : 'Ver mapa'}</span>
+            </div>
+          </>
+        ) : phoneStatus.lastLocation && typeof phoneStatus.lastLocation.lat === 'number' ? (
+          <>
+            <p className="text-base font-bold text-[#14213d]">
+              Última ubicación registrada:{' '}
+              {(() => {
+                const min = Math.max(0, Math.round((now - phoneStatus.lastLocation.time) / 60000));
+                return min < 1 ? 'hace menos de un minuto' : min < 60 ? `hace ${min} min` : `hace ${Math.floor(min / 60)} h`;
+              })()}
+            </p>
+
+            <div className="rounded-2xl overflow-hidden border-2 border-[#ddd5c3]">
+              <LeafletMap
+                center={[phoneStatus.lastLocation.lat, phoneStatus.lastLocation.lng]}
+                zoom={16}
+                interactive={true}
+                markerType="user"
+                destinationCenter={homeCoords}
+                destinationMarkerType="home"
+                showAccuracyCircle={true}
+                accuracyRadius={phoneStatus.lastLocation.accuracy || 30}
+                className="h-64 w-full"
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs font-bold text-[#7a7461] px-1">
+              <span>🔵 Última posición reportada por el teléfono</span>
+              <span>🏠 Casa fija</span>
             </div>
           </>
         ) : (
