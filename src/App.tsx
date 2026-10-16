@@ -16,6 +16,9 @@ import { PanelAuth } from './components/panel/PanelAuth';
 import { isNative } from './lib/native';
 import { DownloadPage } from './components/DownloadPage';
 import { LandingPage } from './components/landing/LandingPage';
+import LegalPage from './legal/LegalPage';
+import { legalDocFromPath } from './legal/content';
+import ConsentBanner from './components/ConsentBanner';
 
 type AppMode = 'phone' | 'panel';
 
@@ -284,6 +287,16 @@ const MainAppContent: React.FC = () => {
 };
 
 export default function App() {
+  // Páginas legales (/acerca, /privacidad, /terminos, /aviso-importante, /contacto): fuera de la app.
+  const legalDoc = typeof window !== 'undefined' ? legalDocFromPath(window.location.pathname) : null;
+  if (legalDoc) {
+    return (
+      <>
+        <LegalPage doc={legalDoc} />
+        <ConsentBanner />
+      </>
+    );
+  }
   if (typeof window !== 'undefined' && /^\/avisos\/[0-9a-f-]{36}\/\d{6,}\/?$/i.test(window.location.pathname)) {
     return <AvisosPage />;
   }
@@ -291,8 +304,11 @@ export default function App() {
     return <DownloadPage />;
   }
   return (
-    <AppProvider>
-      <MainAppContent />
-    </AppProvider>
+    <>
+      <AppProvider>
+        <MainAppContent />
+      </AppProvider>
+      <ConsentBanner />
+    </>
   );
 }

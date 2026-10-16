@@ -6,6 +6,7 @@ import {
 import { PhoneMockup } from './PhoneMockup';
 import { ApoyoNosUnimos, APOYO_URL } from './ApoyoNosUnimos';
 import { APK_URL } from '../../lib/config';
+import { LegalLinks } from '../../legal/LegalLinks';
 
 interface Props {
   onSignup: () => void;
@@ -389,6 +390,9 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
           <span className="font-extrabold text-lg text-white">essimple<span className="text-[#38bdf8]">.live</span></span>
           <span>Acompañamiento sencillo para personas con limitaciones cognitivas o visuales.</span>
           <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-white underline underline-offset-4">Apoyar</a>
+        </div>
+        <div className="max-w-6xl mx-auto px-5 pb-6">
+          <LegalLinks tone="dark" />
         </div>
       </footer>
     </div>

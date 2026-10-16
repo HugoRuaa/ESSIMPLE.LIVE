@@ -1,2 +1,8 @@
 User-agent: *
 Allow: /
+# Estas direcciones llevan datos de una familia (correo codificado, id de familia, teléfono): no se indexan.
+Disallow: /d/
+Disallow: /avisos/
+Disallow: /instalar/
+
+Sitemap: https://essimple.live/sitemap.xml

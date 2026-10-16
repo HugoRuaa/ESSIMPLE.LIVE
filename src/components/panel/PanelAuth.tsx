@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, AlertTriangle, Loader2, Sparkles, ShieldCheck } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { useApp } from '../../context/AppContext';
+import { LegalLinks } from '../../legal/LegalLinks';
 
 interface PanelAuthProps {
   initialTab?: 'signup' | 'login';
@@ -17,7 +18,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
   const [pin, setPin] = useState('1234');
   const [showPass, setShowPass] = useState(false);
   const [showPin, setShowPin] = useState(false);
-  const [acceptedTermsBox, setAcceptedTermsBox] = useState(true);
+  const [acceptedTermsBox, setAcceptedTermsBox] = useState(false);
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -38,7 +39,13 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
 
             <ul className="list-disc list-inside space-y-3 text-lg font-semibold text-[#14213d] leading-relaxed">
               <li>
+                Guardamos el correo, la contraseña y el PIN de la cuenta familiar.
+              </li>
+              <li>
                 Guardamos los contactos que ustedes agregan (nombre, teléfono y foto).
+              </li>
+              <li>
+                Guardamos la dirección de casa, sus coordenadas y la zona segura.
               </li>
               <li>
                 Guardamos el nivel de batería del teléfono y si está conectado.
@@ -65,6 +72,9 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                 Entiendo y acepto
               </span>
             </label>
+            <p className="text-base font-semibold text-[#3b4863] leading-snug">
+              Al continuar aceptas los <a href="/terminos" target="_blank" rel="noopener" className="font-extrabold text-[#0b4f9e] underline">Términos</a> y declaras tener la autorización de la persona acompañada, o de su representante legal, para registrar sus datos, según la <a href="/privacidad" target="_blank" rel="noopener" className="font-extrabold text-[#0b4f9e] underline">Política de Privacidad</a>.
+            </p>
 
             <button
               disabled={!acceptedTermsBox}
@@ -326,7 +336,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                   className="w-5 h-5 rounded text-[#0b4f9e] accent-[#0b4f9e] mt-1 shrink-0"
                 />
                 <span className="text-sm font-bold text-[#14213d] leading-snug">
-                  Acepto los términos de essimple.live: se guardan los contactos, nivel de batería e historial de eventos para acompañar a tu ser querido.
+                  Acepto los <a href="/terminos" target="_blank" rel="noopener" className="text-[#0b4f9e] underline">Términos</a> y la <a href="/privacidad" target="_blank" rel="noopener" className="text-[#0b4f9e] underline">Política de Privacidad</a> de essimple.live, y declaro tener la autorización de la persona acompañada (o de su representante legal) para registrar sus datos, incluida su ubicación.
                 </span>
               </label>
 
@@ -340,7 +350,9 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
 
               {showPrivacyDetails && (
                 <div className="ml-8 p-3 bg-[#f6f3ec] rounded-xl text-sm font-medium text-[#374151] space-y-1">
-                  <p>• Contactos familiares autorizados (nombre, teléfono y color).</p>
+                  <p>• Correo, contraseña y PIN de la cuenta familiar.</p>
+                  <p>• Contactos familiares autorizados (nombre, teléfono, foto y color).</p>
+                  <p>• Dirección de casa, sus coordenadas y la zona segura.</p>
                   <p>• Nivel de batería y conexión, para avisar si está baja y mostrar el estado del teléfono.</p>
                   <p>• Avisos de SOS, de salida de la zona segura y de batería baja.</p>
                   <p>• La última ubicación conocida del teléfono (una sola, se reemplaza con cada actualización; no hay historial de recorridos).</p>
@@ -468,6 +480,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
           </button>
         </div>
       </div>
+      <LegalLinks className="mt-4" />
     </div>
   );
 };
