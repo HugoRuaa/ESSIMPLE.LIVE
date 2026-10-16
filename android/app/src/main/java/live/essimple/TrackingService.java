@@ -40,7 +40,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Servicio en primer plano (con notificación fija): mientras corre, Android no lo pausa aunque la pantalla esté apagada.
- * Cada pocos minutos sube a Supabase la batería y la última ubicación conocida (una sola fila por familia, sin historial)
+ * Cada pocos minutos sube a Supabase la batería y la última ubicación conocida (una sola fila por familia, sin historial) mediante las funciones dispositivo_* con el token del teléfono
  * y revisa dos avisos por SMS a los contactos marcados: salida/regreso de la zona segura y batería baja.
  */
 public class TrackingService extends Service {
@@ -253,21 +253,20 @@ public class TrackingService extends Service {
         if (cfg == null) return;
         io.execute(() -> {
             try {
+                // El teléfono se identifica con su token (nunca con un id de familia) y solo usa la función del servidor.
                 JSONObject body = new JSONObject();
-                body.put("familia_id", cfg.getString("familiaId"));
-                body.put("is_online", true);
-                body.put("last_reported_at", iso(System.currentTimeMillis()));
+                body.put("p_token", cfg.getString("deviceToken"));
+                body.put("p_online", true);
                 if (battery[0] >= 0) {
-                    body.put("battery_level", Math.max(0, Math.min(100, battery[0])));
-                    body.put("is_charging", battery[1] == 1);
+                    body.put("p_battery", Math.max(0, Math.min(100, battery[0])));
+                    body.put("p_charging", battery[1] == 1);
                 }
                 if (fix != null) {
-                    body.put("last_lat", fix.getLatitude());
-                    body.put("last_lng", fix.getLongitude());
-                    body.put("last_accuracy", Math.round(fix.getAccuracy()));
-                    body.put("last_location_at", iso(fix.getTime() > 0 ? fix.getTime() : System.currentTimeMillis()));
+                    body.put("p_lat", fix.getLatitude());
+                    body.put("p_lng", fix.getLongitude());
+                    body.put("p_accuracy", Math.round(fix.getAccuracy()));
                 }
-                boolean ok = post(cfg, "estado_telefono?on_conflict=familia_id", body, "resolution=merge-duplicates,return=minimal");
+                boolean ok = post(cfg, "rpc/dispositivo_reportar", body, null);
                 lastUploadOk = ok;
                 lastUploadAt = System.currentTimeMillis();
             } catch (Exception e) {
@@ -292,7 +291,7 @@ public class TrackingService extends Service {
             conn.setRequestProperty("Authorization", "Bearer " + key);
             conn.setRequestProperty("Content-Type", "application/json");
             conn.setRequestProperty("Content-Profile", cfg.optString("schema", "essimple"));
-            conn.setRequestProperty("Prefer", prefer);
+            if (prefer != null) conn.setRequestProperty("Prefer", prefer);
             byte[] data = body.toString().getBytes(StandardCharsets.UTF_8);
             try (OutputStream out = conn.getOutputStream()) {
                 out.write(data);
@@ -351,12 +350,12 @@ public class TrackingService extends Service {
         io.execute(() -> {
             try {
                 JSONObject body = new JSONObject();
-                body.put("familia_id", cfg.getString("familiaId"));
-                body.put("event_type", type);
-                body.put("title", title);
-                body.put("detail", detail);
-                body.put("level", level);
-                post(cfg, "eventos", body, "return=minimal");
+                body.put("p_token", cfg.getString("deviceToken"));
+                body.put("p_type", type);
+                body.put("p_title", title);
+                body.put("p_detail", detail);
+                body.put("p_level", level);
+                post(cfg, "rpc/dispositivo_evento", body, null);
             } catch (Exception ignored) {
             }
         });

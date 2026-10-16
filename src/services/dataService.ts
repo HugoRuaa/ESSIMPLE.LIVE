@@ -1,5 +1,6 @@
 import { getSupabaseClient, DB_SCHEMA } from '../lib/supabase';
 import { getDeviceToken, isDeviceMode, setDeviceToken, clearDeviceToken } from '../lib/device';
+import { storePinHash, clearPinHash } from '../lib/pin';
 import { Contact, AppSettings, EventItem, ChangeItem, PhoneStatus } from '../types';
 
 // ====================================================================
@@ -191,11 +192,15 @@ export const unlinkPhones = async (): Promise<boolean> => {
 };
 
 /** El teléfono olvida su token (por ejemplo, si el servidor ya lo revocó). */
-export const forgetDevice = (): void => clearDeviceToken();
+export const forgetDevice = (): void => {
+  clearDeviceToken();
+  clearPinHash();
+};
 
 // ---------- Lo que el teléfono recibe de la familia ----------
 
 interface DeviceConfig {
+  pin_hash?: string | null;
   familia: { person_name: string; font_size: string; country_code: string; quick_messages: string[] } | null;
   casa: any | null;
   contactos: any[];
@@ -213,9 +218,14 @@ export const fetchDeviceConfig = async (): Promise<DeviceConfig | null> => {
     const { data, error } = await d.rpc('dispositivo_config', { p_token: token });
     if (error) {
       // 28000 = token revocado o desconocido: este teléfono ya no está vinculado.
-      if ((error as any).code === '28000' || /no autorizado/i.test(error.message || '')) clearDeviceToken();
+      if ((error as any).code === '28000' || /no autorizado/i.test(error.message || '')) {
+        clearDeviceToken();
+        clearPinHash();
+      }
       return null;
     }
+    // Guarda el hash del PIN para poder comprobarlo sin señal.
+    storePinHash((data as DeviceConfig)?.pin_hash);
     return data as DeviceConfig;
   })();
   configCache = { at: Date.now(), value };
@@ -601,6 +611,27 @@ export const fetchFamilyChanges = async (familiaId: string): Promise<ChangeItem[
   } catch (err) {
     console.error('Error al consultar cambios:', err);
     return null;
+  }
+};
+
+// ---------- Perfil de la persona acompañada ----------
+
+export const syncFamilyProfile = async (
+  familiaId: string,
+  profile: { personName?: string; countryCode?: string; fontSize?: string }
+): Promise<void> => {
+  if (noFamily(familiaId) || isDeviceMode()) return;
+  const d = db();
+  const fid = await getMyFamiliaId();
+  if (!d || !fid) return;
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (profile.personName !== undefined) patch.person_name = profile.personName.slice(0, 20);
+  if (profile.countryCode !== undefined) patch.country_code = String(profile.countryCode).replace(/\D/g, '') || '57';
+  if (profile.fontSize !== undefined) patch.font_size = profile.fontSize;
+  try {
+    await d.from('familias').update(patch).eq('id', fid);
+  } catch (err) {
+    console.warn('Aviso guardando el perfil:', err);
   }
 };
 

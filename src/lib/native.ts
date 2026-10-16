@@ -219,53 +219,6 @@ export const readClipboardText = async (): Promise<string> => {
 // Vinculación: código "ESSIMPLE-<base64url(email)>" que viaja junto al link del APK
 // ---------------------------------------------------------------------------
 
-const PAIR_PREFIX = 'ESSIMPLE-';
-export const PAIR_STORAGE_KEY = 'essimple_pair_family';
-
-const toBase64Url = (value: string): string => {
-  const bytes = new TextEncoder().encode(value);
-  let bin = '';
-  bytes.forEach(b => (bin += String.fromCharCode(b)));
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-};
-
-const fromBase64Url = (value: string): string => {
-  const padded = value.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((value.length + 3) % 4);
-  const bin = atob(padded);
-  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
-  return new TextDecoder().decode(bytes);
-};
-
-export const buildPairCode = (familyEmail: string): string => PAIR_PREFIX + toBase64Url(familyEmail.trim().toLowerCase());
-
-/** Busca un código de vinculación dentro de un texto (por ejemplo, el mensaje de WhatsApp copiado). */
-export const parsePairCode = (text: string): string | null => {
-  const match = text.match(/(?:ESSIMPLE|SIMPLE)-([A-Za-z0-9_-]{6,})/i) || text.match(/\/d\/([A-Za-z0-9_-]{6,})/);
-  if (!match) return null;
-  try {
-    const email = fromBase64Url(match[1]);
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
-  } catch {
-    return null;
-  }
-};
-
-export const getPairedFamily = (): string | null => {
-  try {
-    return localStorage.getItem(PAIR_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-};
-
-export const savePairedFamily = (email: string): void => {
-  try {
-    localStorage.setItem(PAIR_STORAGE_KEY, email);
-  } catch {
-    // ignorar
-  }
-};
-
 // ---- Mensaje de voz nativo (AAC/m4a: WhatsApp lo reproduce; el webm del navegador no) ----
 
 export const startNativeRecording = async (): Promise<boolean> => {

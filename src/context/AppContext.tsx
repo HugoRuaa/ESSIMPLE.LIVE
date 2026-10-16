@@ -26,6 +26,7 @@ import {
   fetchFamilyEvents,
   fetchFamilyChanges,
   syncQuickMessagesToSupabase,
+  syncFamilyProfile,
   fetchFamilyQuickMessages,
   syncLiveLocation,
   fetchLiveLocation,
@@ -35,7 +36,10 @@ import {
 
 // Seguridad (fase 0): la contraseña ya no se guarda en el dispositivo. Borra la que dejaron versiones anteriores.
 try {
-  if (typeof localStorage !== 'undefined') localStorage.removeItem('essimple_password');
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('essimple_password');
+    localStorage.removeItem('essimple_pair_family'); // guardaba el correo de la familia en el teléfono
+  }
 } catch {
   // sin acceso a localStorage
 }
@@ -730,6 +734,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (newSettings.quickMessages) {
         void syncQuickMessagesToSupabase(identifier, newSettings.quickMessages);
+      }
+      if (newSettings.personName !== undefined || newSettings.countryCode !== undefined || newSettings.fontSize !== undefined) {
+        void syncFamilyProfile(identifier, {
+          personName: newSettings.personName,
+          countryCode: newSettings.countryCode,
+          fontSize: newSettings.fontSize,
+        });
       }
       return res;
     }

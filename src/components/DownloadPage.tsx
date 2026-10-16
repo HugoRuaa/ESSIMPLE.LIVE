@@ -1,24 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { APK_URL } from '../lib/config';
-import { parsePairCode } from '../lib/native';
-import { registerDownload } from '../lib/autoLink';
 
-/** essimple.live/d/<código>: anota quién envió el enlace y empieza la descarga del APK. */
+/** essimple.live/d/...: empieza la descarga del APK. No registra ni guarda nada de quien descarga. */
 export const DownloadPage: React.FC = () => {
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    const email = parsePairCode(window.location.pathname);
-    (async () => {
-      if (email) await registerDownload(email);
+    const timer = setTimeout(() => {
       if (cancelled) return;
       setStarted(true);
       window.location.href = APK_URL;
-    })();
+    }, 300);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, []);
 
