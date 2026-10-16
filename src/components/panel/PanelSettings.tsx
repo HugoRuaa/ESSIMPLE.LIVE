@@ -129,6 +129,7 @@ export const PanelSettings: React.FC = () => {
 
   // Contraseña
   const [newPass, setNewPass] = useState('');
+  const [newPass2, setNewPass2] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [passMsg, setPassMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [savingPass, setSavingPass] = useState(false);
@@ -139,6 +140,10 @@ export const PanelSettings: React.FC = () => {
       setPassMsg({ ok: false, text: 'Mínimo 10 caracteres.' });
       return;
     }
+    if (newPass !== newPass2) {
+      setPassMsg({ ok: false, text: 'Las dos contraseñas no coinciden.' });
+      return;
+    }
     setSavingPass(true);
     const res = await changePassword(newPass);
     setSavingPass(false);
@@ -147,6 +152,7 @@ export const PanelSettings: React.FC = () => {
       return;
     }
     setNewPass('');
+    setNewPass2('');
     setPassMsg({ ok: true, text: 'Contraseña actualizada.' });
   };
 
@@ -348,6 +354,14 @@ export const PanelSettings: React.FC = () => {
           value={newPass}
           onChange={e => { setNewPass(e.target.value); setPassMsg(null); }}
           placeholder="Nueva contraseña (mín. 10 caracteres)"
+          className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
+        />
+        <input
+          type={showPass ? 'text' : 'password'}
+          autoComplete="new-password"
+          value={newPass2}
+          onChange={e => { setNewPass2(e.target.value); setPassMsg(null); }}
+          placeholder="Repite la nueva contraseña"
           className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
         />
         <button
