@@ -48,12 +48,19 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
 
       {/* HERO */}
       <section className="max-w-6xl mx-auto px-5 pt-12 pb-16 md:pt-20 md:pb-24 grid md:grid-cols-[1.1fr_0.9fr] gap-12 md:gap-8 items-center">
+        <div className="md:order-last">
+          <img
+            src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=800"
+            alt="Mujer mayor sonriendo feliz abrazada con su hijo adulto"
+            className="rounded-3xl shadow-2xl object-cover w-full h-[400px] md:h-[500px]"
+          />
+        </div>
         <div>
           <h1 className="text-[2.6rem] leading-[1.05] sm:text-6xl font-semibold tracking-tight" style={display}>
-            Un celular que ella entiende a la primera, y que a ti te deja tranquilo.
+            Amor y tecnología que conecta generaciones.
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-[#3b4a68] max-w-xl leading-relaxed">
-            essimple.live convierte cualquier Android en un teléfono con botones grandes: llama, pide ayuda y comparte dónde está con un toque. Tú ves desde tu panel que está bien.
+            essimple.live hace que la tecnología sea accesible y cercana para nuestros mayores. Un teléfono que entienden a la primera, facilitando los momentos más felices con sus hijos y nietos, mientras tú tienes la tranquilidad de saber cómo están.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button onClick={onSignup} className={`${cta} bg-[#0b4f9e] text-white shadow-[0_4px_0_#062a54] hover:bg-[#0a4488]`}>

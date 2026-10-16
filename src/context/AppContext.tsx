@@ -372,9 +372,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Location share state
   const [locationShare, setLocationShare] = useState<LocationShareState>(() => {
     let initialCoords = {
-      lat: 4.6533,
-      lng: -74.0836,
-      address: 'Buscando ubicación actual...',
+      lat: settings.homeCenter?.lat || 6.2088,
+      lng: settings.homeCenter?.lng || -75.5684,
+      address: settings.homeAddress || 'Cerca de casa',
       accuracy: 25,
     };
     if (typeof localStorage !== 'undefined') {
