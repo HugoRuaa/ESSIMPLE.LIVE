@@ -53,37 +53,6 @@ export const PanelSettings: React.FC = () => {
     }
   }, [settings.exitPin]);
 
-  // Password change
-  const [password, setPassword] = useState(() => {
-    if (typeof localStorage !== 'undefined') {
-      const stored = localStorage.getItem('essimple_password');
-      if (stored) return stored;
-    }
-    return '123456';
-  });
-  const [showPass, setShowPass] = useState(false);
-  const [passSuccess, setPassSuccess] = useState('');
-
-  useEffect(() => {
-    const identifier =
-      account?.familiaId ||
-      account?.email ||
-      (typeof localStorage !== 'undefined' ? localStorage.getItem('essimple_family_id') : null) ||
-      'hugofrua@gmail.com';
-
-    fetch(`/api/familias/${encodeURIComponent(identifier)}/password`)
-      .then(r => r.json())
-      .then(data => {
-        if (data?.success && data?.password) {
-          setPassword(data.password);
-          if (typeof localStorage !== 'undefined') {
-            localStorage.setItem('essimple_password', data.password);
-          }
-        }
-      })
-      .catch(() => {});
-  }, [account?.familiaId, account?.email]);
-
   // Install Link Modal [33]
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -138,9 +107,10 @@ export const PanelSettings: React.FC = () => {
       account?.familiaId ||
       account?.email ||
       (typeof localStorage !== 'undefined' ? localStorage.getItem('essimple_family_id') : null) ||
-      'hugofrua@gmail.com';
+      '';
 
     try {
+      if (!identifier) throw new Error('sin sesión');
       await fetch(`/api/familias/${encodeURIComponent(identifier)}/pin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,37 +123,6 @@ export const PanelSettings: React.FC = () => {
     setPin(clean);
     setPinSuccess('PIN actualizado correctamente.');
     setTimeout(() => setPinSuccess(''), 3500);
-  };
-
-  const handleChangePass = async () => {
-    const cleanPass = password.trim();
-    if (cleanPass.length < 6) {
-      alert('La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('essimple_password', cleanPass);
-    }
-
-    const identifier =
-      account?.familiaId ||
-      account?.email ||
-      (typeof localStorage !== 'undefined' ? localStorage.getItem('essimple_family_id') : null) ||
-      'hugofrua@gmail.com';
-
-    try {
-      await fetch(`/api/familias/${encodeURIComponent(identifier)}/password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: cleanPass }),
-      });
-    } catch {
-      // ignore
-    }
-
-    setPassword(cleanPass);
-    setPassSuccess('Contraseña actualizada con éxito.');
-    setTimeout(() => setPassSuccess(''), 3500);
   };
 
   const handleCopyLink = () => {
@@ -356,58 +295,6 @@ export const PanelSettings: React.FC = () => {
           <span>Enlace de descarga del APK</span>
         </button>
       </div>
-
-      {/* 4. Cuenta y seguridad [32] */}
-      <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
-        <h2 className="text-2xl font-extrabold text-[#14213d]">Cuenta y seguridad</h2>
-        <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
-          Es la contraseña que utilizas para ingresar a este panel de administración familiar desde cualquier dispositivo o navegador.
-        </p>
-
-        <div className="space-y-2 pt-1">
-          <label className="text-lg font-bold text-[#14213d] flex items-center justify-between">
-            <span>Contraseña de acceso</span>
-            <span className="text-xs sm:text-sm font-bold text-[#0b4f9e] bg-[#f0f6ff] border border-[#0b4f9e]/25 px-2.5 py-0.5 rounded-full">
-              Actualmente en uso
-            </span>
-          </label>
-          <div className="relative">
-            <input
-              type={showPass ? 'text' : 'password'}
-              value={password}
-              onChange={e => {
-                setPassword(e.target.value);
-                if (passSuccess) setPassSuccess('');
-              }}
-              placeholder="Escribe tu contraseña"
-              className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-28 min-[420px]:pr-44 text-xl font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPass(!showPass)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 min-h-11 text-base font-bold text-[#3b4863] hover:text-[#14213d] cursor-pointer select-none bg-white/80 rounded-xl"
-            >
-              {showPass ? <EyeOff className="w-5 h-5 text-[#0b4f9e]" /> : <Eye className="w-5 h-5 text-[#7a7461]" />}
-              <span>{showPass ? 'Ocultar' : 'Ver'}</span>
-            </button>
-          </div>
-        </div>
-
-        {passSuccess && (
-          <div className="bg-[#eef7ee] border border-[#0b6b3a]/30 p-3 rounded-2xl flex items-center gap-2 text-base font-bold text-[#0b6b3a] animate-in fade-in">
-            <Check className="w-5 h-5 stroke-[3] shrink-0" />
-            <span>{passSuccess}</span>
-          </div>
-        )}
-
-        <button
-          onClick={handleChangePass}
-          className="w-full bg-[#0b4f9e] hover:bg-[#093f7e] text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md cursor-pointer transition active:scale-95"
-        >
-          Cambiar contraseña
-        </button>
-      </div>
-
 
       {/* 6. Desvincular teléfono [32] */}
       <div>

@@ -31,16 +31,16 @@ const DEFAULT_FAMILIA_ID = '7a886a1f-3f70-42f2-9d1d-2550067f3214';
 
 const defaultFamilyData = {
   id: DEFAULT_FAMILIA_ID,
-  email: 'hugofrua@gmail.com',
-  password_hash: '123456',
+  email: 'demo@essimple.live',
+  password_hash: '',
   exit_pin: '1234',
-  person_name: 'Fabio Papa',
+  person_name: 'Demo',
   font_size: 'grande',
   country_code: '57',
 };
 
 const familiesStore = new Map<string, any>();
-familiesStore.set('hugofrua@gmail.com', defaultFamilyData);
+familiesStore.set('demo@essimple.live', defaultFamilyData);
 familiesStore.set(DEFAULT_FAMILIA_ID, defaultFamilyData);
 
 const defaultHomeZoneData = {
@@ -59,7 +59,7 @@ const defaultHomeZoneData = {
 
 const homeZoneStore = new Map<string, any>();
 homeZoneStore.set(DEFAULT_FAMILIA_ID, defaultHomeZoneData);
-homeZoneStore.set('hugofrua@gmail.com', defaultHomeZoneData);
+homeZoneStore.set('demo@essimple.live', defaultHomeZoneData);
 
 const defaultContactsList = [
   {
@@ -102,13 +102,13 @@ const defaultContactsList = [
 
 const contactsStore = new Map<string, any[]>();
 contactsStore.set(DEFAULT_FAMILIA_ID, defaultContactsList);
-contactsStore.set('hugofrua@gmail.com', defaultContactsList);
+contactsStore.set('demo@essimple.live', defaultContactsList);
 
 const eventsStore = new Map<string, any[]>();
 const changesStore = new Map<string, any[]>();
 const quickMessagesStore = new Map<string, string[]>();
 quickMessagesStore.set(DEFAULT_FAMILIA_ID, ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
-quickMessagesStore.set('hugofrua@gmail.com', ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
+quickMessagesStore.set('demo@essimple.live', ['Ya llegué', 'Llámame por favor', 'Todo bien', 'Estoy en camino']);
 
 const liveLocationStore = new Map<string, any>();
 const phoneStatusStore = new Map<string, any>();
@@ -413,78 +413,7 @@ app.post('/api/familias/:familiaId/pin', async (req, res) => {
   return res.json({ success: true, familiaId, exitPin: cleanPin, message: 'PIN actualizado exitosamente' });
 });
 
-// Endpoint para consultar contraseña de la familia
-app.get('/api/familias/:familiaId/password', async (req, res) => {
-  const { familiaId: rawId } = req.params;
-  const familiaId = await resolveFamiliaId(rawId);
-  let currentPassword = 'password123';
-  if (familiesStore.has(familiaId)) {
-    currentPassword = familiesStore.get(familiaId).password_hash || currentPassword;
-  } else if (familiesStore.has(rawId?.toLowerCase())) {
-    currentPassword = familiesStore.get(rawId.toLowerCase()).password_hash || currentPassword;
-  } else if (familiesStore.has(DEFAULT_FAMILIA_ID)) {
-    currentPassword = familiesStore.get(DEFAULT_FAMILIA_ID).password_hash || currentPassword;
-  }
-
-  if (supabaseServerClient) {
-    try {
-      const { data } = await supabaseServerClient
-        .schema(SUPABASE_SCHEMA)
-        .from('familias')
-        .select('password_hash')
-        .eq('id', familiaId)
-        .maybeSingle();
-      if (data?.password_hash) {
-        currentPassword = data.password_hash;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return res.json({ success: true, password: currentPassword });
-});
-
-// Endpoint para actualizar contraseña de la familia
-app.post('/api/familias/:familiaId/password', async (req, res) => {
-  const { familiaId: rawId } = req.params;
-  const { password, password_hash } = req.body;
-  const newPass = (password || password_hash || '').trim();
-  if (!newPass || newPass.length < 6) {
-    return res.status(400).json({ success: false, message: 'La contraseña debe tener mínimo 6 caracteres' });
-  }
-
-  const familiaId = await resolveFamiliaId(rawId);
-
-  // Actualizar en el almacén en memoria
-  if (familiesStore.has(familiaId)) {
-    const fam = familiesStore.get(familiaId);
-    fam.password_hash = newPass;
-  }
-  if (familiesStore.has(rawId?.toLowerCase())) {
-    const fam = familiesStore.get(rawId.toLowerCase());
-    fam.password_hash = newPass;
-  }
-  if (familiesStore.has(DEFAULT_FAMILIA_ID)) {
-    const fam = familiesStore.get(DEFAULT_FAMILIA_ID);
-    fam.password_hash = newPass;
-  }
-
-  // Sincronizar en Supabase si está disponible
-  if (supabaseServerClient) {
-    try {
-      await supabaseServerClient
-        .schema(SUPABASE_SCHEMA)
-        .from('familias')
-        .update({ password_hash: newPass, updated_at: new Date().toISOString() })
-        .eq('id', familiaId);
-    } catch {
-      // ignore
-    }
-  }
-
-  return res.json({ success: true, familiaId, message: 'Contraseña actualizada con éxito' });
-});
+// (Fase 0 seguridad) Endpoints de consulta y cambio de contraseña eliminados: la clave nunca se devuelve.
 
 // Endpoint para guardar/actualizar contactos de una familia
 app.post('/api/familias/:familiaId/contacts', async (req, res) => {
@@ -983,16 +912,7 @@ const installTokens: Record<string, {
   used: boolean;
   expiresAt: number;
 }> = {
-  'k7Qp2x9a': {
-    familyEmail: 'hugofrua@gmail.com',
-    used: false,
-    expiresAt: Date.now() + 365 * 24 * 3600 * 1000,
-  },
-  'k7Qp2x9a4b': {
-    familyEmail: 'hugofrua@gmail.com',
-    used: false,
-    expiresAt: Date.now() + 365 * 24 * 3600 * 1000,
-  }
+
 };
 
 // --- API Endpoints ---
@@ -1262,7 +1182,7 @@ app.post('/api/install/create', (req, res) => {
   const { familyEmail } = req.body;
   const token = Math.random().toString(36).substring(2, 10);
   installTokens[token] = {
-    familyEmail: familyEmail || 'hugofrua@gmail.com',
+    familyEmail: familyEmail || 'demo@essimple.live',
     used: false,
     expiresAt: Date.now() + 72 * 3600 * 1000,
   };

@@ -30,6 +30,13 @@ import {
   fetchPhoneStatus,
 } from '../services/dataService';
 
+// Seguridad (fase 0): la contraseña ya no se guarda en el dispositivo. Borra la que dejaron versiones anteriores.
+try {
+  if (typeof localStorage !== 'undefined') localStorage.removeItem('essimple_password');
+} catch {
+  // sin acceso a localStorage
+}
+
 interface AppContextType {
   // Contacts
   contacts: Contact[];
@@ -511,13 +518,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const json = await resp.json();
             if (json?.data?.familyEmail) {
               urlFamily = json.data.familyEmail;
-            } else if (activeToken === 'k7Qp2x9a4b' || activeToken === 'k7Qp2x9a') {
-              urlFamily = 'hugofrua@gmail.com';
             }
           } catch {
-            if (activeToken === 'k7Qp2x9a4b' || activeToken === 'k7Qp2x9a') {
-              urlFamily = 'hugofrua@gmail.com';
-            }
+            // sin respaldo: un token desconocido no debe asignar ninguna familia
           }
         }
 
@@ -615,7 +618,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (stored && stored !== 'local-family-id' ? stored : null) ||
       account.familiaId ||
       (account.isAuthenticated && account.email ? account.email : null) ||
-      'hugofrua@gmail.com'
+      'local-family-id'
     );
   };
 
@@ -737,10 +740,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         void syncQuickMessagesToSupabase(identifier, newSettings.quickMessages);
       }
       return res;
-    }
-
-    if (newSettings.quickMessages) {
-      void syncQuickMessagesToSupabase('hugofrua@gmail.com', newSettings.quickMessages);
     }
 
     return { success: true, message: 'Guardado localmente' };
@@ -1280,9 +1279,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         termsAccepted: true,
         familiaId: res.familiaId,
       });
-      if (password) {
-        localStorage.setItem('essimple_password', password);
-      }
       return { success: true };
     } catch (err: unknown) {
       return { success: false, message: err instanceof Error ? err.message : 'Error al iniciar sesión' };
@@ -1343,9 +1339,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         familiaId: res.familiaId,
       };
       localStorage.setItem('essimple_account', JSON.stringify(newAccount));
-      if (password) {
-        localStorage.setItem('essimple_password', password);
-      }
       setAccount(newAccount);
 
       return { success: true, message: res.message };
