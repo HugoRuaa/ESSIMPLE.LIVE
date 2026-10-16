@@ -10,6 +10,12 @@
 
 delete from essimple.familias where owner_id is null;
 
+-- Vinculación vieja por correo + IP: ya no se usa. Se borran la tabla (correos e IP de descargas) y las
+-- funciones, porque buscar_vinculo() entregaba el correo de una familia a cualquiera en la misma red.
+drop function if exists essimple.registrar_descarga(text), essimple.buscar_vinculo(),
+  essimple.marcar_vinculo_usado(text), essimple._ip_cliente();
+drop table if exists essimple.vinculos_pendientes;
+
 -- La función de alta ya no escribe password_hash.
 create or replace function essimple.crear_mi_familia(p_person_name text, p_pin text)
 returns uuid language plpgsql security definer set search_path = essimple, extensions, pg_temp as $$

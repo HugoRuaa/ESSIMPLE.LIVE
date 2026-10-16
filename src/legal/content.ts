@@ -52,7 +52,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       { type: 'p', text: `El sitio y la app son operados por ${responsibleText}, ${registeredText}.` },
       { type: 'h', text: 'Cómo funciona' },
       { type: 'li', text: 'Un integrante de la familia (el titular de la cuenta) se registra en el panel con su correo y una contraseña, escribe el nombre de la persona acompañada y elige un PIN de 4 números.' },
-      { type: 'li', text: 'Desde el panel se comparte un enlace de descarga de la app para Android, que se instala en el celular de la persona acompañada.' },
+      { type: 'li', text: 'Desde el panel se comparte un enlace de descarga de la app para Android, que se instala en el celular de la persona acompañada, y se genera un código de vinculación de un solo uso (vale 15 minutos) que se escribe en ese celular.' },
       { type: 'li', text: 'Los contactos que la familia marca pueden activar avisos en su propio celular desde un enlace. Así reciben una notificación si la persona pide ayuda, sale de su zona segura o tiene la batería baja.' },
       { type: 'li', text: 'Es gratis. Un botón opcional permite aportar para sostener el proyecto (lleva a nosunimos.live).' },
       { type: 'h', text: 'Qué no es' },
@@ -92,7 +92,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       { type: 'h', text: '3. Qué datos se tratan y para qué' },
       {
         type: 'li',
-        text: 'Cuenta familiar: correo electrónico, contraseña, nombre de la persona acompañada, tamaño de letra, código de país y PIN de salida de 4 números. Finalidad: crear la cuenta, permitir el acceso al panel y proteger la salida de la app en el celular de la persona.',
+        text: 'Cuenta familiar: correo electrónico, contraseña, nombre de la persona acompañada, tamaño de letra, código de país y PIN de salida de 4 números. Finalidad: crear la cuenta, permitir el acceso al panel y proteger la salida de la app en el celular de la persona. La contraseña la gestiona el servicio de autenticación y no se guarda en claro; el PIN se guarda con hash, y una copia con hash queda en el celular vinculado para poder comprobarlo sin conexión.',
       },
       {
         type: 'li',
@@ -120,7 +120,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       },
       {
         type: 'li',
-        text: 'Enlace de descarga: al abrir el enlace de descarga que envía la familia, se guarda el correo de esa familia junto con la dirección IP de quien descarga, para vincular automáticamente la app con la cuenta cuando se abre por primera vez desde la misma red. Se usa dentro de las 24 horas siguientes y se elimina de forma automática pasados 2 días, cuando se registran nuevas descargas.',
+        text: 'Vinculación del celular: el código de vinculación se guarda con hash hasta que se usa o vence (15 minutos). Al vincular el celular se guarda un identificador del celular (también con hash) para reconocerlo y poder revocarlo desde el panel; el identificador en claro queda solo en ese celular. Finalidad: que solo el celular autorizado por la familia envíe su estado y su ubicación. El enlace de descarga no registra ni guarda datos de quien descarga.',
       },
       {
         type: 'li',
@@ -145,14 +145,14 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       { type: 'h', text: '4. Quién puede ver qué' },
       {
         type: 'p',
-        text: 'Quien entre al panel con el correo y la contraseña de la cuenta familiar puede ver y cambiar todos los datos de esa familia. Cuide la contraseña y el PIN, compártalos solo con quien corresponde y cámbielos si dejan de ser privados. Los contactos con avisos activados reciben las notificaciones descritas arriba. Los modos de demostración usan datos de ejemplo y no crean una cuenta.',
+        text: 'Quien entre al panel con el correo y la contraseña de la cuenta familiar puede ver y cambiar todos los datos de esa familia. Cuide la contraseña y el PIN, compártalos solo con quien corresponde y cámbielos si dejan de ser privados. No hay recuperación automática de la contraseña: si la olvida, escriba al canal de contacto y verificaremos su identidad antes de restablecerla. Los contactos con avisos activados reciben las notificaciones descritas arriba. Los modos de demostración usan datos de ejemplo y no crean una cuenta.',
       },
       { type: 'h', text: '5. Almacenamiento local y cookies' },
       { type: 'p', text: 'Esenciales (no requieren su consentimiento):' },
       { type: 'li', text: 'es_consent_v1: guarda su elección sobre las estadísticas.' },
       {
         type: 'li',
-        text: 'Datos de la cuenta y de la familia en su dispositivo (sesión, contactos, ajustes, historial, última ubicación y preferencias): permiten entrar sin repetir la clave y que la app funcione.',
+        text: 'Datos de la cuenta y de la familia en su dispositivo (sesión, contactos, ajustes, historial, última ubicación y preferencias; en el celular vinculado, su identificador y el hash del PIN): permiten entrar sin repetir la clave y que la app funcione. La contraseña no se guarda en el dispositivo.',
       },
       { type: 'p', text: 'Opcionales (solo si usted los acepta):' },
       { type: 'li', text: 'Cookies de Google Analytics (por ejemplo _ga), bajo las políticas de Google.' },
@@ -183,7 +183,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       { type: 'h', text: '8. Conservación y eliminación' },
       {
         type: 'p',
-        text: 'Los datos de la cuenta familiar, los contactos, la zona segura y el estado del teléfono se conservan mientras la cuenta exista; la última ubicación se reemplaza con cada actualización. El historial conserva solo los últimos 50 eventos y 50 cambios. El registro del enlace de descarga se elimina como se indica en la sección 3. Hoy la eliminación de una cuenta, de un contacto o de los datos se hace por solicitud al canal de contacto; los registros que debamos conservar por deberes legales se mantendrán el tiempo que exija la ley.',
+        text: 'Los datos de la cuenta familiar, los contactos, la zona segura y el estado del teléfono se conservan mientras la cuenta exista; la última ubicación se reemplaza con cada actualización. El historial conserva solo los últimos 50 eventos y 50 cambios. La familia puede borrar su cuenta y todos sus datos desde el panel (Ajustes, Borrar mi cuenta); los contactos se pueden quitar desde el panel y también puede pedirlo por el canal de contacto; los registros que debamos conservar por deberes legales se mantendrán el tiempo que exija la ley.',
       },
       { type: 'h', text: '9. Sus derechos como titular' },
       {
@@ -198,7 +198,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       { type: 'h', text: '11. Seguridad' },
       {
         type: 'p',
-        text: 'El tráfico entre su dispositivo y el servicio viaja cifrado mediante HTTPS. Ninguna medida de seguridad es infalible; si detectamos un incidente que afecte datos personales, actuaremos conforme a la ley colombiana. Para reportar una vulnerabilidad escriba al canal de contacto.',
+        text: 'El tráfico entre su dispositivo y el servicio viaja cifrado mediante HTTPS. Cada cuenta familiar solo accede a sus propios datos, la contraseña y el PIN no se guardan en claro y el celular se identifica con una clave propia que la familia puede revocar. Los avisos a contactos por enlace y algunos servicios descritos arriba tienen un nivel de protección menor. Ninguna medida de seguridad es infalible; si detectamos un incidente que afecte datos personales, actuaremos conforme a la ley colombiana. Para reportar una vulnerabilidad escriba al canal de contacto.',
       },
       { type: 'h', text: '12. Cambios a esta política' },
       {
