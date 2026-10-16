@@ -991,3 +991,16 @@ export const fetchPhoneStatus = async (familiaId: string): Promise<PhoneStatus |
   }
   return null;
 };
+
+/** Devuelve el uuid de la familia a partir del id o del correo (para armar enlaces). */
+export const getFamiliaUuid = async (idOrEmail: string): Promise<string | null> => {
+  if (!idOrEmail) return null;
+  if (!idOrEmail.includes('@')) return idOrEmail;
+  const client = getSupabaseClient();
+  if (!client) return null;
+  try {
+    return await toFamiliaUuid(client, idOrEmail);
+  } catch {
+    return null;
+  }
+};

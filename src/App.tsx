@@ -1,3 +1,4 @@
+import { AvisosPage } from './components/avisos/AvisosPage';
 import React, { useEffect, useState } from 'react';
 import {
   Smartphone,
@@ -283,6 +284,9 @@ const MainAppContent: React.FC = () => {
 };
 
 export default function App() {
+  if (typeof window !== 'undefined' && /^\/avisos\/[0-9a-f-]{36}\/\d{6,}\/?$/i.test(window.location.pathname)) {
+    return <AvisosPage />;
+  }
   if (typeof window !== 'undefined' && /^\/d\/[A-Za-z0-9_-]{6,}\/?$/.test(window.location.pathname)) {
     return <DownloadPage />;
   }

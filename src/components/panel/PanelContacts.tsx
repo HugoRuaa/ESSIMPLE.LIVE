@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Contact } from '../../types';
+import { getFamiliaUuid } from '../../services/dataService';
 
 export const PanelContacts: React.FC = () => {
   const {
@@ -28,7 +29,32 @@ export const PanelContacts: React.FC = () => {
     deleteContact,
     reorderContact,
     settings,
+    account,
   } = useApp();
+
+  const [linkError, setLinkError] = useState('');
+
+  // Abre WhatsApp con el enlace para que ese contacto active los avisos en su celular.
+  const sendAvisosLink = async (contact: Contact) => {
+    setLinkError('');
+    let stored = '';
+    try {
+      stored = localStorage.getItem('essimple_family_id') || '';
+    } catch {
+      // ignorar
+    }
+    const familiaUuid = await getFamiliaUuid(stored && stored !== 'local-family-id' ? stored : account.familiaId || account.email || '');
+    if (!familiaUuid) {
+      setLinkError('No se pudo identificar la familia. Vuelve a iniciar sesión.');
+      return;
+    }
+    const cc = (settings.countryCode || '+57').replace(/\D/g, '') || '57';
+    const digits = (contact.phone || '').replace(/\D/g, '');
+    const full = digits.length === 10 && !digits.startsWith(cc) ? `${cc}${digits}` : digits;
+    const link = `${window.location.origin}/avisos/${familiaUuid}/${full}`;
+    const text = `Hola ${contact.name}, abre este enlace en tu celular y toca "Activar avisos" para enterarte si ${settings.personName || 'tu familiar'} sale de su zona segura o tiene la batería baja: ${link}`;
+    window.open(`https://wa.me/${full}?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -269,7 +295,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={() => handleToggleCheckbox(contact.id, 'isSafeZone', contact.isSafeZone)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span>Zona segura (Aviso en el Panel)</span>
+                <span>Zona segura (notificación al celular)</span>
               </label>
 
               <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
@@ -279,8 +305,18 @@ export const PanelContacts: React.FC = () => {
                   onChange={() => handleToggleCheckbox(contact.id, 'isLowBattery', contact.isLowBattery)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span>Batería baja (Aviso en el Panel)</span>
+                <span>Batería baja (notificación al celular)</span>
               </label>
+
+              {(contact.isSafeZone || contact.isLowBattery) && contact.phone && (
+                <button
+                  onClick={() => sendAvisosLink(contact)}
+                  className="w-full bg-[#fff1c9] border-2 border-[#b7791f] text-[#5c3a00] rounded-2xl py-3 px-3 text-lg font-extrabold cursor-pointer active:scale-95 transition"
+                >
+                  Enviar enlace para activar avisos
+                </button>
+              )}
+              {linkError && <p className="text-base font-bold text-[#a61b1b]">{linkError}</p>}
             </div>
 
             {/* Actions Grid: Subir, Bajar, Editar, Eliminar [27] */}
@@ -410,7 +446,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={e => setFormSafeZone(e.target.checked)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span className="text-lg font-bold text-[#14213d]">Zona segura (Aviso en el Panel)</span>
+                <span className="text-lg font-bold text-[#14213d]">Zona segura (notificación al celular)</span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer">
@@ -420,7 +456,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={e => setFormLowBattery(e.target.checked)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span className="text-lg font-bold text-[#14213d]">Batería baja (Aviso en el Panel)</span>
+                <span className="text-lg font-bold text-[#14213d]">Batería baja (notificación al celular)</span>
               </label>
             </div>
 

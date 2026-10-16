@@ -44,6 +44,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                 Guardamos el nivel de batería del teléfono y si está conectado.
               </li>
               <li>Guardamos la última ubicación conocida del teléfono (una sola, sin historial de recorridos).</li>
+              <li>Si un contacto activa los avisos, guardamos el registro de notificaciones de su celular y su número, solo para avisarle.</li>
               <li>Guardamos el estado del teléfono y su versión.</li>
               <li>
                 Guardamos un historial de eventos (SOS, zona segura, batería y mensajes) y cambios de configuración.
@@ -343,6 +344,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                   <p>• Nivel de batería y conexión, para avisar si está baja y mostrar el estado del teléfono.</p>
                   <p>• Avisos de SOS, de salida de la zona segura y de batería baja.</p>
                   <p>• La última ubicación conocida del teléfono (una sola, se reemplaza con cada actualización; no hay historial de recorridos).</p>
+                  <p>• Si un contacto activa los avisos: el registro de notificaciones de su celular y su número.</p>
                 </div>
               )}
             </div>
