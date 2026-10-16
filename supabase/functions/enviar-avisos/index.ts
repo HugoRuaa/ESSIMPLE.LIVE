@@ -1,6 +1,7 @@
 // essimple.live — envía la notificación a los celulares de los contactos escogidos.
 // Se ejecuta con un Database Webhook: INSERT en essimple.eventos.
-// Secretos necesarios (Edge Functions → Secrets): VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.
+// Secretos necesarios (Edge Functions → Secrets): VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, AVISOS_SECRET.
+// Si se usa el disparador SQL (supabase-avisos-disparador.sql), la función debe tener "Verify JWT" desactivado.
 // SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY los pone Supabase solo.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
@@ -17,6 +18,10 @@ const last10 = (v: string) => (v || '').replace(/\D/g, '').slice(-10);
 
 Deno.serve(async (req) => {
   try {
+    // Solo acepta llamadas del disparador de la base de datos (que envía esta clave).
+    if (req.headers.get('x-avisos-secret') !== Deno.env.get('AVISOS_SECRET')) {
+      return new Response('no autorizado', { status: 401 });
+    }
     const payload = await req.json();
     const ev = payload?.record;
     if (payload?.type !== 'INSERT' || !ev) return new Response('ignorado');
