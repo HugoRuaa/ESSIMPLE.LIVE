@@ -144,6 +144,31 @@ export const logoutFamily = async (): Promise<void> => {
   }
 };
 
+/** Cambia la contraseña de la familia. Pide la actual para comprobar que quien cambia es el titular. */
+export const changePassword = async (
+  email: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<{ success: boolean; message?: string }> => {
+  const client = getSupabaseClient();
+  if (!client) return { success: false, message: 'Sin conexión.' };
+  if (newPassword.length < 10) return { success: false, message: 'La contraseña nueva debe tener mínimo 10 caracteres.' };
+  try {
+    const { error: authErr } = await client.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: currentPassword });
+    if (authErr) return { success: false, message: 'La contraseña actual no es correcta.' };
+    const { error } = await client.auth.updateUser({ password: newPassword });
+    if (error) {
+      const m = (error.message || '').toLowerCase();
+      if (m.includes('different') || m.includes('same')) return { success: false, message: 'La contraseña nueva debe ser distinta de la actual.' };
+      if (m.includes('weak') || m.includes('password')) return { success: false, message: 'La contraseña nueva es muy débil. Usa más caracteres y mezcla letras y números.' };
+      return { success: false, message: error.message || 'No se pudo cambiar la contraseña.' };
+    }
+    return { success: true };
+  } catch (err: unknown) {
+    return { success: false, message: err instanceof Error ? err.message : 'No se pudo cambiar la contraseña.' };
+  }
+};
+
 /** Cambia el PIN de salida del teléfono (se guarda con hash en el servidor). */
 export const changePin = async (pin: string): Promise<{ success: boolean; message?: string }> => {
   const d = db();

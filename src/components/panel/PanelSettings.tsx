@@ -4,7 +4,7 @@ import { Eye, EyeOff, QrCode, Copy, Share2, MessageCircle, Check, X } from 'luci
 import { useApp } from '../../context/AppContext';
 import { APK_URL } from '../../lib/config';
 import { buildInstallLink } from '../../lib/autoLink';
-import { changePin, createLinkCode, unlinkPhones, deleteMyAccount } from '../../services/dataService';
+import { changePin, changePassword, createLinkCode, unlinkPhones, deleteMyAccount } from '../../services/dataService';
 
 export const PanelSettings: React.FC = () => {
   const { settings, saveSettings, account, logout } = useApp();
@@ -125,6 +125,41 @@ export const PanelSettings: React.FC = () => {
     setPin('');
     setPinSuccess('PIN actualizado correctamente.');
     setTimeout(() => setPinSuccess(''), 3500);
+  };
+
+  // Contraseña
+  const [curPass, setCurPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [newPass2, setNewPass2] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [passMsg, setPassMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [savingPass, setSavingPass] = useState(false);
+
+  const handleChangePass = async () => {
+    setPassMsg(null);
+    if (!curPass || !newPass) {
+      setPassMsg({ ok: false, text: 'Escribe la contraseña actual y la nueva.' });
+      return;
+    }
+    if (newPass.length < 10) {
+      setPassMsg({ ok: false, text: 'La contraseña nueva debe tener mínimo 10 caracteres.' });
+      return;
+    }
+    if (newPass !== newPass2) {
+      setPassMsg({ ok: false, text: 'La confirmación no coincide con la contraseña nueva.' });
+      return;
+    }
+    setSavingPass(true);
+    const res = await changePassword(account?.email || '', curPass, newPass);
+    setSavingPass(false);
+    if (!res.success) {
+      setPassMsg({ ok: false, text: res.message || 'No se pudo cambiar la contraseña.' });
+      return;
+    }
+    setCurPass('');
+    setNewPass('');
+    setNewPass2('');
+    setPassMsg({ ok: true, text: 'Contraseña actualizada. Guárdala bien: no hay recuperación automática.' });
   };
 
   const handleUnlink = async () => {
@@ -313,6 +348,60 @@ export const PanelSettings: React.FC = () => {
         >
           <QrCode className="w-6 h-6" />
           <span>Enlace de descarga del APK</span>
+        </button>
+      </div>
+
+      {/* Cuenta: cambiar contraseña */}
+      <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-4">
+        <h2 className="text-2xl font-extrabold text-[#14213d]">Cambiar contraseña</h2>
+        <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
+          Es la contraseña con la que entras a este panel. Mínimo 10 caracteres. No hay recuperación automática: si la olvidas, escribe a consultas@insightproviders.cc.
+        </p>
+        <div className="space-y-3">
+          <input
+            type={showPass ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={curPass}
+            onChange={e => { setCurPass(e.target.value); setPassMsg(null); }}
+            placeholder="Contraseña actual"
+            className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
+          />
+          <input
+            type={showPass ? 'text' : 'password'}
+            autoComplete="new-password"
+            value={newPass}
+            onChange={e => { setNewPass(e.target.value); setPassMsg(null); }}
+            placeholder="Contraseña nueva (mín. 10 caracteres)"
+            className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
+          />
+          <input
+            type={showPass ? 'text' : 'password'}
+            autoComplete="new-password"
+            value={newPass2}
+            onChange={e => { setNewPass2(e.target.value); setPassMsg(null); }}
+            placeholder="Repite la contraseña nueva"
+            className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] bg-[#fcfbf9]"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPass(v => !v)}
+            className="flex items-center gap-1.5 px-2.5 min-h-11 text-base font-bold text-[#3b4863] cursor-pointer select-none"
+          >
+            {showPass ? <EyeOff className="w-5 h-5 text-[#0b4f9e]" /> : <Eye className="w-5 h-5 text-[#7a7461]" />}
+            <span>{showPass ? 'Ocultar' : 'Mostrar'}</span>
+          </button>
+        </div>
+        {passMsg && (
+          <div className={`p-3 rounded-2xl text-base font-bold ${passMsg.ok ? 'bg-[#eef7ee] border border-[#0b6b3a]/30 text-[#0b6b3a]' : 'bg-red-50 border border-red-300 text-red-900'}`}>
+            {passMsg.text}
+          </div>
+        )}
+        <button
+          onClick={handleChangePass}
+          disabled={savingPass}
+          className="w-full bg-[#0b4f9e] hover:bg-[#093f7e] disabled:opacity-60 text-white py-3.5 rounded-2xl text-xl font-extrabold shadow-md cursor-pointer transition active:scale-95"
+        >
+          {savingPass ? 'Guardando…' : 'Cambiar contraseña'}
         </button>
       </div>
 
