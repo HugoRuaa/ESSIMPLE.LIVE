@@ -6,7 +6,6 @@ import { SosModal } from './SosModal';
 import { FallModal } from './FallModal';
 import { PinModal } from './PinModal';
 import { ExitMenuView } from './ExitMenuView';
-import { AlertaFamiliaModal } from './AlertaFamiliaModal';
 import { WizardView } from './WizardView';
 import { WriteMessageView } from './WriteMessageView';
 import { VoiceNoteView } from './VoiceNoteView';
@@ -25,8 +24,6 @@ import {
   releaseHome,
   restoreHome,
   requestHomeLauncher,
-  getPendingAlert,
-  type AlertKind,
 } from '../../lib/native';
 import { Contact } from '../../types';
 
@@ -100,18 +97,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
   const [showFallModal, setShowFallModal] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [pendingAlert, setPendingAlert] = useState<AlertKind | null>(null);
-
-  // Al abrir la app o volver a ella (por ejemplo desde la notificación) se revisa si hay un aviso por mandar.
-  useEffect(() => {
-    const check = () => {
-      void getPendingAlert().then(kind => {
-        if (kind) setPendingAlert(kind);
-      });
-    };
-    check();
-    return onAppResume(check);
-  }, []);
   const [sosHoldProgress, setSosHoldProgress] = useState(0); // 0 to 100%
   const [sosToast, setSosToast] = useState('');
 
@@ -626,7 +611,6 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
       </div>
 
       {/* Modals */}
-      <AlertaFamiliaModal kind={pendingAlert} onClose={() => setPendingAlert(null)} />
       <SosModal isOpen={showSosModal} onClose={() => setShowSosModal(false)} />
       <FallModal isOpen={showFallModal} onClose={() => setShowFallModal(false)} />
       <PinModal

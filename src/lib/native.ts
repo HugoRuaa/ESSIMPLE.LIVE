@@ -56,8 +56,6 @@ interface SimplePlugin {
   cancelRecording(): Promise<void>;
   shareVoiceWhatsApp(opts: { phone: string }): Promise<{ granted: boolean; whatsapp: boolean }>;
   shareTextWhatsApp(opts: { phone: string; text: string }): Promise<{ granted: boolean }>;
-  getPendingAlert(): Promise<{ kind: string }>;
-  shareAudioWhatsApp(opts: { phone: string; base64: string; name: string }): Promise<{ granted: boolean }>;
   setTrackingConfig(opts: TrackingConfig): Promise<void>;
   startTracking(): Promise<{ granted: boolean }>;
   stopTracking(): Promise<void>;
@@ -367,38 +365,5 @@ export const getTrackingStatus = async (): Promise<{ running: boolean; lastUploa
     return { running: r.running, lastUploadAt: r.lastUploadAt, lastUploadOk: r.lastUploadOk };
   } catch {
     return null;
-  }
-};
-
-export type AlertKind = 'zona' | 'bateria';
-
-/** Aviso pendiente de la zona segura o la batería baja que dejó el servicio en segundo plano (y lo borra). */
-export const getPendingAlert = async (): Promise<AlertKind | null> => {
-  if (!isNative()) return null;
-  try {
-    const { kind } = await Simple.getPendingAlert();
-    return kind === 'zona' || kind === 'bateria' ? kind : null;
-  } catch {
-    return null;
-  }
-};
-
-const ALERT_AUDIO: Record<AlertKind, string> = {
-  zona: '/audio/alerta_zona_segura.mp3',
-  bateria: '/audio/alerta_bateria_baja.mp3',
-};
-
-/** Abre el chat de WhatsApp del contacto con el audio del aviso adjunto. Solo falta tocar enviar. */
-export const shareAlertAudioWhatsApp = async (phone: string, kind: AlertKind): Promise<boolean> => {
-  if (!isNative()) return false;
-  try {
-    const res = await fetch(ALERT_AUDIO[kind]);
-    if (!res.ok) return false;
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    let bin = '';
-    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    return (await Simple.shareAudioWhatsApp({ phone, base64: btoa(bin), name: `alerta_${kind}` })).granted;
-  } catch {
-    return false;
   }
 };
