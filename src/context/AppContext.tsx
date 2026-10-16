@@ -891,7 +891,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // Seguimiento en segundo plano (solo el APK): servicio en primer plano que sube batería y última ubicación
-  // y registra un aviso en el panel si sale de la zona segura o la batería baja. Se vuelve a configurar cuando cambian la casa,
+  // y registra un aviso en el panel (y una notificación para mandar el audio por WhatsApp) si sale de la zona segura o la batería baja. Se vuelve a configurar cuando cambian la casa,
   // la zona o los contactos marcados.
   const trackingKey = JSON.stringify({
     c: settings.safeZoneCenter,

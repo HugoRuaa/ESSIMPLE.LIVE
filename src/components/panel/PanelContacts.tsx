@@ -269,7 +269,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={() => handleToggleCheckbox(contact.id, 'isSafeZone', contact.isSafeZone)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span>Zona segura (Aviso en el Panel)</span>
+                <span>Zona segura (audio por WhatsApp)</span>
               </label>
 
               <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
@@ -279,7 +279,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={() => handleToggleCheckbox(contact.id, 'isLowBattery', contact.isLowBattery)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span>Batería baja (Aviso en el Panel)</span>
+                <span>Batería baja (audio por WhatsApp)</span>
               </label>
             </div>
 
@@ -410,7 +410,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={e => setFormSafeZone(e.target.checked)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span className="text-lg font-bold text-[#14213d]">Zona segura (Aviso en el Panel)</span>
+                <span className="text-lg font-bold text-[#14213d]">Zona segura (audio por WhatsApp)</span>
               </label>
 
               <label className="flex items-center gap-3 cursor-pointer">
@@ -420,7 +420,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={e => setFormLowBattery(e.target.checked)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span className="text-lg font-bold text-[#14213d]">Batería baja (Aviso en el Panel)</span>
+                <span className="text-lg font-bold text-[#14213d]">Batería baja (audio por WhatsApp)</span>
               </label>
             </div>
 

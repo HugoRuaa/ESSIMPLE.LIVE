@@ -660,6 +660,62 @@ public class SimplePlugin extends Plugin {
         }
     }
 
+    /** Devuelve (y borra) el aviso pendiente de la zona segura o la batería: "zona", "bateria" o vacío. Caduca a las 6 horas. */
+    @PluginMethod
+    public void getPendingAlert(PluginCall call) {
+        SharedPreferences p = prefs();
+        String kind = p.getString("pending_alert", "");
+        long at = p.getLong("pending_alert_at", 0L);
+        if (kind == null || kind.isEmpty() || System.currentTimeMillis() - at > 6L * 60 * 60 * 1000) kind = "";
+        if (!kind.isEmpty() || at != 0L) p.edit().remove("pending_alert").remove("pending_alert_at").apply();
+        JSObject out = new JSObject();
+        out.put("kind", kind);
+        call.resolve(out);
+    }
+
+    /** Abre WhatsApp con un audio (mp3 en base64) adjunto y el chat del contacto. La persona solo toca enviar. */
+    @PluginMethod
+    public void shareAudioWhatsApp(PluginCall call) {
+        String phone = call.getString("phone", "");
+        String base64 = call.getString("base64", "");
+        String name = call.getString("name", "aviso");
+        String digits = phone == null ? "" : phone.replaceAll("\\D", "");
+        if (base64 == null || base64.isEmpty()) {
+            call.reject("Falta el audio");
+            return;
+        }
+        try {
+            File dir = new File(getContext().getCacheDir(), "alertas");
+            if (!dir.exists()) dir.mkdirs();
+            File f = new File(dir, name.replaceAll("[^a-zA-Z0-9_-]", "") + ".mp3");
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(f);
+            fos.write(Base64.decode(base64, Base64.DEFAULT));
+            fos.close();
+            Uri uri = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
+            String used = null;
+            for (String pkg : new String[] { "com.whatsapp", "com.whatsapp.w4b" }) {
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("audio/mpeg");
+                intent.putExtra(Intent.EXTRA_STREAM, uri);
+                intent.setPackage(pkg);
+                if (!digits.isEmpty()) intent.putExtra("jid", digits + "@s.whatsapp.net");
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    getActivity().startActivity(intent);
+                    used = pkg;
+                    break;
+                } catch (Exception notInstalled) {
+                    // Probar con WhatsApp Business.
+                }
+            }
+            JSObject out = new JSObject();
+            out.put("granted", used != null);
+            call.resolve(out);
+        } catch (Exception e) {
+            call.reject("No se pudo abrir WhatsApp: " + e.getMessage());
+        }
+    }
+
     /** Abre el chat de WhatsApp del contacto con el texto ya escrito (mismo camino que el audio). */
     @PluginMethod
     public void shareTextWhatsApp(PluginCall call) {

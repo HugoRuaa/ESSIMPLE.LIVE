@@ -435,7 +435,7 @@ export const PanelHomeZone: React.FC = () => {
         </div>
 
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
-          Se registra un aviso en el Panel Familiar cuando sale y cuando regresa de la zona segura.
+          Cuando sale de la zona segura se registra un aviso en el panel y el celular le muestra una notificación para mandar un audio por WhatsApp a los contactos con Zona segura marcada. Ella solo toca el botón y enviar en WhatsApp.
         </p>
 
         {/* Center of the zone */}

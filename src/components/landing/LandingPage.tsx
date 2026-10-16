@@ -116,17 +116,17 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             <div className="md:col-span-5 md:pt-8">
               <MapPin className="w-8 h-8 text-[#86efac]" aria-hidden />
               <h3 className="mt-3 text-xl font-bold">Zona segura</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Marcas su casa en el mapa y, cuando ella sale del área o vuelve, queda un aviso en tu panel familiar.</p>
+              <p className="mt-2 text-white/80 leading-relaxed">Marcas su casa en el mapa. Cuando ella sale del área, queda un aviso en tu panel y su celular le ofrece mandar un audio por WhatsApp a los contactos que elijas.</p>
             </div>
             <div className="md:col-span-7">
               <BatteryLow className="w-8 h-8 text-[#fcd34d]" aria-hidden />
               <h3 className="mt-3 text-xl font-bold">Batería baja</h3>
-              <p className="mt-2 text-white/80 leading-relaxed max-w-xl">Al llegar al 20 %, queda un aviso en tu panel para que puedas ayudarla a cargar el celular. En el panel ves además si está conectado y cuánta batería tiene.</p>
+              <p className="mt-2 text-white/80 leading-relaxed max-w-xl">Al llegar al 20 %, queda un aviso en tu panel y su celular le ofrece mandar un audio por WhatsApp a los contactos que elijas. En el panel ves además si está conectado y cuánta batería tiene.</p>
             </div>
             <div className="md:col-span-5">
               <ShieldCheck className="w-8 h-8 text-[#7dd3fc]" aria-hidden />
               <h3 className="mt-3 text-xl font-bold">Lo que debes saber</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Los avisos se ven en el panel, no llegan como mensaje al celular de la familia. Dependen de que el celular tenga señal y GPS, y de que Android no detenga la app: en algunas marcas hay que quitar el ahorro de batería.</p>
+              <p className="mt-2 text-white/80 leading-relaxed">El audio por WhatsApp no se envía solo: ella debe tocar la notificación y enviar en WhatsApp. Los avisos dependen de que el celular tenga señal y GPS, y de que Android no detenga la app: en algunas marcas hay que quitar el ahorro de batería.</p>
             </div>
           </div>
         </div>

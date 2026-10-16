@@ -53,6 +53,9 @@ public class TrackingService extends Service {
 
     private static final String CHANNEL_ID = "essimple_tracking";
     private static final int NOTIFICATION_ID = 4101;
+    private static final String ALERT_CHANNEL_ID = "essimple_alertas";
+    static final String KEY_PENDING_ALERT = "pending_alert";
+    static final String KEY_PENDING_ALERT_AT = "pending_alert_at";
     private static final long HEARTBEAT_MS = 5 * 60 * 1000L;
     private static final long MIN_UPLOAD_GAP_MS = 60 * 1000L;
     private static final float MOVE_UPLOAD_METERS = 50f;
@@ -134,6 +137,40 @@ public class TrackingService extends Service {
             handler.post(heartbeat);
         }
         return START_STICKY;
+    }
+
+    /**
+     * Avisa en el celular: guarda el aviso pendiente y muestra una notificación de prioridad alta. Al tocarla se abre
+     * essimple.live y la app muestra los botones para mandar el audio por WhatsApp (WhatsApp exige un toque para enviar).
+     */
+    private void alertUser(String kind, String title, String text) {
+        try {
+            prefs().edit().putString(KEY_PENDING_ALERT, kind).putLong(KEY_PENDING_ALERT_AT, System.currentTimeMillis()).apply();
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+            if (Build.VERSION.SDK_INT >= 26) {
+                NotificationChannel channel = new NotificationChannel(
+                    ALERT_CHANNEL_ID, "Avisos a la familia", NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Te recuerda avisar a tu familia cuando sales de la zona segura o la batería está baja.");
+                nm.createNotificationChannel(channel);
+            }
+            Intent open = new Intent(this, MainActivity.class);
+            open.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            int piFlags = Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0;
+            PendingIntent pi = PendingIntent.getActivity(this, 7, open, piFlags);
+            Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(this, ALERT_CHANNEL_ID)
+                : new Notification.Builder(this);
+            b.setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentIntent(pi)
+                .setAutoCancel(true);
+            if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_HIGH);
+            nm.notify("zona".equals(kind) ? 4102 : 4103, b.build());
+        } catch (Exception ignored) {
+        }
     }
 
     private boolean startAsForeground() {
@@ -387,6 +424,7 @@ public class TrackingService extends Service {
                 prefs().edit().putString(KEY_ZONE_STATE, "outside").apply();
                 if ("inside".equals(state)) {
                     logEvent(cfg, "zona_salida", "Salió de su zona segura", "Registrado en el Panel Familiar", "warning");
+                    alertUser("zona", "Saliste de tu zona segura", "Toca para avisar a tu familia por WhatsApp.");
                 }
             } else if (insideStreak >= 2 && !"inside".equals(state)) {
                 prefs().edit().putString(KEY_ZONE_STATE, "inside").apply();
@@ -410,6 +448,7 @@ public class TrackingService extends Service {
             if (level <= LOW_BATTERY && !alerted) {
                 prefs().edit().putBoolean(KEY_BATTERY_ALERTED, true).apply();
                 logEvent(cfg, "bateria_baja", "Batería baja", "Batería al " + level + " %. Registrado en el Panel Familiar", "warning");
+                alertUser("bateria", "Tu batería está baja", "Toca para avisar a tu familia por WhatsApp.");
             }
         } catch (Exception ignored) {
         }
