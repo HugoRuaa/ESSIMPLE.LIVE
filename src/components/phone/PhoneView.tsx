@@ -433,10 +433,10 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
                 setTimeout(() => window.location.reload(), 300);
               }}
               title="Actualizar"
-              className="px-3 min-[360px]:px-4 min-h-11 bg-white border-2 border-[#7a7461] rounded-2xl text-lg font-extrabold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center gap-1.5"
+              aria-label="Actualizar"
+              className="w-11 min-h-11 shrink-0 bg-white border-2 border-[#7a7461] rounded-2xl text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center justify-center"
             >
-              <RefreshCw className={`w-4 h-4 text-[#7a7461] ${refreshing ? 'animate-spin' : ''}`} />
-              <span>{refreshing ? 'Actualizando' : 'Actualizar'}</span>
+              <RefreshCw className={`w-5 h-5 text-[#7a7461] ${refreshing ? 'animate-spin' : ''}`} />
             </button>
 
             {/* Salir protegido por PIN para evitar salidas accidentales */}
