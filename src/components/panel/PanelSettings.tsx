@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { Eye, EyeOff, QrCode, Copy, Share2, MessageCircle, Check, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { FontSize } from '../../types';
 import { APK_URL } from '../../lib/config';
 import { buildPairCode } from '../../lib/native';
 import { buildInstallLink } from '../../lib/autoLink';
@@ -11,7 +10,6 @@ export const PanelSettings: React.FC = () => {
   const { settings, updateSettings, saveSettings, account } = useApp();
 
   const [personName, setPersonName] = useState(settings.personName);
-  const [fontSize, setFontSize] = useState<FontSize>(settings.fontSize);
   const [countryCode, setCountryCode] = useState(settings.countryCode);
 
   // Mensajes rápidos predeterminados
@@ -46,7 +44,7 @@ export const PanelSettings: React.FC = () => {
 
   // PIN change
   const [pin, setPin] = useState(settings.exitPin || '1234');
-  const [showPin, setShowPin] = useState(true);
+  const [showPin, setShowPin] = useState(false);
   const [pinSuccess, setPinSuccess] = useState('');
 
   useEffect(() => {
@@ -122,7 +120,6 @@ export const PanelSettings: React.FC = () => {
   const handleSavePerson = () => {
     saveSettings({
       personName: personName.slice(0, 20),
-      fontSize,
       countryCode,
     });
     alert('Ajustes de la persona guardados.');
@@ -215,68 +212,6 @@ export const PanelSettings: React.FC = () => {
           <p className="text-sm font-semibold text-[#3b4863]">Hasta 20 letras.</p>
         </div>
 
-        {/* Font size radio selector [32] */}
-        <div className="space-y-2 pt-1">
-          <p className="text-lg font-bold text-[#14213d]">Tamaño de letra en el teléfono</p>
-
-          <label
-            onClick={() => setFontSize('normal')}
-            className={`flex items-center gap-3 p-3.5 min-h-14 rounded-2xl border-2 cursor-pointer transition select-none ${
-              fontSize === 'normal' ? 'border-[#0b4f9e] bg-[#f0f6ff]' : 'border-[#ddd5c3] bg-white'
-            }`}
-          >
-            <input
-              type="radio"
-              name="fontSize"
-              checked={fontSize === 'normal'}
-              onChange={() => setFontSize('normal')}
-              className="w-5 h-5 shrink-0 text-[#0b4f9e] accent-[#0b4f9e]"
-            />
-            <div>
-              <span className="text-lg font-bold text-[#3b4863] block">Normal</span>
-              <span className="text-xl font-bold text-[#14213d]">Hola, ¿cómo estás?</span>
-            </div>
-          </label>
-
-          <label
-            onClick={() => setFontSize('grande')}
-            className={`flex items-center gap-3 p-3.5 min-h-14 rounded-2xl border-2 cursor-pointer transition select-none ${
-              fontSize === 'grande' ? 'border-[#0b4f9e] bg-[#f0f6ff]' : 'border-[#ddd5c3] bg-white'
-            }`}
-          >
-            <input
-              type="radio"
-              name="fontSize"
-              checked={fontSize === 'grande'}
-              onChange={() => setFontSize('grande')}
-              className="w-5 h-5 shrink-0 text-[#0b4f9e] accent-[#0b4f9e]"
-            />
-            <div>
-              <span className="text-lg font-bold text-[#3b4863] block">Grande</span>
-              <span className="text-2xl font-bold text-[#14213d]">Hola, ¿cómo estás?</span>
-            </div>
-          </label>
-
-          <label
-            onClick={() => setFontSize('muy_grande')}
-            className={`flex items-center gap-3 p-3.5 min-h-14 rounded-2xl border-2 cursor-pointer transition select-none ${
-              fontSize === 'muy_grande' ? 'border-[#0b4f9e] bg-[#f0f6ff]' : 'border-[#ddd5c3] bg-white'
-            }`}
-          >
-            <input
-              type="radio"
-              name="fontSize"
-              checked={fontSize === 'muy_grande'}
-              onChange={() => setFontSize('muy_grande')}
-              className="w-5 h-5 shrink-0 text-[#0b4f9e] accent-[#0b4f9e]"
-            />
-            <div>
-              <span className="text-lg font-bold text-[#3b4863] block">Muy grande</span>
-              <span className="text-3xl font-extrabold text-[#14213d]">Hola, ¿cómo estás?</span>
-            </div>
-          </label>
-        </div>
-
         {/* Country code */}
         <div className="space-y-1.5 pt-2">
           <label className="text-lg font-bold text-[#14213d]">
@@ -356,9 +291,6 @@ export const PanelSettings: React.FC = () => {
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
           Es el PIN de 4 números que se escribe en el teléfono de la persona acompañada para salir de la app o entrar al modo de mantenimiento.
         </p>
-        <p className="text-sm font-semibold text-[#7a7461] leading-relaxed">
-          El PIN actual se encuentra precargado y oculto por privacidad. Toca el ojo para verlo si lo necesitas; si deseas modificarlo, sobrescribe directamente los 4 números y presiona &quot;Cambiar PIN&quot;.
-        </p>
 
         <div className="space-y-2 pt-1">
           <label className="text-lg font-bold text-[#14213d] flex items-center justify-between">
@@ -431,9 +363,6 @@ export const PanelSettings: React.FC = () => {
         <p className="text-base font-semibold text-[#3b4863] leading-relaxed">
           Es la contraseña que utilizas para ingresar a este panel de administración familiar desde cualquier dispositivo o navegador.
         </p>
-        <p className="text-sm font-semibold text-[#7a7461] leading-relaxed">
-          La contraseña actual se encuentra precargada y oculta por privacidad. Toca el ojo para verla si lo necesitas; si deseas modificarla, sobrescribe directamente en el cuadro y presiona &quot;Cambiar contraseña&quot;.
-        </p>
 
         <div className="space-y-2 pt-1">
           <label className="text-lg font-bold text-[#14213d] flex items-center justify-between">
@@ -479,22 +408,6 @@ export const PanelSettings: React.FC = () => {
         </button>
       </div>
 
-      {/* 5. Privacidad [32] */}
-      <div className="bg-white border-2 border-[#ddd5c3] rounded-3xl p-5 shadow-sm space-y-3">
-        <h2 className="text-2xl font-extrabold text-[#14213d]">Privacidad</h2>
-        <ul className="list-disc list-inside space-y-2 text-base font-semibold text-[#3b4863] leading-relaxed">
-          <li>Guardamos los contactos que ustedes agregan (nombre, teléfono y foto).</li>
-          <li>Guardamos el nivel de batería del teléfono y si está conectado.</li>
-          <li>Guardamos la última ubicación conocida del teléfono (una sola, que se reemplaza en cada actualización; no hay historial de recorridos).</li>
-          <li>Guardamos el estado del teléfono y su versión.</li>
-          <li>
-            Guardamos un historial de eventos (por ejemplo SOS, salidas de la zona segura, batería baja y mensajes enviados) y de los cambios de configuración.
-          </li>
-          <li>
-            El teléfono muestra una notificación fija mientras comparte su ubicación y su batería con la familia. Solo se conserva la última posición, nunca un recorrido.
-          </li>
-        </ul>
-      </div>
 
       {/* 6. Desvincular teléfono [32] */}
       <div>
