@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, Phone, MessageSquare, Mic, Share2, ChevronDown, Bell, Lock } from 'lucide-react';
+import { MapPin, Phone, MessageSquare, Mic, Share2, ChevronDown, Bell, Lock, RefreshCw } from 'lucide-react';
 import { Logo } from '../common/Logo';
 import { TactileButton } from '../common/TactileButton';
 import { SosModal } from './SosModal';
@@ -96,6 +96,7 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
   const [showSosModal, setShowSosModal] = useState(false);
   const [showFallModal, setShowFallModal] = useState(false);
   const [showPinModal, setShowPinModal] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [sosHoldProgress, setSosHoldProgress] = useState(0); // 0 to 100%
   const [sosToast, setSosToast] = useState('');
 
@@ -418,6 +419,25 @@ export const PhoneView: React.FC<PhoneViewProps> = ({ onExitToPanel, isDedicated
         <div className="flex items-center justify-between gap-2 pt-1">
           <Logo size="sm" compact className="min-w-0" />
           <div className="flex items-center gap-2 shrink-0">
+
+            {/* Actualizar: recarga la app dentro de sí misma (trae la última versión y los contactos) sin salir de ella */}
+            <button
+              onClick={() => {
+                setRefreshing(true);
+                try {
+                  localStorage.removeItem('essimple_live_attempt');
+                  localStorage.removeItem('essimple_live_block');
+                } catch {
+                  // ignorar
+                }
+                setTimeout(() => window.location.reload(), 300);
+              }}
+              title="Actualizar"
+              className="px-3 min-[360px]:px-4 min-h-11 bg-white border-2 border-[#7a7461] rounded-2xl text-lg font-extrabold text-[#14213d] shadow-[0_3px_0_#cfc6b2] active:translate-y-0.5 active:shadow-none cursor-pointer transition flex items-center gap-1.5"
+            >
+              <RefreshCw className={`w-4 h-4 text-[#7a7461] ${refreshing ? 'animate-spin' : ''}`} />
+              <span>{refreshing ? 'Actualizando' : 'Actualizar'}</span>
+            </button>
 
             {/* Salir protegido por PIN para evitar salidas accidentales */}
             <button
