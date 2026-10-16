@@ -29,7 +29,8 @@ export interface TrackingConfig {
   url: string;
   key: string;
   schema: string;
-  familiaId: string;
+  /** Token del teléfono: el servicio lo envía a las funciones dispositivo_* (nunca un id de familia). */
+  deviceToken: string;
   personName: string;
   home: { lat: number; lng: number; radius: number; active: boolean };
   zoneNumbers: string[];

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { sendSmsNative, getPairedFamily, getBatteryStatus, getNativeStatus, isNative, onAppResume, startTracking, type TrackingConfig } from '../lib/native';
+import { sendSmsNative, getBatteryStatus, getNativeStatus, isNative, onAppResume, startTracking, type TrackingConfig } from '../lib/native';
 import {
   Contact,
   EventItem,
@@ -10,14 +10,17 @@ import {
   UserAccount,
 } from '../types';
 import { getSupabaseConfig, DB_SCHEMA } from '../lib/supabase';
+import { getDeviceToken, isDeviceMode } from '../lib/device';
 import {
-  registerFamilyByCode,
-  loginFamilyByCode,
+  registerFamily,
+  loginFamily,
+  logoutFamily,
+  getSessionFamily,
+  fetchDevicePerson,
   syncContactsToSupabase,
   fetchFamilyContacts,
   syncHomeZoneToSupabase,
   fetchFamilyHomeZone,
-  lookupFamilyByEmail,
   logEventToSupabase,
   logChangeToSupabase,
   fetchFamilyEvents,
@@ -77,7 +80,7 @@ interface AppContextType {
   // Account & Auth
   account: UserAccount;
   login: (email: string, password?: string) => Promise<{ success: boolean; message?: string }>;
-  signup: (email: string, pin: string, password?: string, personName?: string) => Promise<{ success: boolean; message?: string }>;
+  signup: (email: string, pin: string, password: string, personName?: string) => Promise<{ success: boolean; message?: string }>;
   loginDemo: () => void;
   logout: () => void;
   acceptTerms: () => void;
@@ -499,76 +502,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('essimple_account', JSON.stringify(account));
   }, [account]);
 
-  // Sincronizar automáticamente datos familiares desde Supabase al iniciar sesión, cargar la app o abrir enlace del acompañado
+  // Carga los datos desde el servidor. El servidor decide qué familia es según la sesión (panel) o el token (teléfono).
   useEffect(() => {
     let isMounted = true;
-    const loadCloudData = async () => {
-      try {
-        const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-        let urlFamily = search?.get('family') || getPairedFamily();
-        const urlToken = search?.get('token');
-        const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-        const pathToken = pathname.startsWith('/instalar/') ? pathname.split('/')[2]?.trim() : null;
-        const activeToken = urlToken || pathToken;
 
-        // Si viene con token y sin email en la url, resolver la familia asociada al token
-        if (!urlFamily && activeToken) {
-          try {
-            const resp = await fetch(`/api/install/${encodeURIComponent(activeToken)}`);
-            const json = await resp.json();
-            if (json?.data?.familyEmail) {
-              urlFamily = json.data.familyEmail;
-            }
-          } catch {
-            // sin respaldo: un token desconocido no debe asignar ninguna familia
-          }
-        }
+    const loadForIdentifier = async (identifier: string, familyId: string | null) => {
+      const homeZone = await fetchFamilyHomeZone(identifier);
+      if (homeZone && isMounted) {
+        setSettings(prev => ({ ...prev, ...homeZone }));
+      }
 
-        const targetEmail = account.email || (urlFamily ? decodeURIComponent(urlFamily).trim() : '');
-        if (!targetEmail || targetEmail === 'demo@essimple.live') return;
-        let familyId = localStorage.getItem('essimple_family_id');
-        if (!familyId || familyId === 'local-family-id' || (urlFamily && !account.email)) {
-          const lookup = await lookupFamilyByEmail(targetEmail);
-          if (lookup?.familiaId) {
-            familyId = lookup.familiaId;
-            localStorage.setItem('essimple_family_id', familyId);
-            if (isMounted) {
-              setAccount(prev => ({
-                ...prev,
-                email: targetEmail,
-                isAuthenticated: true,
-                termsAccepted: true,
-                familiaId: familyId,
-              }));
-              if (lookup.familyData?.person_name) {
-                setSettings(prev => ({ ...prev, personName: lookup.familyData.person_name }));
-              }
-            }
-          }
-        }
+      const cloudContacts = await fetchFamilyContacts(identifier);
+      if (cloudContacts && cloudContacts.length > 0 && isMounted) {
+        setContacts(cloudContacts);
+        setStagedContacts(cloudContacts);
+        setHasContactChanges(false);
+      }
 
-        const identifier = familyId || targetEmail;
-        if (!identifier) return;
-
-        // 1. Cargar casa y zona segura desde Supabase
-        const homeZone = await fetchFamilyHomeZone(identifier);
-        if (homeZone && isMounted) {
-          setSettings(prev => ({
-            ...prev,
-            ...homeZone,
-          }));
-        }
-
-        // 2. Cargar contactos desde Supabase si la lista actual está vacía
-        if (familyId) {
-          const cloudContacts = await fetchFamilyContacts(familyId);
-          if (cloudContacts && cloudContacts.length > 0 && isMounted) {
-            setContacts(cloudContacts);
-            setStagedContacts(cloudContacts);
-            setHasContactChanges(false);
-          }
-        }
-        // 3. Cargar eventos e historial de cambios desde la nube
+      // Solo la familia ve el historial; el teléfono no lo descarga.
+      if (!isDeviceMode()) {
         const [cloudEvents, cloudChanges] = await Promise.all([
           fetchFamilyEvents(identifier),
           fetchFamilyChanges(identifier),
@@ -587,14 +539,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             localStorage.setItem(`essimple_changes_${familyId || identifier}`, JSON.stringify(cloudChanges));
           } catch {}
         }
+      }
 
-        // 4. Cargar mensajes rápidos desde el servidor
-        const cloudQuickMsgs = await fetchFamilyQuickMessages(identifier);
-        if (cloudQuickMsgs && cloudQuickMsgs.length > 0 && isMounted) {
-          setSettings(prev => ({ ...prev, quickMessages: cloudQuickMsgs }));
+      const cloudQuickMsgs = await fetchFamilyQuickMessages(identifier);
+      if (cloudQuickMsgs && cloudQuickMsgs.length > 0 && isMounted) {
+        setSettings(prev => ({ ...prev, quickMessages: cloudQuickMsgs }));
+      }
+    };
+
+    const loadCloudData = async () => {
+      try {
+        if (account.email === 'demo@essimple.live') return;
+
+        // Teléfono vinculado: usa su token.
+        if (isDeviceMode()) {
+          const person = await fetchDevicePerson();
+          if (!person || !isMounted) return; // token revocado o sin conexión
+          setSettings(prev => ({
+            ...prev,
+            personName: person.personName || prev.personName,
+            fontSize: (person.fontSize as AppSettings['fontSize']) || prev.fontSize,
+            countryCode: person.countryCode || prev.countryCode,
+          }));
+          await loadForIdentifier('device', null);
+          return;
         }
+
+        // Panel de la familia: solo con sesión abierta y válida en el servidor.
+        if (!account.isAuthenticated) return;
+        const family = await getSessionFamily();
+        if (!family) {
+          // La sesión venció o fue cerrada en el servidor: se descarta el estado guardado en el navegador.
+          if (isMounted) clearLocalFamilyState();
+          return;
+        }
+        localStorage.setItem('essimple_family_id', family.id);
+        if (isMounted) {
+          setAccount(prev => (prev.familiaId === family.id && prev.email === family.email ? prev : { ...prev, email: family.email, familiaId: family.id }));
+          setSettings(prev => ({
+            ...prev,
+            personName: family.person_name || prev.personName,
+            fontSize: (family.font_size as AppSettings['fontSize']) || prev.fontSize,
+            countryCode: family.country_code || prev.countryCode,
+          }));
+        }
+        await loadForIdentifier(family.id, family.id);
       } catch (err) {
-        console.warn('Error cargando datos familiares desde Supabase en arranque:', err);
+        console.warn('Error cargando datos familiares en el arranque:', err);
       }
     };
 
@@ -613,11 +604,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper para identificar la familia activa
   const resolveCurrentFamilyId = () => {
+    // El teléfono vinculado no usa ids: el servidor lo identifica por su token.
+    if (isDeviceMode()) return 'device';
     const stored = localStorage.getItem('essimple_family_id');
     return (
       (stored && stored !== 'local-family-id' ? stored : null) ||
       account.familiaId ||
-      (account.isAuthenticated && account.email ? account.email : null) ||
       'local-family-id'
     );
   };
@@ -915,29 +907,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return digits.length > 10 ? '+' + digits : digits;
     };
 
-    const resolveUuid = async (): Promise<string | null> => {
-      const looksLikeUuid = (v: string | null | undefined) => !!v && /^[0-9a-f-]{32,36}$/i.test(v);
-      const stored = localStorage.getItem('essimple_family_id');
-      if (looksLikeUuid(stored)) return stored;
-      if (looksLikeUuid(account.familiaId)) return account.familiaId as string;
-      const email = account.email || getPairedFamily();
-      if (!email) return null;
-      const lookup = await lookupFamilyByEmail(email);
-      return looksLikeUuid(lookup?.familiaId) ? (lookup!.familiaId as string) : null;
-    };
-
     const configure = async () => {
       const perms = await getNativeStatus();
       if (!perms || !perms.location) return;
-      const familiaId = await resolveUuid();
-      if (!familiaId || cancelled) return;
+      // El servicio nativo se identifica con el token del teléfono, nunca con un id de familia.
+      const deviceToken = getDeviceToken();
+      if (!deviceToken || cancelled) return;
       const { url, anonKey } = getSupabaseConfig();
       if (!url || !anonKey) return;
       const config: TrackingConfig = {
         url,
         key: anonKey,
         schema: DB_SCHEMA,
-        familiaId,
+        deviceToken,
         personName: settings.personName || 'La persona',
         home: {
           lat: settings.safeZoneCenter?.lat ?? 0,
@@ -1192,89 +1174,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveEmergencyBanner(null);
   };
 
-  // Auth (gestión por código con Supabase essimple.familias)
-  const login = async (email: string, password = 'password123'): Promise<{ success: boolean; message?: string }> => {
+  // Auth: Supabase Auth con correo y contraseña. Sin confirmación por correo y sin recuperación de contraseña.
+  const login = async (email: string, password = ''): Promise<{ success: boolean; message?: string }> => {
     try {
-      const res = await loginFamilyByCode(email, password);
-      if (!res.success) {
+      const res = await loginFamily(email, password);
+      if (!res.success || !res.familiaId || !res.familyData) {
         return { success: false, message: res.message || 'No se pudo iniciar sesión.' };
       }
 
-      if (res.familiaId) {
-        localStorage.setItem('essimple_family_id', res.familiaId);
-        if (res.familyData) {
-          setSettings(prev => ({
-            ...prev,
-            personName: res.familyData.person_name || prev.personName,
-            fontSize: res.familyData.font_size || prev.fontSize,
-            exitPin: res.familyData.exit_pin || prev.exitPin,
-            countryCode: res.familyData.country_code || prev.countryCode,
-          }));
-        }
+      localStorage.setItem('essimple_family_id', res.familiaId);
+      setSettings(prev => ({
+        ...prev,
+        personName: res.familyData!.person_name || prev.personName,
+        fontSize: (res.familyData!.font_size as AppSettings['fontSize']) || prev.fontSize,
+        countryCode: res.familyData!.country_code || prev.countryCode,
+      }));
 
-        // Cargar contactos guardados en Supabase (si no tiene, queda [] vacía)
-        const loadedContacts = await fetchFamilyContacts(res.familiaId);
-        const contactList = loadedContacts || [];
-        setContacts(contactList);
-        setStagedContacts(contactList);
-        setHasContactChanges(false);
-        localStorage.setItem('essimple_contacts', JSON.stringify(contactList));
+      const [loadedContacts, loadedHomeZone, cloudEvents, cloudChanges, cloudQuickMsgs] = await Promise.all([
+        fetchFamilyContacts(res.familiaId),
+        fetchFamilyHomeZone(res.familiaId),
+        fetchFamilyEvents(res.familiaId),
+        fetchFamilyChanges(res.familiaId),
+        fetchFamilyQuickMessages(res.familiaId),
+      ]);
 
-        // Cargar casa y zona segura asociadas a esta familia en Supabase
-        const loadedHomeZone = await fetchFamilyHomeZone(res.familiaId);
-        if (loadedHomeZone) {
-          setSettings(prev => ({
-            ...prev,
-            ...loadedHomeZone,
-          }));
-        }
+      const contactList = loadedContacts || [];
+      setContacts(contactList);
+      setStagedContacts(contactList);
+      setHasContactChanges(false);
+      localStorage.setItem('essimple_contacts', JSON.stringify(contactList));
 
-        // Cargar eventos asociados a esta familia
-        const cloudEvents = await fetchFamilyEvents(res.familiaId);
-        if (cloudEvents && cloudEvents.length > 0) {
-          setEvents(cloudEvents);
-          try {
-            localStorage.setItem('essimple_events', JSON.stringify(cloudEvents));
-            localStorage.setItem(`essimple_events_${res.familiaId}`, JSON.stringify(cloudEvents));
-          } catch {}
-        } else {
-          const savedEvents = localStorage.getItem(`essimple_events_${res.familiaId}`) || localStorage.getItem('essimple_events');
-          if (savedEvents) {
-            try {
-              const eventList = JSON.parse(savedEvents);
-              if (Array.isArray(eventList) && eventList.length > 0) {
-                setEvents(eventList);
-              }
-            } catch {}
-          }
-        }
-
-        const cloudChanges = await fetchFamilyChanges(res.familiaId);
-        if (cloudChanges && cloudChanges.length > 0) {
-          setChanges(cloudChanges);
-          try {
-            localStorage.setItem('essimple_changes', JSON.stringify(cloudChanges));
-            localStorage.setItem(`essimple_changes_${res.familiaId}`, JSON.stringify(cloudChanges));
-          } catch {}
-        } else {
-          const savedChanges = localStorage.getItem(`essimple_changes_${res.familiaId}`) || localStorage.getItem('essimple_changes');
-          if (savedChanges) {
-            try {
-              const changeList = JSON.parse(savedChanges);
-              if (Array.isArray(changeList) && changeList.length > 0) {
-                setChanges(changeList);
-              }
-            } catch {}
-          }
-        }
-        const cloudQuickMsgs = await fetchFamilyQuickMessages(res.familiaId);
-        if (cloudQuickMsgs && cloudQuickMsgs.length > 0) {
-          setSettings(prev => ({ ...prev, quickMessages: cloudQuickMsgs }));
-        }
-        setActiveEmergencyBanner(null);
+      if (loadedHomeZone) setSettings(prev => ({ ...prev, ...loadedHomeZone }));
+      setEvents(cloudEvents || []);
+      setChanges(cloudChanges || []);
+      try {
+        localStorage.setItem('essimple_events', JSON.stringify(cloudEvents || []));
+        localStorage.setItem('essimple_changes', JSON.stringify(cloudChanges || []));
+      } catch {}
+      if (cloudQuickMsgs && cloudQuickMsgs.length > 0) {
+        setSettings(prev => ({ ...prev, quickMessages: cloudQuickMsgs }));
       }
+      setActiveEmergencyBanner(null);
+
       setAccount({
-        email: email.trim().toLowerCase(),
+        email: res.familyData.email,
         isAuthenticated: true,
         termsAccepted: true,
         familiaId: res.familiaId,
@@ -1288,29 +1231,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const signup = async (
     email: string,
     pin: string,
-    password = 'password123',
-    personName = 'Álvaro'
+    password: string,
+    personName = 'Mi familiar'
   ): Promise<{ success: boolean; message?: string }> => {
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const accompaniedName = personName?.trim() || 'Álvaro';
-      const cleanPin = pin?.trim() || '1234';
+      const accompaniedName = personName?.trim() || 'Mi familiar';
+      const cleanPin = pin?.trim() || '';
 
-      const res = await registerFamilyByCode(cleanEmail, password, cleanPin, accompaniedName);
+      const res = await registerFamily(cleanEmail, password, cleanPin, accompaniedName);
       if (!res.success) {
         return { success: false, message: res.message || 'No se pudo registrar la familia.' };
       }
 
-      // Toda la información de la nueva cuenta familiar DEBE ESTAR COMPLETAMENTE VACÍA
+      // Toda la información de la nueva cuenta familiar empieza vacía.
       const updatedSettings: AppSettings = {
         ...cleanEmptySettings,
         personName: accompaniedName,
-        exitPin: cleanPin,
+        exitPin: '',
         safeZoneActive: false,
         homeAddress: '',
       };
 
-      // Resetear estados a vacío absoluto
       setContacts([]);
       setStagedContacts([]);
       setHasContactChanges(false);
@@ -1319,7 +1261,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveEmergencyBanner(null);
       setSettings(updatedSettings);
 
-      // Limpiar y guardar en localStorage
       localStorage.setItem('essimple_contacts', JSON.stringify([]));
       localStorage.setItem('essimple_events', JSON.stringify([]));
       localStorage.setItem('essimple_changes', JSON.stringify([]));
@@ -1327,9 +1268,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (res.familiaId) {
         localStorage.setItem('essimple_family_id', res.familiaId);
-        // En Supabase, la lista de contactos queda vacía (0 contactos)
-        syncContactsToSupabase(res.familiaId, []);
-        syncHomeZoneToSupabase(res.familiaId, updatedSettings);
       }
 
       const newAccount = {
@@ -1370,12 +1308,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAccount(demoAccount);
   };
 
-  const logout = () => {
+  // Borra del navegador todo lo de la familia (no toca el servidor).
+  const clearLocalFamilyState = () => {
     localStorage.removeItem('essimple_account');
     localStorage.removeItem('essimple_family_id');
     localStorage.removeItem('essimple_contacts');
     localStorage.removeItem('essimple_events');
     localStorage.removeItem('essimple_changes');
+    localStorage.removeItem('essimple_settings');
     setContacts([]);
     setStagedContacts([]);
     setHasContactChanges(false);
@@ -1384,6 +1324,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setActiveEmergencyBanner(null);
     setSettings(cleanEmptySettings);
     setAccount({ email: '', isAuthenticated: false, termsAccepted: false });
+  };
+
+  const logout = () => {
+    void logoutFamily();
+    clearLocalFamilyState();
   };
 
   const acceptTerms = () => {

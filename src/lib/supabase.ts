@@ -69,8 +69,11 @@ export const getSupabaseClient = (): SupabaseClient<any, any> | null => {
         schema: DB_SCHEMA,
       },
       auth: {
-        persistSession: false,
-        autoRefreshToken: false,
+        // La sesión de la familia (tokens, nunca la clave) se guarda en el navegador y se renueva sola.
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        storageKey: 'essimple_auth',
       },
     });
     return cachedClient;

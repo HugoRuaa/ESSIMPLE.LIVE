@@ -257,26 +257,30 @@ begin
 end $$;
 
 -- Estado y última ubicación (una sola fila por familia, sin historial).
+-- Cada dato es opcional: lo que llega como null se deja como estaba.
 create or replace function essimple.dispositivo_reportar(
-  p_token text, p_online boolean, p_battery integer, p_charging boolean, p_app_version text,
-  p_missing text[], p_home_screen boolean, p_sharing boolean,
+  p_token text, p_online boolean default null, p_battery integer default null, p_charging boolean default null,
+  p_app_version text default null, p_missing text[] default null, p_home_screen boolean default null,
+  p_sharing boolean default null,
   p_lat double precision default null, p_lng double precision default null, p_accuracy integer default null)
 returns void language plpgsql security definer set search_path = essimple, pg_temp as $$
 declare v_fam uuid := essimple._familia_de_token(p_token);
 begin
-  insert into essimple.estado_telefono as e (familia_id, is_online, battery_level, is_charging, app_version,
-      missing_permissions, is_home_screen, is_sharing, last_lat, last_lng, last_accuracy, last_location_at, last_reported_at)
-    values (v_fam, coalesce(p_online, true), greatest(0, least(100, coalesce(p_battery, 0))), coalesce(p_charging, false),
-      left(coalesce(p_app_version, ''), 30), coalesce(p_missing, '{}'), coalesce(p_home_screen, true), coalesce(p_sharing, false),
-      p_lat, p_lng, p_accuracy, case when p_lat is not null then now() end, now())
-  on conflict (familia_id) do update set
-      is_online = excluded.is_online, battery_level = excluded.battery_level, is_charging = excluded.is_charging,
-      app_version = excluded.app_version, missing_permissions = excluded.missing_permissions,
-      is_home_screen = excluded.is_home_screen, is_sharing = excluded.is_sharing,
-      last_lat = coalesce(excluded.last_lat, e.last_lat), last_lng = coalesce(excluded.last_lng, e.last_lng),
-      last_accuracy = coalesce(excluded.last_accuracy, e.last_accuracy),
-      last_location_at = coalesce(excluded.last_location_at, e.last_location_at),
-      last_reported_at = now();
+  insert into essimple.estado_telefono (familia_id) values (v_fam) on conflict (familia_id) do nothing;
+  update essimple.estado_telefono set
+      is_online = coalesce(p_online, is_online),
+      battery_level = coalesce(greatest(0, least(100, p_battery)), battery_level),
+      is_charging = coalesce(p_charging, is_charging),
+      app_version = coalesce(left(p_app_version, 30), app_version),
+      missing_permissions = coalesce(p_missing, missing_permissions),
+      is_home_screen = coalesce(p_home_screen, is_home_screen),
+      is_sharing = coalesce(p_sharing, is_sharing),
+      last_lat = coalesce(p_lat, last_lat),
+      last_lng = coalesce(p_lng, last_lng),
+      last_accuracy = coalesce(p_accuracy, last_accuracy),
+      last_location_at = case when p_lat is not null and p_lng is not null then now() else last_location_at end,
+      last_reported_at = now()
+    where familia_id = v_fam;
 end $$;
 
 -- Aviso desde el teléfono (SOS, zona segura, batería). El disparador de avisos sigue igual.
@@ -331,7 +335,7 @@ grant execute on function essimple.vincular_dispositivo(text), essimple.disposit
   essimple.dispositivo_reportar(text, boolean, integer, boolean, text, text[], boolean, boolean, double precision, double precision, integer),
   essimple.dispositivo_evento(text, text, text, text, text, text[]),
   essimple.dispositivo_verificar_pin(text, text)
-  to anon;
+  to anon, authenticated;  -- sirven con token; authenticated por si el mismo navegador tiene sesión de familia
 
 -- --------------------------------------------------------------------
 -- 8. Comprobaciones (correr después; deben dar 0 filas / false)

@@ -15,7 +15,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [personName, setPersonName] = useState('');
-  const [pin, setPin] = useState('1234');
+  const [pin, setPin] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [acceptedTermsBox, setAcceptedTermsBox] = useState(false);
@@ -135,12 +135,16 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
       setAuthError('Por favor ingresa un correo electrónico válido.');
       return;
     }
-    if (password.length < 6) {
-      setAuthError('La contraseña debe tener mínimo 6 caracteres.');
+    if (password.length < 10) {
+      setAuthError('La contraseña debe tener mínimo 10 caracteres.');
       return;
     }
     if (pin.length !== 4) {
       setAuthError('El PIN debe tener exactamente 4 números.');
+      return;
+    }
+    if (/^(\d)\1{3}$/.test(pin) || ['1234', '4321', '0123', '2580'].includes(pin)) {
+      setAuthError('Elige un PIN menos obvio (no uses 1234 ni cuatro números iguales).');
       return;
     }
     if (!acceptedTermsBox) {
@@ -150,7 +154,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
 
     setIsSubmitting(true);
     try {
-      const chosenPersonName = personName.trim() || 'Álvaro';
+      const chosenPersonName = personName.trim() || 'Mi familiar';
       const res = await signup(email, pin, password, chosenPersonName);
       if (!res.success) {
         setAuthError(res.message || 'No se pudo registrar la familia.');
@@ -172,7 +176,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
         <p className="text-sm sm:text-base font-semibold text-[#4b5563] max-w-md">
           {tab === 'signup'
             ? 'Crea tu cuenta familiar para proteger y acompañar a tu ser querido desde cualquier lugar.'
-            : 'Accede a la configuración y monitoreo del teléfono de tu familiar.'}
+            : 'Accede a la configuración y monitoreo del teléfono de tu familiar. Si olvidaste la contraseña, escribe a consultas@insightproviders.cc.'}
         </p>
       </div>
 
@@ -262,7 +266,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Mín. 6 caracteres"
+                  placeholder="Mín. 10 caracteres"
                   disabled={isSubmitting}
                   className="w-full border-2 border-[#7a7461] rounded-2xl p-3.5 pr-32 text-lg font-bold text-[#14213d] focus:outline-none focus:border-[#0b4f9e] disabled:opacity-60 bg-white"
                 />
@@ -275,6 +279,9 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                   <span>{showPass ? 'Ocultar' : 'Mostrar'}</span>
                 </button>
               </div>
+              <p className="text-xs font-semibold text-[#6b7280]">
+                Guárdala bien: essimple.live no envía correos ni tiene recuperación automática. Si la olvidas, escribe a consultas@insightproviders.cc.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -307,7 +314,7 @@ export const PanelAuth: React.FC<PanelAuthProps> = ({ initialTab = 'signup' }) =
                     required
                     value={pin}
                     onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-                    placeholder="1234"
+                    placeholder="4 números"
                     disabled={isSubmitting}
                     className="w-full border-2 border-[#7a7461] rounded-2xl p-3 pr-28 text-xl font-bold tracking-widest text-[#14213d] focus:outline-none focus:border-[#0b4f9e] disabled:opacity-60 bg-white"
                   />

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Delete, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { isDeviceMode } from '../../lib/device';
+import { verifyDevicePin } from '../../services/dataService';
 
 interface PinModalProps {
   isOpen: boolean;
@@ -16,24 +18,48 @@ export const PinModal: React.FC<PinModalProps> = ({
   const { settings } = useApp();
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [checking, setChecking] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleDigit = (digit: string) => {
-    if (pin.length >= 4) return;
+  const fail = (msg: string) => {
+    setTimeout(() => {
+      setErrorMsg(msg);
+      setPin('');
+      setChecking(false);
+    }, 200);
+  };
+
+  const handleDigit = async (digit: string) => {
+    if (pin.length >= 4 || checking) return;
     const newPin = pin + digit;
     setPin(newPin);
     setErrorMsg('');
 
     if (newPin.length === 4) {
-      if (newPin === settings.exitPin) {
+      // En el teléfono vinculado el servidor verifica el PIN (hash + bloqueo tras 5 fallos).
+      // Sin vincular (vista previa o demostración) se compara con el PIN de la demostración.
+      if (!isDeviceMode()) {
+        if (newPin === settings.exitPin) {
+          onSuccess();
+          setPin('');
+        } else {
+          fail('PIN incorrecto.');
+        }
+        return;
+      }
+      setChecking(true);
+      const res = await verifyDevicePin(newPin);
+      if (res.ok) {
+        setChecking(false);
         onSuccess();
         setPin('');
+      } else if (res.blocked) {
+        fail('Demasiados intentos. Espera 15 minutos.');
+      } else if (res.offline) {
+        fail('Sin conexión: no se puede comprobar el PIN.');
       } else {
-        setTimeout(() => {
-          setErrorMsg('PIN incorrecto.');
-          setPin('');
-        }, 200);
+        fail('PIN incorrecto.');
       }
     }
   };
