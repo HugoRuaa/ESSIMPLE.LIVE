@@ -216,7 +216,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
       {/* CÓMO EMPEZAR (secuencia real) */}
       <section id="como" className="bg-white border-y border-[#dbe3f0]">
         <div className="max-w-6xl mx-auto px-5 py-16 md:py-24">
-          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>Listo en una tarde</h2>
+          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>Listo en pocos minutos</h2>
           <ol className="mt-10 grid md:grid-cols-3 gap-10 list-none">
             {[
               ['Crea tu panel', 'Con tu correo y una contraseña. Agrega sus contactos y elige un PIN de 4 números.'],
