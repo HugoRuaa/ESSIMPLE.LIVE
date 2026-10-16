@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, Check } from 'lucide-react';
-import { getSupabaseClient, DB_SCHEMA } from '../../lib/supabase';
+import { fetchAvisoInfo, subscribeAviso } from '../../services/dataService';
 import { VAPID_PUBLIC_KEY, urlBase64ToUint8Array } from '../../lib/push';
 
 type Estado = 'listo' | 'trabajando' | 'activado' | 'denegado' | 'sin_soporte' | 'error';
 
-/** Página que abre cada contacto desde su enlace: /avisos/<familia>/<teléfono>. Registra su celular para recibir los avisos. */
+/** Página que abre cada contacto desde su enlace: /avisos/<código>. Registra su celular para recibir los avisos. */
 export const AvisosPage: React.FC = () => {
-  const partes = window.location.pathname.split('/').filter(Boolean); // ['avisos', familia, telefono]
-  const familiaId = partes[1] || '';
-  const phoneDigits = (partes[2] || '').replace(/\D/g, '');
+  const partes = window.location.pathname.split('/').filter(Boolean); // ['avisos', código]
+  const token = partes.length === 2 ? partes[1] : ''; // los enlaces viejos (familia/teléfono) ya no sirven
+  const [enlaceValido, setEnlaceValido] = useState<boolean | null>(null);
   const [persona, setPersona] = useState('la persona que cuidas');
   const [estado, setEstado] = useState<Estado>('listo');
   const [detalle, setDetalle] = useState('');
@@ -20,17 +20,14 @@ export const AvisosPage: React.FC = () => {
 
   useEffect(() => {
     if (!soporta) setEstado('sin_soporte');
-    const client = getSupabaseClient();
-    if (!client || !familiaId) return;
-    void client
-      .schema(DB_SCHEMA)
-      .from('familias')
-      .select('person_name')
-      .eq('id', familiaId)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        if (data?.person_name) setPersona(data.person_name);
-      });
+    if (!token) {
+      setEnlaceValido(false);
+      return;
+    }
+    void fetchAvisoInfo(token).then(info => {
+      setEnlaceValido(!!info);
+      if (info?.personName) setPersona(info.personName);
+    });
   }, []);
 
   const activar = async () => {
@@ -52,22 +49,8 @@ export const AvisosPage: React.FC = () => {
         });
       }
       const json = sub.toJSON();
-      const client = getSupabaseClient();
-      if (!client) throw new Error('Sin conexión con el servidor');
-      const { error } = await client
-        .schema(DB_SCHEMA)
-        .from('push_suscripciones')
-        .upsert(
-          {
-            familia_id: familiaId,
-            phone_digits: phoneDigits,
-            endpoint: sub.endpoint,
-            p256dh: json.keys?.p256dh,
-            auth: json.keys?.auth,
-          },
-          { onConflict: 'endpoint' }
-        );
-      if (error) throw new Error(error.message);
+      const res = await subscribeAviso(token, { endpoint: sub.endpoint, p256dh: json.keys?.p256dh, auth: json.keys?.auth });
+      if (!res.success) throw new Error(res.message || 'No se pudo guardar');
       await reg.showNotification('Avisos activados', {
         body: `Recibirás un aviso cuando ${persona} pida ayuda, salga de su zona segura o tenga la batería baja.`,
         icon: '/icon-192.png',
@@ -91,8 +74,8 @@ export const AvisosPage: React.FC = () => {
           la batería por debajo del 20 %.
         </p>
 
-        {!familiaId || !phoneDigits ? (
-          <p className="text-lg font-bold text-[#a61b1b]">Este enlace está incompleto. Pide uno nuevo a quien lo envió.</p>
+        {enlaceValido === false ? (
+          <p className="text-lg font-bold text-[#a61b1b]">Este enlace no sirve (está incompleto, es antiguo o ya fue revocado). Pide uno nuevo a quien lo envió.</p>
         ) : estado === 'activado' ? (
           <div className="bg-[#e4f4ea] border-2 border-[#0b6b3a] rounded-3xl p-5 flex items-start gap-3">
             <Check className="w-7 h-7 text-[#0b6b3a] shrink-0" aria-hidden />

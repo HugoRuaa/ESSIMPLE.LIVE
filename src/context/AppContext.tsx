@@ -663,7 +663,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const newContact: Contact = {
       ...contactData,
-      id: `c_${Date.now()}`,
+      id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `c_${Date.now()}`,
       order: contacts.length + 1,
     };
     const updated = [...contacts, newContact];

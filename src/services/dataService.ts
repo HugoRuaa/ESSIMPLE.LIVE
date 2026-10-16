@@ -295,14 +295,17 @@ export const verifyDevicePin = async (
 
 // ---------- Contactos ----------
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Se actualiza por id y solo se borra lo que ya no está: borrar todo y volver a crear
+// revocaría los avisos de los contactos en cada guardado.
 export const syncContactsToSupabase = async (familiaId: string, contacts: Contact[]) => {
   if (noFamily(familiaId) || isDeviceMode()) return;
   const d = db();
   const fid = await getMyFamiliaId();
   if (!d || !fid) return;
   try {
-    await d.from('contactos').delete().eq('familia_id', fid);
-    const rows = contacts.map(c => ({
+    const toRow = (c: Contact) => ({
       familia_id: fid,
       name: c.name,
       phone: c.phone,
@@ -312,8 +315,21 @@ export const syncContactsToSupabase = async (familiaId: string, contacts: Contac
       is_safe_zone: c.isSafeZone,
       is_low_battery: c.isLowBattery,
       display_order: c.order,
-    }));
-    if (rows.length > 0) await d.from('contactos').insert(rows);
+    });
+    const { data: existing } = await d.from('contactos').select('id');
+    const existingIds = new Set<string>((existing || []).map((r: { id: string }) => r.id));
+    const keep = contacts.filter(c => UUID_RE.test(c.id) && existingIds.has(c.id));
+    const fresh = contacts.filter(c => !(UUID_RE.test(c.id) && existingIds.has(c.id)));
+
+    if (keep.length > 0) {
+      await d.from('contactos').upsert(keep.map(c => ({ id: c.id, ...toRow(c) })), { onConflict: 'id' });
+    }
+    if (fresh.length > 0) {
+      await d.from('contactos').insert(fresh.map(c => (UUID_RE.test(c.id) ? { id: c.id, ...toRow(c) } : toRow(c))));
+    }
+    const keepIds = new Set(keep.map(c => c.id));
+    const gone = [...existingIds].filter(id => !keepIds.has(id));
+    if (gone.length > 0) await d.from('contactos').delete().in('id', gone);
   } catch (err) {
     console.error('Error al sincronizar contactos:', err);
   }
@@ -612,6 +628,40 @@ export const fetchFamilyChanges = async (familiaId: string): Promise<ChangeItem[
     console.error('Error al consultar cambios:', err);
     return null;
   }
+};
+
+// ---------- Avisos a contactos (enlace con token propio) ----------
+
+/** La familia crea el enlace de un contacto. Devuelve el token que va en la dirección. */
+export const createAvisoToken = async (phoneDigits: string): Promise<string | null> => {
+  const d = db();
+  if (!d) return null;
+  const { data, error } = await d.rpc('crear_enlace_aviso', { p_phone: phoneDigits });
+  return error || !data ? null : (data as string);
+};
+
+/** El celular del contacto pregunta a quién cuida. Devuelve null si el enlace no es válido o fue revocado. */
+export const fetchAvisoInfo = async (token: string): Promise<{ personName: string } | null> => {
+  const d = db();
+  if (!d || !token) return null;
+  const { data, error } = await d.rpc('aviso_info', { p_token: token });
+  if (error || !data) return null;
+  return { personName: (data as { person_name?: string }).person_name || '' };
+};
+
+export const subscribeAviso = async (
+  token: string,
+  sub: { endpoint: string; p256dh?: string; auth?: string }
+): Promise<{ success: boolean; message?: string }> => {
+  const d = db();
+  if (!d) return { success: false, message: 'Sin conexión con el servidor' };
+  const { error } = await d.rpc('aviso_suscribir', {
+    p_token: token,
+    p_endpoint: sub.endpoint,
+    p_p256dh: sub.p256dh || '',
+    p_auth: sub.auth || '',
+  });
+  return error ? { success: false, message: /no válido/i.test(error.message) ? 'Este enlace ya no sirve. Pide uno nuevo.' : error.message } : { success: true };
 };
 
 // ---------- Perfil de la persona acompañada ----------

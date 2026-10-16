@@ -198,7 +198,7 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalDoc> = {
       { type: 'h', text: '11. Seguridad' },
       {
         type: 'p',
-        text: 'El tráfico entre su dispositivo y el servicio viaja cifrado mediante HTTPS. Cada cuenta familiar solo accede a sus propios datos, la contraseña y el PIN no se guardan en claro y el celular se identifica con una clave propia que la familia puede revocar. Los avisos a contactos por enlace y algunos servicios descritos arriba tienen un nivel de protección menor. Ninguna medida de seguridad es infalible; si detectamos un incidente que afecte datos personales, actuaremos conforme a la ley colombiana. Para reportar una vulnerabilidad escriba al canal de contacto.',
+        text: 'El tráfico entre su dispositivo y el servicio viaja cifrado mediante HTTPS. Cada cuenta familiar solo accede a sus propios datos, la contraseña y el PIN no se guardan en claro y el celular se identifica con una clave propia que la familia puede revocar. Cada enlace de aviso es propio de un contacto, lleva un código al azar y se revoca al quitar al contacto o cambiarle el número. Ninguna medida de seguridad es infalible; si detectamos un incidente que afecte datos personales, actuaremos conforme a la ley colombiana. Para reportar una vulnerabilidad escriba al canal de contacto.',
       },
       { type: 'h', text: '12. Cambios a esta política' },
       {

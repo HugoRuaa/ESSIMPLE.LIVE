@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Contact } from '../../types';
-import { getFamiliaUuid } from '../../services/dataService';
+import { createAvisoToken } from '../../services/dataService';
 
 export const PanelContacts: React.FC = () => {
   const {
@@ -37,21 +37,16 @@ export const PanelContacts: React.FC = () => {
   // Abre WhatsApp con el enlace para que ese contacto active los avisos en su celular.
   const sendAvisosLink = async (contact: Contact) => {
     setLinkError('');
-    let stored = '';
-    try {
-      stored = localStorage.getItem('essimple_family_id') || '';
-    } catch {
-      // ignorar
-    }
-    const familiaUuid = await getFamiliaUuid(stored && stored !== 'local-family-id' ? stored : account.familiaId || account.email || '');
-    if (!familiaUuid) {
-      setLinkError('No se pudo identificar la familia. Vuelve a iniciar sesión.');
-      return;
-    }
     const cc = (settings.countryCode || '+57').replace(/\D/g, '') || '57';
     const digits = (contact.phone || '').replace(/\D/g, '');
     const full = digits.length === 10 && !digits.startsWith(cc) ? `${cc}${digits}` : digits;
-    const link = `${window.location.origin}/avisos/${familiaUuid}/${full}`;
+    // Cada contacto recibe un enlace propio con un código al azar: no lleva ni el id de la familia ni el teléfono.
+    const token = await createAvisoToken(full);
+    if (!token) {
+      setLinkError('No se pudo crear el enlace. Revisa tu conexión y vuelve a iniciar sesión.');
+      return;
+    }
+    const link = `${window.location.origin}/avisos/${token}`;
     const text = `Hola ${contact.name}, abre este enlace en tu celular y toca "Activar avisos" para enterarte si ${settings.personName || 'tu familiar'} pide ayuda, sale de su zona segura o tiene la batería baja: ${link}`;
     window.open(`https://wa.me/${full}?text=${encodeURIComponent(text)}`, '_blank');
   };
