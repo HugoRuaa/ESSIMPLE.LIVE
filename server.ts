@@ -1287,6 +1287,18 @@ app.get('/acompanado', (req, res) => {
 
 // Vite middleware or static serving
 async function startServer() {
+  // El APK corre en https://localhost y carga la versión más reciente desde este sitio (live.json y /assets):
+  // sin este permiso el celular la rechaza y usa el código de respaldo.
+  app.use((req, res, next) => {
+    if (req.path === '/live.json' || req.path.startsWith('/assets/')) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      if (req.path === '/live.json') res.setHeader('Cache-Control', 'no-store, max-age=0');
+      if (req.method === 'OPTIONS') return res.sendStatus(204);
+    }
+    next();
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
