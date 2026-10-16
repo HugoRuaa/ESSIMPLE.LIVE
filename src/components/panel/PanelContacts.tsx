@@ -52,7 +52,7 @@ export const PanelContacts: React.FC = () => {
     const digits = (contact.phone || '').replace(/\D/g, '');
     const full = digits.length === 10 && !digits.startsWith(cc) ? `${cc}${digits}` : digits;
     const link = `${window.location.origin}/avisos/${familiaUuid}/${full}`;
-    const text = `Hola ${contact.name}, abre este enlace en tu celular y toca "Activar avisos" para enterarte si ${settings.personName || 'tu familiar'} sale de su zona segura o tiene la batería baja: ${link}`;
+    const text = `Hola ${contact.name}, abre este enlace en tu celular y toca "Activar avisos" para enterarte si ${settings.personName || 'tu familiar'} pide ayuda, sale de su zona segura o tiene la batería baja: ${link}`;
     window.open(`https://wa.me/${full}?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -285,7 +285,7 @@ export const PanelContacts: React.FC = () => {
                   onChange={() => handleToggleEmergency(contact.id, contact.isEmergency)}
                   className="w-6 h-6 rounded text-[#0b4f9e] accent-[#0b4f9e] cursor-pointer"
                 />
-                <span>Emergencia (SOS)</span>
+                <span>Emergencia (SOS: llamada y notificación)</span>
               </label>
 
               <label className="flex items-center gap-3 min-h-11 cursor-pointer select-none">
@@ -308,7 +308,7 @@ export const PanelContacts: React.FC = () => {
                 <span>Batería baja (notificación al celular)</span>
               </label>
 
-              {(contact.isSafeZone || contact.isLowBattery) && contact.phone && (
+              {(contact.isEmergency || contact.isSafeZone || contact.isLowBattery) && contact.phone && (
                 <button
                   onClick={() => sendAvisosLink(contact)}
                   className="w-full bg-[#fff1c9] border-2 border-[#b7791f] text-[#5c3a00] rounded-2xl py-3 px-3 text-lg font-extrabold cursor-pointer active:scale-95 transition"

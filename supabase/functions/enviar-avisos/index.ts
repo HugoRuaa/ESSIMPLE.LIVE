@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     if (payload?.type !== 'INSERT' || !ev) return new Response('ignorado');
 
     const tipo = ev.event_type as string;
-    if (tipo !== 'zona_salida' && tipo !== 'bateria_baja') return new Response('ignorado');
+    if (tipo !== 'zona_salida' && tipo !== 'bateria_baja' && tipo !== 'sos') return new Response('ignorado');
 
     const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
       db: { schema: SCHEMA },
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const { data: familia } = await db.from('familias').select('person_name').eq('id', ev.familia_id).maybeSingle();
     const nombre = familia?.person_name || 'Tu familiar';
 
-    const columna = tipo === 'zona_salida' ? 'is_safe_zone' : 'is_low_battery';
+    const columna = tipo === 'zona_salida' ? 'is_safe_zone' : tipo === 'sos' ? 'is_emergency' : 'is_low_battery';
     const { data: contactos } = await db.from('contactos').select('phone').eq('familia_id', ev.familia_id).eq(columna, true);
     const numeros = new Set((contactos || []).map((c: { phone: string }) => last10(c.phone)).filter(Boolean));
     if (numeros.size === 0) return new Response('sin contactos marcados');
@@ -44,13 +44,30 @@ Deno.serve(async (req) => {
     const { data: subs } = await db.from('push_suscripciones').select('*').eq('familia_id', ev.familia_id);
     const destino = (subs || []).filter((s: { phone_digits: string }) => numeros.has(last10(s.phone_digits)));
 
+    // Última ubicación conocida (si el celular la subió): al tocar la notificación se abre en el mapa.
+    const { data: estado } = await db.from('estado_telefono').select('last_lat,last_lng').eq('familia_id', ev.familia_id).maybeSingle();
+    const mapa = typeof estado?.last_lat === 'number' && typeof estado?.last_lng === 'number'
+      ? `https://www.google.com/maps?q=${estado.last_lat},${estado.last_lng}`
+      : 'https://essimple.live/';
+
+    const textos: Record<string, { title: string; body: string }> = {
+      zona_salida: {
+        title: `${nombre} salió de su zona segura`,
+        body: 'Revisa que esté bien. Toca para ver su última ubicación.',
+      },
+      bateria_baja: {
+        title: `La batería de ${nombre} está baja`,
+        body: 'Ayúdala a cargar el celular para que siga conectada.',
+      },
+      sos: {
+        title: `🚨 ${nombre} pidió ayuda (SOS)`,
+        body: 'Llámala ahora. Toca para ver su última ubicación.',
+      },
+    };
     const mensaje = JSON.stringify({
-      title: tipo === 'zona_salida' ? `${nombre} salió de su zona segura` : `La batería de ${nombre} está baja`,
-      body: tipo === 'zona_salida'
-        ? 'Revisa que esté bien. Puedes abrir el panel para ver su última ubicación.'
-        : 'Ayúdala a cargar el celular para que siga conectada.',
+      ...textos[tipo],
       tag: `${tipo}-${ev.familia_id}`,
-      url: 'https://essimple.live/',
+      url: mapa,
     });
 
     let enviados = 0;

@@ -69,7 +69,7 @@ export const AvisosPage: React.FC = () => {
         );
       if (error) throw new Error(error.message);
       await reg.showNotification('Avisos activados', {
-        body: `Recibirás un aviso cuando ${persona} salga de su zona segura o tenga la batería baja.`,
+        body: `Recibirás un aviso cuando ${persona} pida ayuda, salga de su zona segura o tenga la batería baja.`,
         icon: '/icon-192.png',
       });
       setEstado('activado');
@@ -87,8 +87,8 @@ export const AvisosPage: React.FC = () => {
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight">Avisos de essimple.live</h1>
         <p className="text-xl font-semibold leading-relaxed text-[#3b4863]">
-          Recibirás una notificación en este celular cuando {persona} salga de su zona segura o tenga la batería por
-          debajo del 20 %.
+          Recibirás una notificación en este celular cuando {persona} pida ayuda (SOS), salga de su zona segura o tenga
+          la batería por debajo del 20 %.
         </p>
 
         {!familiaId || !phoneDigits ? (

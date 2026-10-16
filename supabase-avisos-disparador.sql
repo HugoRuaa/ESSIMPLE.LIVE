@@ -7,7 +7,7 @@ create extension if not exists pg_net with schema extensions;
 create or replace function essimple.avisar_evento() returns trigger
 language plpgsql security definer set search_path = public, extensions as $fn$
 begin
-  if new.event_type in ('zona_salida', 'bateria_baja') then
+  if new.event_type in ('zona_salida', 'bateria_baja', 'sos') then
     perform net.http_post(
       url := 'https://mlhsbihiwrrowlxuzqvf.supabase.co/functions/v1/enviar-avisos',
       headers := jsonb_build_object('Content-Type', 'application/json', 'x-avisos-secret', 'PEGAR_AQUI_EL_SECRETO'),
