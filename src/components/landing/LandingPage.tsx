@@ -16,12 +16,12 @@ interface Props {
 const display = { fontFamily: "'Fraunces', Georgia, serif" } as const;
 
 const FAQ = [
-  ['¿Funciona en iPhone?', 'Por ahora la app de la persona acompañada es solo para Android. El panel familiar se abre desde cualquier navegador, en celular o computador.'],
-  ['¿Por qué no está en Google Play?', 'Se descarga directo desde este sitio. Android pide un permiso una sola vez para instalar desde fuera de la tienda, y la app se actualiza igual que cualquier otra.'],
-  ['¿Ella tiene que aprender algo?', 'No. Ve sus contactos con fotos grandes y un botón verde para llamar. Todo lo demás, como llamadas, mensajes y ubicación, se hace con un toque.'],
-  ['¿Puede salir de la app por error?', 'Es difícil a propósito. Atrás no la cierra y el botón de inicio vuelve a essimple.live. Para salir hace falta un PIN de 4 números que tú eliges.'],
-  ['¿Qué pasa si quiero usar el celular normal?', 'Con el PIN aparecen dos botones: volver a la app o volver al estado normal del celular. Los permisos se conservan, y al abrir la app de nuevo todo vuelve como estaba.'],
-  ['¿Ven mi ubicación todo el tiempo?', 'No. La ubicación solo se comparte cuando ella toca "Dónde estoy", cuando pide ayuda con el botón SOS, cuando decide compartirla, y de fondo cada pocos minutos: tu panel muestra solo la última ubicación conocida del celular, sin historial de recorridos. Una notificación fija en su celular lo indica todo el tiempo.'],
+  ['¿En qué dispositivos funciona?', 'La app de la persona acompañada es para Android. El panel familiar se abre desde cualquier navegador, en celular o computador.'],
+  ['¿Cómo se instala?', 'Se descarga directo desde este sitio. Android pide un permiso una sola vez para instalar fuera de la tienda, y después un asistente guía los permisos en una sola cadena de toques.'],
+  ['¿Qué ve ella en su pantalla?', 'Sus contactos con foto y nombre en letra grande, un botón verde para llamar, y abajo dos botones: SOS y Dónde estoy. Llamar, escribir, enviar una nota de voz o compartir su ubicación se hace con un toque.'],
+  ['¿Cómo se protege la app?', 'La app ocupa toda la pantalla y el botón Atrás no la cierra. Para salir se necesita un PIN de 4 números que tú eliges. Con el PIN aparecen dos opciones: volver a la app o volver al estado normal del celular.'],
+  ['¿Qué ubicación veo en mi panel?', 'La última ubicación conocida del celular, que se actualiza cada pocos minutos, y la ubicación compartida cuando ella toca "Dónde estoy" o pide ayuda con el SOS. Mientras la familia ve su ubicación, ella lo lee en su pantalla: «Tu familia está viendo tu ubicación». Una notificación fija en su celular indica que essimple.live está cuidando.'],
+  ['¿Quién recibe los avisos?', 'Los contactos que marques para emergencia (SOS), zona segura o batería baja. Cada uno activa los avisos una vez desde un enlace que le envías por WhatsApp, y desde entonces le llega una notificación a su celular.'],
   ['¿Cuánto cuesta?', 'Es gratis. Se sostiene con aportes voluntarios de quien quiera apoyar el proyecto.'],
 ];
 
@@ -53,7 +53,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             Un celular que ella entiende a la primera, y que a ti te deja tranquilo.
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-[#3b4a68] max-w-xl leading-relaxed">
-            essimple.live convierte cualquier Android en un teléfono con botones grandes: llama, pide ayuda y comparte dónde está con un toque. Tú ves desde tu panel que está bien.
+            essimple.live convierte un Android en un teléfono con fotos, letra y botones grandes: llama, pide ayuda y comparte dónde está con un toque. Pensado para personas con limitaciones cognitivas o visuales y para las familias que las cuidan: desde tu panel ves cómo está su celular y recibes avisos en el tuyo.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button onClick={onSignup} className={`${cta} bg-[#0b4f9e] text-white shadow-[0_4px_0_#062a54] hover:bg-[#0a4488]`}>
@@ -63,7 +63,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
               Ver una demostración
             </button>
           </div>
-          <p className="mt-5 text-sm text-[#4b5a78]">Gratis, sin tarjeta. Sin anuncios. La app es para Android.</p>
+          <p className="mt-5 text-sm text-[#4b5a78]">Gratis, sin tarjeta y sin anuncios. La app es para Android.</p>
         </div>
         <PhoneMockup />
       </section>
@@ -75,11 +75,11 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             <Smartphone className="w-9 h-9 text-[#0b4f9e]" aria-hidden />
             <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>En su celular: solo lo que necesita</h2>
             <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-              Sus contactos de siempre, con letra grande y un botón verde para llamar. Abajo, dos botones: SOS y Dónde estoy. No hay menús, ni notificaciones que confundan, ni apps que se abran sin querer.
+              Sus contactos de siempre, con foto, nombre en letra grande y un botón verde para llamar. Abajo, dos botones grandes: SOS y Dónde estoy. Una sola pantalla, con una acción por botón.
             </p>
             <ul className="mt-5 space-y-2 pl-5 list-disc text-[#3b4a68]">
-              <li>Hasta 20 contactos, 5 de ellos de emergencia.</li>
-              <li>Tres tamaños de letra para elegir el más cómodo.</li>
+              <li>Hasta 20 contactos, con los de emergencia marcados.</li>
+              <li>Fotos de cada contacto, para reconocerlo sin leer.</li>
               <li>Notas de voz de hasta 60 segundos y mensajes por SMS o WhatsApp.</li>
             </ul>
           </div>
@@ -87,13 +87,13 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             <Eye className="w-9 h-9 text-[#0b6b3a]" aria-hidden />
             <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>En tu panel: lo que te importa saber</h2>
             <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-              Abres el panel desde cualquier navegador y ves si el celular está encendido, cuánta batería tiene y qué pasó en las últimas horas. Tú decides los contactos, la zona segura y el PIN.
+              Abres el panel desde cualquier navegador y ves si el celular está en línea, cuánta batería tiene y qué pasó en las últimas horas. Tú decides los contactos, la zona segura y el PIN.
             </p>
             <ul className="mt-5 space-y-2 pl-5 list-disc text-[#3b4a68]">
               <li>Estado en vivo: en línea y nivel de batería.</li>
               <li>Últimos eventos: llamadas de ayuda (SOS), salidas de la zona segura, batería baja y mensajes enviados.</li>
               <li>Última ubicación conocida del celular, actualizada cada pocos minutos.</li>
-              <li>Un cambio en el panel aparece en su celular sin que ella haga nada.</li>
+              <li>Los cambios de contactos en el panel llegan a su celular sin que ella haga nada.</li>
             </ul>
           </div>
         </div>
@@ -110,7 +110,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
               <Siren className="w-9 h-9 text-[#ff8a8a]" aria-hidden />
               <h3 className="mt-3 text-2xl font-bold">Botón SOS</h3>
               <p className="mt-2 text-lg text-white/80 leading-relaxed max-w-xl">
-                Se mantiene presionado tres segundos para que no se active por error. Entonces deja el aviso en tu panel familiar y llama al primer contacto de emergencia; si no contesta, ella puede llamar al siguiente con un toque.
+                Se mantiene presionado tres segundos para que no se active por error. Entonces deja el aviso en tu panel familiar, avisa por notificación a los contactos de emergencia que activaron los avisos y llama al primero; si no contesta, ella puede llamar al siguiente con un toque.
               </p>
             </div>
             <div className="md:col-span-5 md:pt-8">
@@ -125,8 +125,8 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             </div>
             <div className="md:col-span-5">
               <ShieldCheck className="w-8 h-8 text-[#7dd3fc]" aria-hidden />
-              <h3 className="mt-3 text-xl font-bold">Lo que debes saber</h3>
-              <p className="mt-2 text-white/80 leading-relaxed">Cada contacto activa los avisos una vez, desde un enlace que tú le envías. Los avisos dependen de que el celular tenga señal y GPS, y de que Android no detenga la app: en algunas marcas hay que quitar el ahorro de batería.</p>
+              <h3 className="mt-3 text-xl font-bold">Para que los avisos lleguen</h3>
+              <p className="mt-2 text-white/80 leading-relaxed">Cada contacto activa los avisos una vez, desde un enlace que tú le envías. Con señal, GPS encendido y el ahorro de batería de Android desactivado para la app, essimple.live puede seguir informando en segundo plano.</p>
             </div>
           </div>
         </div>
@@ -144,7 +144,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                 Estar cerca no es vigilar
               </h2>
               <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-                Está pensado para acompañar con amor y respeto. Ellos siempre saben qué se comparte y cuándo, disfrutando de cada momento al aire libre con total autonomía.
+                Está pensado para acompañar con cariño y respeto. Ella ve en su pantalla cuándo su familia está viendo su ubicación y puede dejar de compartirla con un botón.
               </p>
             </div>
 
@@ -154,9 +154,9 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                   <MapPin className="w-6 h-6" aria-hidden />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-[#14213d]">Ubicación solo cuando se comparte</h3>
+                  <h3 className="text-xl font-bold text-[#14213d]">Ubicación a la vista de todos</h3>
                   <p className="mt-1 text-base text-[#3b4a68] leading-relaxed">
-                    Mientras alguien la ve en el panel, aparece un aviso claro en su pantalla: «Tu familia está viendo tu ubicación». Nunca se guardan recorridos invasivos.
+                    Mientras comparte su ubicación, aparece una franja verde en su pantalla: «Tu familia está viendo tu ubicación», con un botón rojo grande para dejar de compartir. En el panel queda la última ubicación conocida.
                   </p>
                 </div>
               </div>
@@ -166,9 +166,9 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                   <Mic className="w-6 h-6" aria-hidden />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-[#14213d]">Voz y mensajes, sin teclados difíciles</h3>
+                  <h3 className="text-xl font-bold text-[#14213d]">Voz y mensajes a un toque</h3>
                   <p className="mt-1 text-base text-[#3b4a68] leading-relaxed">
-                    Puede mandar una nota de voz de hasta 60 segundos o escribir con letra grande. Tú le respondes y ella lo escucha de inmediato.
+                    Puede grabar una nota de voz de hasta 60 segundos y enviarla por WhatsApp, o escribir un mensaje con letra grande y enviarlo por SMS o WhatsApp.
                   </p>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                 <div>
                   <h3 className="text-xl font-bold text-[#14213d]">Toda la familia, un solo panel</h3>
                   <p className="mt-1 text-base text-[#3b4a68] leading-relaxed">
-                    Hijos, hijas y nietos pueden revisar que el celular esté cargado y conectado, compartiendo el cuidado con cariño y sin duplicar esfuerzos.
+                    Hijos, hijas y nietos pueden revisar que el celular esté cargado y en línea, y ver el mismo panel para compartir el cuidado.
                   </p>
                 </div>
               </div>
@@ -202,10 +202,10 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                   Momentos que importan
                 </span>
                 <p className="text-lg sm:text-xl font-bold leading-snug">
-                  «Volver a compartir tardes al sol sabiendo que están seguros es la mayor paz para toda la familia.»
+                  Cerca, aunque no estén en la misma habitación.
                 </p>
                 <p className="text-xs sm:text-sm text-white/80 mt-1 font-medium">
-                  Autonomía para ellos, serenidad y contacto directo para ti.
+                  Autonomía para ellos, contacto directo para ti.
                 </p>
               </div>
             </div>
@@ -262,10 +262,10 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                     Caminar sin miedo
                   </span>
                   <p className="text-lg sm:text-xl font-bold leading-snug">
-                    «Mi padre volvió a salir a su caminata de la tarde con total seguridad. Si duda de cómo volver, un toque lo guía a casa.»
+                    Si duda de cómo volver, un toque le muestra el camino a casa.
                   </p>
                   <p className="text-xs sm:text-sm text-white/80 mt-1 font-medium">
-                    Luz, aire fresco y la tranquilidad de estar a un toque de su familia.
+                    A un toque de su familia.
                   </p>
                 </div>
               </div>
@@ -277,10 +277,10 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                   ☀️ Seguridad en áreas abiertas y naturaleza
                 </span>
                 <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tight text-[#14213d]" style={display}>
-                  Salir a pasear con la certeza de que siempre están conectados
+                  Salir a pasear sabiendo cómo volver
                 </h2>
                 <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-                  A muchos adultos mayores les da temor salir a caminar o visitar un parque por miedo a desorientarse. essimple.live les devuelve esa confianza con herramientas pensadas para ellos.
+                  Para quien teme desorientarse, la pantalla tiene dos botones grandes: uno para saber dónde está y otro para volver a casa. Y la familia puede ayudar desde el panel.
                 </p>
               </div>
 
@@ -288,9 +288,9 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                 <div className="bg-white rounded-2xl p-4 border border-[#c9d5e8] shadow-sm flex items-start gap-3.5">
                   <span className="text-2xl shrink-0" aria-hidden>🧭</span>
                   <div>
-                    <h3 className="text-lg font-bold text-[#14213d]">«Llévame a casa» con voz clara y flechas grandes</h3>
+                    <h3 className="text-lg font-bold text-[#14213d]">«Llévame a casa» con un toque</h3>
                     <p className="text-sm text-[#3b4a68] mt-0.5 leading-relaxed">
-                      El teléfono le dice en español su dirección exacta y la ruta más sencilla para regresar a pie o en transporte, sin pantallas enredadas.
+                      La pantalla le dice en letra grande a cuántos metros está de casa y hacia qué dirección, y abre la ruta en Google Maps, a pie o en transporte según lo que hayas elegido. «Dónde estoy» le muestra su dirección y un mapa.
                     </p>
                   </div>
                 </div>
@@ -298,9 +298,9 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                 <div className="bg-white rounded-2xl p-4 border border-[#c9d5e8] shadow-sm flex items-start gap-3.5">
                   <span className="text-2xl shrink-0" aria-hidden>🆘</span>
                   <div>
-                    <h3 className="text-lg font-bold text-[#14213d]">Botón SOS que llama a la lista familiar</h3>
+                    <h3 className="text-lg font-bold text-[#14213d]">Botón SOS que llama y avisa</h3>
                     <p className="text-sm text-[#3b4a68] mt-0.5 leading-relaxed">
-                      Al presionar por 3 segundos, llama al primer contacto; si no contesta, salta directamente al siguiente hasta que alguien responda.
+                      Al mantenerlo 3 segundos, empieza una cuenta atrás de 10 segundos, llama al primer contacto de emergencia y deja listos los botones para llamar a los siguientes. A la vez, los contactos con avisos activados reciben una notificación.
                     </p>
                   </div>
                 </div>
@@ -308,9 +308,9 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
                 <div className="bg-white rounded-2xl p-4 border border-[#c9d5e8] shadow-sm flex items-start gap-3.5">
                   <span className="text-2xl shrink-0" aria-hidden>🔋</span>
                   <div>
-                    <h3 className="text-lg font-bold text-[#14213d]">Tú ves en el panel si el celular tiene batería</h3>
+                    <h3 className="text-lg font-bold text-[#14213d]">Batería a la vista en el panel</h3>
                     <p className="text-sm text-[#3b4a68] mt-0.5 leading-relaxed">
-                      Si sale a caminar con poca carga, el panel te lo advierte para que puedas recordarle llevar su cargador o acompañarle.
+                      El panel muestra la batería y si está cargando. Al llegar al 20 %, queda el aviso en tu panel y llega una notificación a los contactos que elijas.
                     </p>
                   </div>
                 </div>
@@ -324,18 +324,17 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
       <section className="max-w-6xl mx-auto px-5 py-16 md:py-24 grid md:grid-cols-2 gap-12 items-start">
         <div>
           <Lock className="w-9 h-9 text-[#0b4f9e]" aria-hidden />
-          <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>Difícil de cerrar por error, fácil de dejar con tu PIN</h2>
+          <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>Protegida con tu PIN</h2>
           <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-            La app ocupa toda la pantalla, el botón Atrás no la cierra y el botón de inicio vuelve a essimple.live. Con el PIN aparecen solo dos opciones: volver a la app o volver al estado normal del celular.
+            La app ocupa toda la pantalla y el botón Atrás no la cierra. Con tu PIN de 4 números aparecen dos opciones: volver a la app o volver al estado normal del celular.
           </p>
         </div>
         <div className="rounded-3xl border-2 border-[#c9d5e8] bg-white p-6 sm:p-8">
           <ShieldCheck className="w-8 h-8 text-[#0b6b3a]" aria-hidden />
-          <h3 className="mt-3 text-xl font-bold">Qué guardamos y qué no</h3>
+          <h3 className="mt-3 text-xl font-bold">Qué guardamos</h3>
           <ul className="mt-3 space-y-2 pl-5 list-disc text-[#3b4a68] leading-relaxed">
             <li>Guardamos: contactos, estado de batería y conexión, la última ubicación conocida del celular (una sola, se reemplaza con cada actualización), versión de la app e historial de eventos y cambios.</li>
-            <li>No guardamos: recorridos ni historial de ubicación. Solo se guarda la última posición, que se reemplaza en cada actualización.</li>
-            <li>Sin anuncios y sin venta de datos.</li>
+                        <li>Sin anuncios y sin venta de datos.</li>
           </ul>
         </div>
       </section>
@@ -346,7 +345,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
           <HeartHandshake className="w-10 h-10 mx-auto text-[#0b6b3a]" aria-hidden />
           <h2 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>Gratis para todas las familias</h2>
           <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-            Cuidar no debería depender de una suscripción. essimple.live se sostiene con aportes voluntarios: si te sirve y quieres que siga creciendo, puedes apoyar.
+            Cuidar no depende de una suscripción. essimple.live se sostiene con aportes voluntarios: si te sirve y quieres que siga creciendo, puedes apoyar.
           </p>
           <div className="mt-6 flex justify-center">
             <ApoyoNosUnimos />
@@ -388,7 +387,7 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
       <footer className="bg-[#14213d] text-white/80">
         <div className="max-w-6xl mx-auto px-5 py-8 flex flex-wrap items-center justify-between gap-4 text-sm">
           <span className="font-extrabold text-lg text-white">essimple<span className="text-[#38bdf8]">.live</span></span>
-          <span>Acompañamiento y protección para adultos mayores.</span>
+          <span>Acompañamiento sencillo para personas con limitaciones cognitivas o visuales.</span>
           <a href={APOYO_URL} target="_blank" rel="noopener noreferrer" className="font-bold text-white underline underline-offset-4">Apoyar</a>
         </div>
       </footer>
