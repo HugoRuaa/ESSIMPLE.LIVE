@@ -48,19 +48,12 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
 
       {/* HERO */}
       <section className="max-w-6xl mx-auto px-5 pt-12 pb-16 md:pt-20 md:pb-24 grid md:grid-cols-[1.1fr_0.9fr] gap-12 md:gap-8 items-center">
-        <div className="md:order-last">
-          <img
-            src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=800"
-            alt="Mujer mayor sonriendo feliz abrazada con su hijo adulto"
-            className="rounded-3xl shadow-2xl object-cover w-full h-[400px] md:h-[500px]"
-          />
-        </div>
         <div>
           <h1 className="text-[2.6rem] leading-[1.05] sm:text-6xl font-semibold tracking-tight" style={display}>
-            Amor y tecnología que conecta generaciones.
+            Un celular que ella entiende a la primera, y que a ti te deja tranquilo.
           </h1>
           <p className="mt-6 text-lg sm:text-xl text-[#3b4a68] max-w-xl leading-relaxed">
-            essimple.live hace que la tecnología sea accesible y cercana para nuestros mayores. Un teléfono que entienden a la primera, facilitando los momentos más felices con sus hijos y nietos, mientras tú tienes la tranquilidad de saber cómo están.
+            essimple.live convierte cualquier Android en un teléfono con botones grandes: llama, pide ayuda y comparte dónde está con un toque. Tú ves desde tu panel que está bien.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <button onClick={onSignup} className={`${cta} bg-[#0b4f9e] text-white shadow-[0_4px_0_#062a54] hover:bg-[#0a4488]`}>
@@ -139,28 +132,84 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
         </div>
       </section>
 
-      {/* CERCANÍA */}
-      <section className="max-w-6xl mx-auto px-5 py-16 md:py-24 grid md:grid-cols-3 gap-10">
-        <div className="md:col-span-3 max-w-2xl">
-          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight" style={display}>Estar cerca no es vigilar</h2>
-          <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
-            Está pensado para acompañar con respeto. Ella siempre sabe qué se comparte y cuándo.
-          </p>
-        </div>
-        <div>
-          <MapPin className="w-7 h-7 text-[#0b4f9e]" aria-hidden />
-          <h3 className="mt-3 text-xl font-bold">Ubicación solo cuando se comparte</h3>
-          <p className="mt-2 text-[#3b4a68] leading-relaxed">Mientras alguien la ve, aparece un aviso en su pantalla: "Tu familia está viendo tu ubicación". No se guarda el historial de recorridos.</p>
-        </div>
-        <div>
-          <Mic className="w-7 h-7 text-[#0b4f9e]" aria-hidden />
-          <h3 className="mt-3 text-xl font-bold">Voz y mensajes, sin teclado</h3>
-          <p className="mt-2 text-[#3b4a68] leading-relaxed">Puede mandar una nota de voz o escribir con letra grande. Tú le respondes desde donde estés.</p>
-        </div>
-        <div>
-          <Users className="w-7 h-7 text-[#0b4f9e]" aria-hidden />
-          <h3 className="mt-3 text-xl font-bold">Toda la familia, un solo panel</h3>
-          <p className="mt-2 text-[#3b4a68] leading-relaxed">Los contactos y los cambios quedan registrados, así todos saben qué se configuró y cuándo.</p>
+      {/* CERCANÍA CON FOTO 1 */}
+      <section className="max-w-6xl mx-auto px-5 py-16 md:py-24">
+        <div className="grid md:grid-cols-12 gap-10 md:gap-12 items-center">
+          <div className="md:col-span-6 space-y-6">
+            <div>
+              <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#0b6b3a] bg-[#eef7f0] border border-[#0b6b3a]/30 px-3 py-1.5 rounded-full">
+                🌿 Cariño, respeto y libertad
+              </span>
+              <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tight text-[#14213d]" style={display}>
+                Estar cerca no es vigilar
+              </h2>
+              <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
+                Está pensado para acompañar con amor y respeto. Ellos siempre saben qué se comparte y cuándo, disfrutando de cada momento al aire libre con total autonomía.
+              </p>
+            </div>
+
+            <div className="space-y-5 pt-2">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-2xl bg-[#eff6ff] text-[#0b4f9e] shrink-0 border border-[#c9d5e8]">
+                  <MapPin className="w-6 h-6" aria-hidden />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#14213d]">Ubicación solo cuando se comparte</h3>
+                  <p className="mt-1 text-base text-[#3b4a68] leading-relaxed">
+                    Mientras alguien la ve en el panel, aparece un aviso claro en su pantalla: «Tu familia está viendo tu ubicación». Nunca se guardan recorridos invasivos.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-2xl bg-[#eff6ff] text-[#0b4f9e] shrink-0 border border-[#c9d5e8]">
+                  <Mic className="w-6 h-6" aria-hidden />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#14213d]">Voz y mensajes, sin teclados difíciles</h3>
+                  <p className="mt-1 text-base text-[#3b4a68] leading-relaxed">
+                    Puede mandar una nota de voz de hasta 60 segundos o escribir con letra grande. Tú le respondes y ella lo escucha de inmediato.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 rounded-2xl bg-[#eff6ff] text-[#0b4f9e] shrink-0 border border-[#c9d5e8]">
+                  <Users className="w-6 h-6" aria-hidden />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[#14213d]">Toda la familia, un solo panel</h3>
+                  <p className="mt-1 text-base text-[#3b4a68] leading-relaxed">
+                    Hijos, hijas y nietos pueden revisar que el celular esté cargado y conectado, compartiendo el cuidado con cariño y sin duplicar esfuerzos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Fotografía 1: Hija y familia con su padre mayor junto al lago en un día soleado */}
+          <div className="md:col-span-6">
+            <div className="relative rounded-3xl overflow-hidden border-2 border-[#c9d5e8] shadow-xl bg-white group">
+              <img
+                src="/landing/padre_hija_familia_lago.jpg"
+                alt="Hija y familia compartiendo felices un día soleado al aire libre junto al agua con su padre mayor"
+                className="w-full h-80 sm:h-[420px] object-cover transition-transform duration-700 group-hover:scale-105"
+                referrerPolicy="no-referrer"
+                loading="lazy"
+              />
+              <div className="p-5 sm:p-6 bg-gradient-to-t from-black/85 via-black/55 to-transparent absolute inset-x-0 bottom-0 text-white">
+                <span className="inline-block text-xs font-black tracking-wide uppercase px-2.5 py-1 rounded-full bg-[#0b6b3a] text-white mb-2">
+                  Momentos que importan
+                </span>
+                <p className="text-lg sm:text-xl font-bold leading-snug">
+                  «Volver a compartir tardes al sol sabiendo que están seguros es la mayor paz para toda la familia.»
+                </p>
+                <p className="text-xs sm:text-sm text-white/80 mt-1 font-medium">
+                  Autonomía para ellos, serenidad y contacto directo para ti.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -190,6 +239,83 @@ export const LandingPage: React.FC<Props> = ({ onSignup, onLogin, onDemo }) => {
             <p className="text-sm text-[#4b5a78] max-w-sm">
               Si vas a instalarla tú mismo en su celular, descarga el APK aquí. Android te pedirá un permiso, una sola vez, para instalar desde fuera de Google Play.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN FOTO 2: CAMINATAS EN LA NATURALEZA Y LIBERTAD */}
+      <section className="bg-[#f0f6ff] border-b border-[#c9d5e8]">
+        <div className="max-w-6xl mx-auto px-5 py-16 md:py-24">
+          <div className="grid md:grid-cols-12 gap-10 md:gap-12 items-center">
+            {/* Fotografía 2: Hijo acompañando a su padre mayor en una caminata por el parque al aire libre con luz dorada */}
+            <div className="md:col-span-6 order-2 md:order-1">
+              <div className="relative rounded-3xl overflow-hidden border-2 border-[#c9d5e8] shadow-xl bg-white group">
+                <img
+                  src="/landing/padre_hijo_caminata_parque.jpg"
+                  alt="Hijo acompañando con cariño a su padre mayor en una caminata por un sendero lleno de luz y naturaleza"
+                  className="w-full h-80 sm:h-[420px] object-cover transition-transform duration-700 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                />
+                <div className="p-5 sm:p-6 bg-gradient-to-t from-black/85 via-black/55 to-transparent absolute inset-x-0 bottom-0 text-white">
+                  <span className="inline-block text-xs font-black tracking-wide uppercase px-2.5 py-1 rounded-full bg-[#0b4f9e] text-white mb-2">
+                    Caminar sin miedo
+                  </span>
+                  <p className="text-lg sm:text-xl font-bold leading-snug">
+                    «Mi padre volvió a salir a su caminata de la tarde con total seguridad. Si duda de cómo volver, un toque lo guía a casa.»
+                  </p>
+                  <p className="text-xs sm:text-sm text-white/80 mt-1 font-medium">
+                    Luz, aire fresco y la tranquilidad de estar a un toque de su familia.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="md:col-span-6 order-1 md:order-2 space-y-6">
+              <div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#0b4f9e] bg-white border border-[#0b4f9e]/30 px-3 py-1.5 rounded-full shadow-sm">
+                  ☀️ Seguridad en áreas abiertas y naturaleza
+                </span>
+                <h2 className="mt-4 text-3xl sm:text-5xl font-semibold tracking-tight text-[#14213d]" style={display}>
+                  Salir a pasear con la certeza de que siempre están conectados
+                </h2>
+                <p className="mt-4 text-lg text-[#3b4a68] leading-relaxed">
+                  A muchos adultos mayores les da temor salir a caminar o visitar un parque por miedo a desorientarse. essimple.live les devuelve esa confianza con herramientas pensadas para ellos.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl p-4 border border-[#c9d5e8] shadow-sm flex items-start gap-3.5">
+                  <span className="text-2xl shrink-0" aria-hidden>🧭</span>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#14213d]">«Llévame a casa» con voz clara y flechas grandes</h3>
+                    <p className="text-sm text-[#3b4a68] mt-0.5 leading-relaxed">
+                      El teléfono le dice en español su dirección exacta y la ruta más sencilla para regresar a pie o en transporte, sin pantallas enredadas.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-4 border border-[#c9d5e8] shadow-sm flex items-start gap-3.5">
+                  <span className="text-2xl shrink-0" aria-hidden>🆘</span>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#14213d]">Botón SOS que llama a la lista familiar</h3>
+                    <p className="text-sm text-[#3b4a68] mt-0.5 leading-relaxed">
+                      Al presionar por 3 segundos, llama al primer contacto; si no contesta, salta directamente al siguiente hasta que alguien responda.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-4 border border-[#c9d5e8] shadow-sm flex items-start gap-3.5">
+                  <span className="text-2xl shrink-0" aria-hidden>🔋</span>
+                  <div>
+                    <h3 className="text-lg font-bold text-[#14213d]">Tú ves en el panel si el celular tiene batería</h3>
+                    <p className="text-sm text-[#3b4a68] mt-0.5 leading-relaxed">
+                      Si sale a caminar con poca carga, el panel te lo advierte para que puedas recordarle llevar su cargador o acompañarle.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
