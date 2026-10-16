@@ -2,7 +2,7 @@
 
 > Esquema: `APP_BLUEPRINT.md` · Procedimiento: `GUIA_REPLICAR.md`.
 > Última auditoría: **16 de octubre de 2026** · Commit base auditado: `c5fcf54` · Blueprint: **v1**
-> Estado: capa legal en `feat/capa-legal` y seguridad en `fix/seguridad` (ninguna está en `main`). Fase 0 de seguridad hecha en código; el SQL de la fase 1 está escrito y probado en una base local, **NO ejecutado en Supabase**.
+> Estado: capa legal y seguridad (fases 0, 2 y 4 en código; SQL fase 1 + parches 1 y 2 ya corridos por Hugo en Supabase) fusionadas en `main` el 2026-10-16 (`bc886ac`); la compilación del APK en GitHub Actions terminó bien. Fase 0 de seguridad hecha en código; el SQL de la fase 1 está escrito y probado en una base local, **NO ejecutado en Supabase**.
 
 ## 1. Identidad (M01)
 
@@ -85,3 +85,4 @@ Responsable = INSIGHT PROVIDERS S.A.S.; mismos contactos que CareFor; mismo esqu
 |---|---|---|---|
 | 2026-10-16 | Primera auditoría; capa legal (5 docs), consentimiento GA4 (inactivo hasta `GA_ID`), enlaces en portada y registro, casilla desmarcada con enlaces y declaración de autorización, `sitemap.xml`, `robots.txt` | M04, M05 | M04 0→2 |
 | 2026-10-16 | Fase 0 de seguridad (código) + `supabase-seguridad.sql` (fase 1, no ejecutado) | M07 | M07 →1 |
+| 2026-10-16 | Fusión a `main`; textos legales al día con la seguridad; pendiente: prueba real en el sitio, limpieza SQL, reinstalar APK en 10 teléfonos, fase 3 (avisos a contactos) | M04, M07 | M07 1 |
