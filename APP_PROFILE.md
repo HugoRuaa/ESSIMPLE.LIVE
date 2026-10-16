@@ -2,7 +2,7 @@
 
 > Esquema: `APP_BLUEPRINT.md` · Procedimiento: `GUIA_REPLICAR.md`.
 > Última auditoría: **16 de octubre de 2026** · Commit base auditado: `c5fcf54` · Blueprint: **v1**
-> Estado: capa legal en la rama `feat/capa-legal` (NO está en `main`). Solo se tocó lo legal; ninguna función ni dato cambió, salvo la casilla de aceptación del registro (ahora desmarcada y con enlaces).
+> Estado: capa legal en `feat/capa-legal` y seguridad en `fix/seguridad` (ninguna está en `main`). Fase 0 de seguridad hecha en código; el SQL de la fase 1 está escrito y probado en una base local, **NO ejecutado en Supabase**.
 
 ## 1. Identidad (M01)
 
@@ -22,7 +22,7 @@
 |---|---|---|---|
 | M04 Legal | 0 | 2 (3 tras revisión jurídica) | 3 |
 | M05 Analítica | 0 (sin analítica) | 2 en cuanto se pegue `GA_ID` (GA4 solo con consentimiento) | 2 |
-| M07 Seguridad | — | **sin tocar, crítico** (ver deuda) | 3 |
+| M07 Seguridad | — | **1**: fase 0 hecha; RLS sigue abierto en producción hasta ejecutar `supabase-seguridad.sql` y publicar el cliente nuevo | 3 |
 | Resto | — | sin evaluar a fondo | — |
 
 ## 3. Inventario de datos (lo que el código hace hoy)
@@ -50,11 +50,11 @@
 - **Documentos (5):** `/acerca`, `/privacidad`, `/terminos`, `/aviso-importante`, `/contacto`. Aceptación con enlaces en el registro y en "Antes de empezar".
 
 ## 5. Deuda
-### P0 abiertos (decisión de Hugo pendiente: ¿se corrigen antes de publicar? — pregunta 1 sin responder)
+### P0 abiertos (Hugo decidió corregir con corte limpio: 10 familias, sin recuperación de clave, Supabase Auth con correo y clave sin confirmación)
 1. **RLS abierto:** todas las tablas de `essimple` tienen política `using (true)` para `anon`. Con la llave pública (va en la web y en el APK) se puede leer y modificar todo: correo, hash, PIN, contactos, casa, ubicación.
-2. **Contraseña:** se guarda en claro en `localStorage` (`essimple_password`); `server.ts` tiene `GET /api/familias/:id/password` que la devuelve y datos por defecto con correo y claves reales. El hash SHA-256 es sin sal. El login aún acepta comparación con texto plano.
+2. **Contraseña (fase 0 HECHA en código: ya no se guarda ni se muestra, se borra de los dispositivos, endpoints eliminados; falta Supabase Auth, fase 2):** se guarda en claro en `localStorage` (`essimple_password`); `server.ts` tiene `GET /api/familias/:id/password` que la devuelve y datos por defecto con correo y claves reales. El hash SHA-256 es sin sal. El login aún acepta comparación con texto plano.
 3. **PIN de salida en claro** en `familias.exit_pin`.
-4. `resolveCurrentFamilyId()` cae a `'hugofrua@gmail.com'` cuando no hay sesión: escribe eventos/cambios en esa familia.
+4. **(HECHO en código)** antes `resolveCurrentFamilyId()` caía a `'hugofrua@gmail.com'` cuando no hay sesión: escribe eventos/cambios en esa familia.
 5. **Función `enviar-avisos`:** el disparador SQL lleva el secreto en el script (`PEGAR_AQUI_EL_SECRETO`); revisar que no quede en el repo.
 6. **Sin borrado de cuenta** en la interfaz (la política dice "por solicitud al correo").
 
@@ -69,7 +69,17 @@
 ## 6. Decisiones (Hugo)
 Responsable = INSIGHT PROVIDERS S.A.S.; mismos contactos que CareFor; mismo esquema (2026-10-16). Habrá Google Analytics. Aceptación como en CareFor. Retención: cuenta mientras exista, 50 eventos/cambios, IP 2 días, borrado por solicitud. Texto sobre autorización del representante legal con revisión de Hugo.
 
+## 6b. Plan de seguridad (rama `fix/seguridad`)
+- Fase 0 (hecha): sin contraseña en cliente, sin correo del dueño como respaldo, `server.ts` sin endpoints de clave ni tokens fijos.
+- Fase 1 (escrita, no ejecutada): `supabase-seguridad.sql`: RLS por dueño (`owner_id = auth.uid()`), tablas cerradas a `anon`, teléfono con código de un solo uso (15 min) y token con hash, funciones `dispositivo_*`, PIN con hash y bloqueo tras 5 fallos, recorte a 50 eventos/cambios, `eliminar_mi_cuenta()`. Probada en PostgreSQL 16 local con `auth` simulado (aislamiento entre familias, anon sin acceso, vinculación, PIN, límite de intentos, borrado). **No probada contra Supabase real.**
+- Fase 2 (pendiente): cliente con Supabase Auth (correo y clave; sin confirmación ni recuperación), alta con `crear_mi_familia`, cambiar PIN y borrar cuenta desde la interfaz.
+- Fase 3 (pendiente): contactos de avisos con token propio (`push_suscripciones`, `vinculos_pendientes`, enlace `/avisos/<uuid>/<tel>`), códigos de vinculación aleatorios en vez de `ESSIMPLE-`+base64(correo).
+- Fase 4 (pendiente): APK nuevo (`TrackingService`/`SimplePlugin` con token y RPC en vez de llave pública directa). Ejecutar el SQL solo cuando esté listo.
+- Al terminar: reescribir secciones 4 y 11 de la política y avisar a las 10 familias (claves nuevas puestas por Hugo; clave olvidada = Hugo la cambia a mano).
+- Sin verificar: `android/.../assets/public/assets/app-entry-*.js` está versionado y contiene código viejo; no sé si el CI lo regenera. El disparador `avisar_evento` (pg_net) con inserciones desde RPC. Configuración real de Auth en Supabase.
+
 ## 7. Bitácora
 | Fecha | Cambio | Módulos | Calibre |
 |---|---|---|---|
 | 2026-10-16 | Primera auditoría; capa legal (5 docs), consentimiento GA4 (inactivo hasta `GA_ID`), enlaces en portada y registro, casilla desmarcada con enlaces y declaración de autorización, `sitemap.xml`, `robots.txt` | M04, M05 | M04 0→2 |
+| 2026-10-16 | Fase 0 de seguridad (código) + `supabase-seguridad.sql` (fase 1, no ejecutado) | M07 | M07 →1 |
